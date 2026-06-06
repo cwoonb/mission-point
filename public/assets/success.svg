@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34d399"/>
+      <stop offset="100%" style="stop-color:#10b981"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="55" fill="#d1fae5"/>
+  <circle cx="60" cy="60" r="38" fill="url(#sg)"/>
+  <!-- Checkmark -->
+  <path d="M42 60 L55 73 L80 46" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Stars around -->
+  <text x="8" y="30" font-size="16" fill="#f59e0b">⭐</text>
+  <text x="90" y="25" font-size="14" fill="#fbbf24">✨</text>
+  <text x="5" y="95" font-size="14" fill="#fbbf24">✨</text>
+  <text x="90" y="105" font-size="16" fill="#f59e0b">⭐</text>
+  <text x="48" y="112" font-size="14" fill="#34d399">🎉</text>
+</svg>

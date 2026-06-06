@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 80">
+  <defs>
+    <linearGradient id="cpn" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+  </defs>
+  <rect width="160" height="80" rx="12" fill="url(#cpn)"/>
+  <!-- Dotted line -->
+  <line x1="50" y1="0" x2="50" y2="80" stroke="white" stroke-width="2" stroke-dasharray="6,4" opacity="0.5"/>
+  <!-- Left circle cutout -->
+  <circle cx="50" cy="0" r="10" fill="white"/>
+  <circle cx="50" cy="80" r="10" fill="white"/>
+  <!-- Stars -->
+  <text x="8" y="30" font-size="18" fill="white">🎁</text>
+  <text x="8" y="55" font-size="12" fill="white" font-weight="bold">COUPON</text>
+  <!-- Right side -->
+  <text x="65" y="42" font-size="22" font-weight="bold" fill="white">POINT</text>
+  <text x="65" y="62" font-size="12" fill="rgba(255,255,255,0.8)">교환권</text>
+</svg>

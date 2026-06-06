@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="coin" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="55" fill="#fef3c7"/>
+  <circle cx="60" cy="60" r="38" fill="url(#coin)" stroke="#d97706" stroke-width="3"/>
+  <circle cx="60" cy="60" r="30" fill="none" stroke="#fde68a" stroke-width="2"/>
+  <text x="60" y="68" text-anchor="middle" font-size="28" font-weight="bold" fill="#92400e">P</text>
+  <text x="20" y="25" font-size="16" fill="#f59e0b">✨</text>
+  <text x="88" y="22" font-size="14" fill="#fbbf24">⭐</text>
+  <text x="15" y="100" font-size="12" fill="#fbbf24">✦</text>
+  <text x="90" y="98" font-size="16" fill="#f59e0b">✨</text>
+</svg>

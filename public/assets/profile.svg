@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="pg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#a78bfa"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="55" fill="#ede9fe"/>
+  <circle cx="60" cy="60" r="38" fill="url(#pg)"/>
+  <!-- Head -->
+  <circle cx="60" cy="48" r="14" fill="white"/>
+  <!-- Body -->
+  <path d="M35 88 Q35 70 60 70 Q85 70 85 88" fill="white"/>
+  <text x="8" y="30" font-size="16" fill="#c4b5fd">🌟</text>
+  <text x="88" y="30" font-size="14" fill="#ddd6fe">✦</text>
+</svg>
