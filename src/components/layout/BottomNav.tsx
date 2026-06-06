@@ -21,7 +21,10 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 shadow-lg safe-bottom z-50">
+    /* left-0 right-0 mx-auto 방식으로 iOS 안전 */
+    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 shadow-lg z-40"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       <div className="flex items-center justify-around py-2">
         {tabs.map(({ to, icon: Icon, label, badge }) => (
           <NavLink
@@ -30,7 +33,7 @@ export default function BottomNav() {
             end={to === '/'}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200',
+                'flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 min-w-0',
                 isActive ? 'text-purple-600' : 'text-gray-400'
               )
             }
@@ -49,17 +52,10 @@ export default function BottomNav() {
                     </span>
                   )}
                 </div>
-                <span
-                  className={clsx(
-                    'text-[10px] font-semibold',
-                    isActive ? 'text-purple-600' : 'text-gray-400'
-                  )}
-                >
+                <span className={clsx('text-[10px] font-semibold truncate', isActive ? 'text-purple-600' : 'text-gray-400')}>
                   {label}
                 </span>
-                {isActive && (
-                  <span className="w-1 h-1 bg-purple-500 rounded-full" />
-                )}
+                {isActive && <span className="w-1 h-1 bg-purple-500 rounded-full" />}
               </>
             )}
           </NavLink>

@@ -292,7 +292,7 @@ export default function HomePage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: -20 }}
               onAnimationComplete={() => setTimeout(() => setRewardMsg(''), 2000)}
-              className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-amber-400 text-white font-black px-6 py-3 rounded-2xl shadow-lg z-50 flex items-center gap-2"
+              className="fixed bottom-24 left-4 right-4 max-w-xs mx-auto bg-amber-400 text-white font-black px-4 py-3 rounded-2xl shadow-lg z-50 flex items-center justify-center gap-2"
             >
               <span className="text-xl">⭐</span>
               {rewardMsg}

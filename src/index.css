@@ -3,33 +3,56 @@
 @tailwind utilities;
 
 @layer base {
-  * {
+  *,
+  *::before,
+  *::after {
     -webkit-tap-highlight-color: transparent;
     box-sizing: border-box;
+  }
+
+  html {
+    overflow-x: hidden;
+    /* iOS 노치/홈바 대응 */
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   body {
     font-family: 'Noto Sans KR', sans-serif;
     background: linear-gradient(135deg, #f3e8ff 0%, #dbeafe 100%);
     min-height: 100vh;
+    min-height: 100dvh;
     overscroll-behavior: none;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 
   #root {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* 기본 입력 스타일 초기화 */
+  input, textarea, select {
+    font-family: inherit;
+    font-size: 16px; /* iOS 자동확대 방지 */
   }
 }
 
 @layer components {
   .page-container {
-    @apply max-w-md mx-auto w-full min-h-screen flex flex-col bg-white shadow-2xl relative overflow-hidden;
+    @apply max-w-md mx-auto w-full flex flex-col bg-white shadow-2xl relative;
+    min-height: 100dvh;
+    overflow-x: hidden;
   }
 
   .content-area {
-    @apply flex-1 overflow-y-auto pb-20;
+    @apply flex-1 overflow-y-auto;
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
   }
 
   .card {
@@ -72,10 +95,11 @@
   .input-field {
     @apply w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium
            focus:outline-none focus:border-purple-400 transition-colors;
+    font-size: 16px; /* iOS 자동확대 방지 */
   }
 
   .section-title {
-    @apply text-lg font-bold text-gray-800 mb-3;
+    @apply text-base font-bold text-gray-800 mb-3;
   }
 }
 
@@ -86,6 +110,10 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
   }
 
   .safe-bottom {
@@ -101,8 +129,14 @@
   animation: coinFly 0.8s ease-out forwards;
 }
 
+@keyframes coinFly {
+  0%   { transform: translateY(0) scale(1); opacity: 1; }
+  50%  { transform: translateY(-60px) scale(1.2); }
+  100% { transform: translateY(-110px) scale(0.5); opacity: 0; }
+}
+
 @keyframes confetti-fall {
-  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
   100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
 

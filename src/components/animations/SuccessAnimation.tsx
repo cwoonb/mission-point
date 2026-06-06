@@ -34,7 +34,7 @@ export default function SuccessAnimation({ isVisible, points, onClose }: Success
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
+          className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none px-6"
         >
           {confetti.map((c) => (
             <div
@@ -55,7 +55,7 @@ export default function SuccessAnimation({ isVisible, points, onClose }: Success
             animate={{ scale: 1, rotate: 0 }}
             exit={{ scale: 0 }}
             transition={{ type: 'spring', damping: 15 }}
-            className="bg-white rounded-3xl shadow-2xl px-8 py-10 flex flex-col items-center gap-4 text-center pointer-events-auto mx-4"
+            className="bg-white rounded-3xl shadow-2xl px-6 py-10 flex flex-col items-center gap-4 text-center pointer-events-auto w-full max-w-xs"
             onClick={onClose}
           >
             <motion.div
@@ -77,7 +77,7 @@ export default function SuccessAnimation({ isVisible, points, onClose }: Success
                   +{points.toLocaleString('ko-KR')}P 획득! ⭐
                 </motion.p>
               )}
-              <p className="text-gray-400 text-sm mt-2">화면을 탭해서 닫기</p>
+              <p className="text-gray-400 text-sm mt-2">탭해서 닫기</p>
             </div>
           </motion.div>
         </motion.div>
