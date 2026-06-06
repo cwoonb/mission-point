@@ -27,66 +27,47 @@ export function googlePayloadToProfile(credential: string): PendingSocialProfile
   };
 }
 
-// ── Kakao SDK loader ─────────────────────────────────────
-let kakaoLoaded = false;
-
-export function loadKakaoSDK(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (kakaoLoaded || (window.Kakao && window.Kakao.isInitialized())) {
-      kakaoLoaded = true;
-      resolve();
-      return;
-    }
-    if (document.getElementById('kakao-sdk')) {
-      const check = setInterval(() => {
-        if (window.Kakao) { clearInterval(check); kakaoLoaded = true; resolve(); }
-      }, 100);
-      return;
-    }
-    const script = document.createElement('script');
-    script.id = 'kakao-sdk';
-    script.src = 'https://t1.kakaocdn.net/kakao_js_sdk/1.3.28/kakao.min.js';
-    script.crossOrigin = 'anonymous';
-    script.onload = () => { kakaoLoaded = true; resolve(); };
-    script.onerror = () => reject(new Error('Kakao SDK load failed'));
-    document.head.appendChild(script);
-  });
-}
-
-export async function kakaoLogin(): Promise<PendingSocialProfile> {
-  await loadKakaoSDK();
+// ── Kakao OAuth (SDK 없이 REST API 방식) ──────────────────
+export function triggerKakaoLogin(): void {
   const appKey = import.meta.env.VITE_KAKAO_JS_KEY as string | undefined;
   if (!appKey) throw new Error('VITE_KAKAO_JS_KEY is not set in .env.local');
 
-  if (!window.Kakao.isInitialized()) {
-    window.Kakao.init(appKey);
-  }
+  const redirectUri = window.location.origin;
+  const url =
+    `https://kauth.kakao.com/oauth/authorize` +
+    `?client_id=${appKey}` +
+    `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+    `&response_type=token`;
+  window.location.href = url;
+}
 
-  return new Promise((resolve, reject) => {
-    window.Kakao.Auth.login({
-      success: () => {
-        window.Kakao.API.request({
-          url: '/v2/user/me',
-          success: (res: KakaoUserResponse) => {
-            resolve({
-              socialProvider: 'KAKAO',
-              socialId: String(res.id),
-              name:
-                res.kakao_account?.profile?.nickname ??
-                res.kakao_account?.email?.split('@')[0] ??
-                '카카오 사용자',
-              email: res.kakao_account?.email,
-              profileImage:
-                res.kakao_account?.profile?.profile_image_url ??
-                res.kakao_account?.profile?.thumbnail_image_url,
-            });
-          },
-          fail: reject,
-        });
-      },
-      fail: reject,
-    });
+export async function checkKakaoCallback(): Promise<PendingSocialProfile | null> {
+  const hash = window.location.hash;
+  if (!hash.includes('access_token')) return null;
+
+  const params = new URLSearchParams(hash.slice(1));
+  const accessToken = params.get('access_token');
+  if (!accessToken) return null;
+
+  // URL에서 토큰 해시 제거
+  window.history.replaceState(null, '', window.location.pathname);
+
+  const res = await fetch('https://kapi.kakao.com/v2/user/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
+  if (!res.ok) throw new Error(`Kakao user info failed: ${res.status}`);
+
+  const data = await res.json();
+  return {
+    socialProvider: 'KAKAO',
+    socialId: String(data.id),
+    name:
+      data.kakao_account?.profile?.nickname ??
+      data.kakao_account?.email?.split('@')[0] ??
+      '카카오 사용자',
+    email: data.kakao_account?.email,
+    profileImage: data.kakao_account?.profile?.profile_image_url,
+  };
 }
 
 // ── Naver SDK loader ─────────────────────────────────────

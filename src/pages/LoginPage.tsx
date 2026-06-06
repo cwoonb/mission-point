@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleLogin } from '@react-oauth/google';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { googlePayloadToProfile, kakaoLogin, initNaverLogin, triggerNaverLogin } from '../lib/socialAuth';
+import { googlePayloadToProfile, triggerKakaoLogin, initNaverLogin, triggerNaverLogin } from '../lib/socialAuth';
 import type { PendingSocialProfile } from '../types';
 
 export default function LoginPage() {
@@ -28,22 +28,17 @@ export default function LoginPage() {
     }
   };
 
-  const handleKakaoLogin = async () => {
+  const handleKakaoLogin = () => {
     const appKey = import.meta.env.VITE_KAKAO_JS_KEY;
     if (!appKey) {
-      setError('카카오 앱 키가 설정되지 않았습니다. .env.local 파일을 확인하세요.');
+      setError('카카오 앱 키가 설정되지 않았습니다.');
       return;
     }
-    setLoading('KAKAO');
-    setError(null);
     try {
-      const profile = await kakaoLogin();
-      handleSocialProfile(profile);
+      triggerKakaoLogin();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : JSON.stringify(e);
+      const msg = e instanceof Error ? e.message : String(e);
       setError(`카카오 로그인 실패: ${msg}`);
-    } finally {
-      setLoading(null);
     }
   };
 

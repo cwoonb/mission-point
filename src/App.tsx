@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './store/authStore';
 import { useMissionStore } from './store/missionStore';
 import { useShopStore } from './store/shopStore';
-import { checkNaverCallback } from './lib/socialAuth';
+import { checkNaverCallback, checkKakaoCallback } from './lib/socialAuth';
 
 import AppLayout from './components/layout/AppLayout';
 import SplashPage from './pages/SplashPage';
@@ -71,11 +71,16 @@ function AppContent() {
     initMissions();
     initShop();
 
+    // Handle Kakao OAuth callback (access_token in URL hash)
+    checkKakaoCallback().then((profile) => {
+      if (!profile) return;
+      socialLogin(profile);
+    });
+
     // Handle Naver OAuth callback (token in URL hash)
     checkNaverCallback().then((profile) => {
       if (!profile) return;
       socialLogin(profile);
-      // Navigation is handled in PublicRoutes → RoleSelectionPage or redirect
     });
   }, []);
 
