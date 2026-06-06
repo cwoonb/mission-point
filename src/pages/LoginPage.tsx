@@ -39,8 +39,9 @@ export default function LoginPage() {
     try {
       const profile = await kakaoLogin();
       handleSocialProfile(profile);
-    } catch (e) {
-      setError('카카오 로그인에 실패했습니다.');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : JSON.stringify(e);
+      setError(`카카오 로그인 실패: ${msg}`);
     } finally {
       setLoading(null);
     }
