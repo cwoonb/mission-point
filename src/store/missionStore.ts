@@ -12,6 +12,7 @@ interface MissionState {
 
   initializeData: () => void;
   createMission: (data: Omit<Mission, 'id' | 'createdAt' | 'status'>) => Mission;
+  updateMission: (missionId: string, data: Partial<Pick<Mission, 'title' | 'description' | 'rewardPoint' | 'submissionType' | 'startDate' | 'endDate' | 'assigneeId'>>) => void;
   updateStatus: (missionId: string, status: MissionStatus) => void;
   deleteMission: (missionId: string) => void;
   submitMission: (
@@ -49,6 +50,14 @@ export const useMissionStore = create<MissionState>()(
         };
         set((s) => ({ missions: [...s.missions, mission] }));
         return mission;
+      },
+
+      updateMission: (missionId, data) => {
+        set((s) => ({
+          missions: s.missions.map((m) =>
+            m.id === missionId ? { ...m, ...data } : m
+          ),
+        }));
       },
 
       updateStatus: (missionId, status) => {

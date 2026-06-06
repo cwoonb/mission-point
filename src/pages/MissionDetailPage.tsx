@@ -102,12 +102,20 @@ export default function MissionDetailPage() {
         showBack
         rightElement={
           isFacilitator && isCreator && mission.status === 'IN_PROGRESS' ? (
-            <button
-              onClick={() => setDeleteModal(true)}
-              className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => navigate(`/missions/${mission.id}/edit`)}
+                className="p-1.5 text-purple-400 hover:bg-purple-50 rounded-lg transition-colors"
+              >
+                <Edit3 size={16} />
+              </button>
+              <button
+                onClick={() => setDeleteModal(true)}
+                className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           ) : undefined
         }
       />

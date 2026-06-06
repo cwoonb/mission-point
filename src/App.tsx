@@ -15,6 +15,7 @@ import HomePage from './pages/HomePage';
 import MissionListPage from './pages/MissionListPage';
 import MissionDetailPage from './pages/MissionDetailPage';
 import MissionCreatePage from './pages/MissionCreatePage';
+import MissionEditPage from './pages/MissionEditPage';
 import MissionSubmitPage from './pages/MissionSubmitPage';
 import ApprovalPage from './pages/ApprovalPage';
 import PerformerListPage from './pages/PerformerListPage';
@@ -33,6 +34,7 @@ function AuthenticatedRoutes() {
         <Route index element={<HomePage />} />
         <Route path="missions" element={<MissionListPage />} />
         <Route path="missions/create" element={<MissionCreatePage />} />
+        <Route path="missions/:id/edit" element={<MissionEditPage />} />
         <Route path="missions/:id" element={<MissionDetailPage />} />
         <Route path="missions/:id/submit" element={<MissionSubmitPage />} />
         <Route path="approvals" element={<ApprovalPage />} />
