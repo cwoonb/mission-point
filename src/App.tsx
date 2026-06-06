@@ -17,6 +17,8 @@ import MissionDetailPage from './pages/MissionDetailPage';
 import MissionCreatePage from './pages/MissionCreatePage';
 import MissionSubmitPage from './pages/MissionSubmitPage';
 import ApprovalPage from './pages/ApprovalPage';
+import PerformerListPage from './pages/PerformerListPage';
+import PerformerDetailPage from './pages/PerformerDetailPage';
 import ShopPage from './pages/ShopPage';
 import CouponDetailPage from './pages/CouponDetailPage';
 import PointHistoryPage from './pages/PointHistoryPage';
@@ -34,6 +36,8 @@ function AuthenticatedRoutes() {
         <Route path="missions/:id" element={<MissionDetailPage />} />
         <Route path="missions/:id/submit" element={<MissionSubmitPage />} />
         <Route path="approvals" element={<ApprovalPage />} />
+        <Route path="performers" element={<PerformerListPage />} />
+        <Route path="performers/:id" element={<PerformerDetailPage />} />
         <Route path="shop" element={<ShopPage />} />
         <Route path="shop/:id" element={<CouponDetailPage />} />
         <Route path="points" element={<PointHistoryPage />} />

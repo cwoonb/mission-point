@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Target, ShoppingBag, User, ClipboardCheck } from 'lucide-react';
+import { Home, Target, ShoppingBag, User, ClipboardCheck, Users } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useMissionStore } from '../../store/missionStore';
 import { clsx } from 'clsx';
@@ -14,7 +14,10 @@ export default function BottomNav() {
     { to: '/', icon: Home, label: '홈' },
     { to: '/missions', icon: Target, label: '미션' },
     ...(viewMode === 'FACILITATOR'
-      ? [{ to: '/approvals', icon: ClipboardCheck, label: '승인', badge: pendingReviews }]
+      ? [
+          { to: '/approvals', icon: ClipboardCheck, label: '승인', badge: pendingReviews },
+          { to: '/performers', icon: Users, label: '수행자' },
+        ]
       : []),
     { to: '/shop', icon: ShoppingBag, label: '상점' },
     { to: '/profile', icon: User, label: '내 정보' },
