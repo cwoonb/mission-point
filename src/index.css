@@ -50,7 +50,10 @@
 
   .content-area {
     @apply flex-1 overflow-y-auto;
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+    /* !important: a page's own padding utilities (py-5, pb-4, etc., from Tailwind's
+       utilities layer) would otherwise win the cascade and wipe out this safe-area
+       buffer, letting content hide behind the fixed BottomNav */
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)) !important;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
   }
