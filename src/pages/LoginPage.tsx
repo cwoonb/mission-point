@@ -19,8 +19,8 @@ export default function LoginPage() {
     initNaverLogin().catch(() => {/* ignore if env not set */});
   }, []);
 
-  const handleSocialProfile = (profile: PendingSocialProfile) => {
-    const result = socialLogin(profile);
+  const handleSocialProfile = async (profile: PendingSocialProfile) => {
+    const result = await socialLogin(profile);
     if (result === 'REGISTER') {
       navigate('/register', { replace: true });
     } else {
@@ -28,15 +28,17 @@ export default function LoginPage() {
     }
   };
 
-  const handleKakaoLogin = () => {
-    const appKey = import.meta.env.VITE_KAKAO_JS_KEY;
-    if (!appKey) {
+  const handleKakaoLogin = async () => {
+    const restKey = import.meta.env.VITE_KAKAO_REST_KEY;
+    if (!restKey) {
       setError('카카오 앱 키가 설정되지 않았습니다.');
       return;
     }
+    setLoading('KAKAO');
     try {
-      triggerKakaoLogin();
+      await triggerKakaoLogin();
     } catch (e: unknown) {
+      setLoading(null);
       const msg = e instanceof Error ? e.message : String(e);
       setError(`카카오 로그인 실패: ${msg}`);
     }

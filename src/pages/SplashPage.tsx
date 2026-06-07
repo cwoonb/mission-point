@@ -12,9 +12,11 @@ export default function SplashPage() {
   const { initializeData: initShop } = useShopStore();
 
   useEffect(() => {
-    initAuth();
-    initMissions();
-    initShop();
+    (async () => {
+      await initAuth();
+      await initMissions();
+      initShop();
+    })();
 
     const timer = setTimeout(() => {
       navigate(currentUser ? '/' : '/login', { replace: true });

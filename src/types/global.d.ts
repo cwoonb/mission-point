@@ -1,4 +1,9 @@
 // Kakao SDK types
+interface KakaoShareLink {
+  mobileWebUrl: string;
+  webUrl: string;
+}
+
 interface KakaoSDK {
   init(key: string): void;
   isInitialized(): boolean;
@@ -16,6 +21,32 @@ interface KakaoSDK {
       success(res: KakaoUserResponse): void;
       fail(err: unknown): void;
     }): void;
+  };
+  Share: {
+    sendDefault(options: {
+      objectType: 'feed';
+      content: {
+        title: string;
+        description: string;
+        imageUrl?: string;
+        link: KakaoShareLink;
+      };
+      buttons?: Array<{ title: string; link: KakaoShareLink }>;
+    }): void;
+  };
+  Picker: {
+    selectFriends(options: {
+      title?: string;
+      maxPickableCount?: number;
+      minPickableCount?: number;
+      enableSearch?: boolean;
+    }): Promise<{
+      users?: Array<{
+        uuid: string;
+        profile_nickname?: string;
+        profile_thumbnail_image?: string;
+      }>;
+    }>;
   };
 }
 

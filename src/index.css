@@ -44,7 +44,7 @@
 @layer components {
   .page-container {
     @apply max-w-md mx-auto w-full flex flex-col bg-white shadow-2xl relative;
-    min-height: 100dvh;
+    height: 100dvh;
     overflow-x: hidden;
   }
 

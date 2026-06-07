@@ -27,37 +27,89 @@ export function googlePayloadToProfile(credential: string): PendingSocialProfile
   };
 }
 
-// ── Kakao OAuth (SDK 없이 REST API 방식) ──────────────────
-export function triggerKakaoLogin(): void {
-  const appKey = import.meta.env.VITE_KAKAO_JS_KEY as string | undefined;
-  if (!appKey) throw new Error('VITE_KAKAO_JS_KEY is not set in .env.local');
+// ── Kakao OAuth (PKCE / Authorization Code Flow) ─────────
+function randomString(len: number): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => chars[b % chars.length]).join('');
+}
+
+async function sha256Base64Url(plain: string): Promise<string> {
+  const data = new TextEncoder().encode(plain);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+export async function triggerKakaoLogin(): Promise<void> {
+  const restKey = import.meta.env.VITE_KAKAO_REST_KEY as string | undefined;
+  if (!restKey) throw new Error('VITE_KAKAO_REST_KEY is not set');
+
+  const verifier = randomString(128);
+  const challenge = await sha256Base64Url(verifier);
+  sessionStorage.setItem('kakao_pkce_verifier', verifier);
 
   const redirectUri = window.location.origin;
   const url =
     `https://kauth.kakao.com/oauth/authorize` +
-    `?client_id=${appKey}` +
+    `?client_id=${restKey}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
-    `&response_type=token`;
+    `&response_type=code` +
+    `&code_challenge=${challenge}` +
+    `&code_challenge_method=S256` +
+    `&scope=friends,talk_message`;
   window.location.href = url;
 }
 
 export async function checkKakaoCallback(): Promise<PendingSocialProfile | null> {
-  const hash = window.location.hash;
-  if (!hash.includes('access_token')) return null;
+  // Code captured early in main.tsx before React Router strips query params
+  const code =
+    sessionStorage.getItem('kakao_oauth_code') ??
+    new URLSearchParams(window.location.search).get('code');
+  if (!code) return null;
+  sessionStorage.removeItem('kakao_oauth_code');
 
-  const params = new URLSearchParams(hash.slice(1));
-  const accessToken = params.get('access_token');
-  if (!accessToken) return null;
+  const verifier = sessionStorage.getItem('kakao_pkce_verifier');
+  if (!verifier) return null;
+  sessionStorage.removeItem('kakao_pkce_verifier');
 
-  // URL에서 토큰 해시 제거
   window.history.replaceState(null, '', window.location.pathname);
 
-  const res = await fetch('https://kapi.kakao.com/v2/user/me', {
+  const restKey = import.meta.env.VITE_KAKAO_REST_KEY as string | undefined;
+  if (!restKey) return null;
+
+  const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: restKey,
+      redirect_uri: window.location.origin,
+      code,
+      code_verifier: verifier,
+    }).toString(),
+  });
+
+  if (!tokenRes.ok) {
+    const err = await tokenRes.text();
+    throw new Error(`Kakao token error: ${tokenRes.status} ${err}`);
+  }
+
+  const tokenData = await tokenRes.json();
+  const accessToken: string = tokenData.access_token;
+  if (!accessToken) throw new Error('No access token in Kakao response');
+  // Store for friend picker / message API use
+  sessionStorage.setItem('kakao_access_token', accessToken);
+
+  const userRes = await fetch('https://kapi.kakao.com/v2/user/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) throw new Error(`Kakao user info failed: ${res.status}`);
+  if (!userRes.ok) throw new Error(`Kakao user info failed: ${userRes.status}`);
 
-  const data = await res.json();
+  const data = await userRes.json();
   return {
     socialProvider: 'KAKAO',
     socialId: String(data.id),

@@ -49,13 +49,16 @@ export default function RoleSelectionPage() {
   const navigate = useNavigate();
   const { pendingSocialProfile, completeSocialRegistration, clearPendingProfile } = useAuthStore();
 
+  const pendingInviteId = sessionStorage.getItem('pending_invite_id');
+
   if (!pendingSocialProfile) {
     navigate('/login', { replace: true });
     return null;
   }
 
-  const handleSelect = (role: UserRole) => {
-    completeSocialRegistration(role);
+  const handleSelect = async (role: UserRole) => {
+    const facilitatorId = role === 'CHILD' && pendingInviteId ? pendingInviteId : undefined;
+    await completeSocialRegistration(role, facilitatorId);
     navigate('/', { replace: true });
   };
 
@@ -93,6 +96,21 @@ export default function RoleSelectionPage() {
           </h1>
           <p className="text-gray-500 text-sm mt-2">어떤 역할로 이용하실 건가요?</p>
         </motion.div>
+
+        {/* 초대 배너 */}
+        {pendingInviteId && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-yellow-50 border-2 border-yellow-300 rounded-3xl p-4 mb-2 text-center"
+          >
+            <p className="text-2xl mb-1">🎉</p>
+            <p className="font-black text-yellow-800 text-sm">초대를 받았어요!</p>
+            <p className="text-yellow-700 text-xs mt-1">
+              <span className="font-bold">수행자</span>로 가입하면 초대한 분과 바로 연결돼요
+            </p>
+          </motion.div>
+        )}
 
         {/* 역할 선택 카드 */}
         <div className="flex flex-col gap-4">

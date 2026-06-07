@@ -1,4 +1,9 @@
 export type UserRole = 'PARENT' | 'TEACHER' | 'CHILD';
+export type MissionType = 'HOMEWORK' | 'VOCABULARY' | 'READING' | 'ATTENDANCE' | 'REVIEW_NOTES' | 'LIFESTYLE' | 'OTHER';
+export type MissionGoal = 'SINCERITY' | 'STUDY_HABIT' | 'SUBMISSION_MGMT' | 'PARENT_REPORT' | 'REWARD_EVENT';
+export type RepeatType = 'ONCE' | 'DAILY' | 'WEEKLY' | 'WEEKDAYS';
+export type ParentShareType = 'NONE' | 'ON_COMPLETE' | 'WEEKLY_REPORT';
+export type StudentStatus = 'EXCELLENT' | 'CAUTION' | 'UNSUBMITTED' | 'COUNSELING';
 export type ViewMode = 'FACILITATOR' | 'PERFORMER';
 export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER';
 
@@ -33,6 +38,9 @@ export interface User {
   socialId?: string;
   email?: string;
   profileImage?: string;
+  facilitatorId?: string;
+  groupId?: string;
+  code?: string;
 }
 
 export interface PendingSocialProfile {
@@ -55,6 +63,10 @@ export interface Mission {
   startDate: string;
   endDate: string;
   createdAt: string;
+  missionType?: MissionType;
+  missionGoal?: MissionGoal;
+  repeatType?: RepeatType;
+  parentShare?: ParentShareType;
 }
 
 export interface MissionSubmission {
@@ -96,6 +108,14 @@ export interface Coupon {
   enabled: boolean;
   category: string;
   bgColor: string;
+}
+
+export interface PerformerGroup {
+  id: string;
+  name: string;
+  emoji: string;
+  facilitatorId: string;
+  createdAt: string;
 }
 
 export interface CouponExchange {

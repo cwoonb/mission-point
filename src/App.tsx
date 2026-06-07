@@ -5,6 +5,8 @@ import { AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './store/authStore';
 import { useMissionStore } from './store/missionStore';
 import { useShopStore } from './store/shopStore';
+import { useGroupStore } from './store/groupStore';
+import { useTemplateStore } from './store/templateStore';
 import { checkNaverCallback, checkKakaoCallback } from './lib/socialAuth';
 
 import AppLayout from './components/layout/AppLayout';
@@ -24,6 +26,9 @@ import ShopPage from './pages/ShopPage';
 import CouponDetailPage from './pages/CouponDetailPage';
 import PointHistoryPage from './pages/PointHistoryPage';
 import ProfilePage from './pages/ProfilePage';
+import StudentDetailPage from './pages/StudentDetailPage';
+import ParentReportPage from './pages/ParentReportPage';
+import RankingPage from './pages/RankingPage';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -40,6 +45,9 @@ function AuthenticatedRoutes() {
         <Route path="approvals" element={<ApprovalPage />} />
         <Route path="performers" element={<PerformerListPage />} />
         <Route path="performers/:id" element={<PerformerDetailPage />} />
+        <Route path="students/:id" element={<StudentDetailPage />} />
+        <Route path="students/:id/report" element={<ParentReportPage />} />
+        <Route path="ranking" element={<RankingPage />} />
         <Route path="shop" element={<ShopPage />} />
         <Route path="shop/:id" element={<CouponDetailPage />} />
         <Route path="points" element={<PointHistoryPage />} />
@@ -63,13 +71,21 @@ function PublicRoutes() {
 
 function AppContent() {
   const { currentUser, pendingSocialProfile, socialLogin, initializeData: initAuth } = useAuthStore();
-  const { initializeData: initMissions } = useMissionStore();
+  const { initializeData: initMissions, autoGenerateRepeatMissions } = useMissionStore();
   const { initializeData: initShop } = useShopStore();
+  const { initializeData: initGroups } = useGroupStore();
+  const { initializeData: initTemplates } = useTemplateStore();
 
   useEffect(() => {
-    initAuth();
-    initMissions();
-    initShop();
+    (async () => {
+      // users 시드가 끝나야 missions 등의 외래키 참조가 안전하게 시드됨
+      await initAuth();
+      await initMissions();
+      initShop();
+      initGroups();
+      initTemplates();
+      autoGenerateRepeatMissions();
+    })();
 
     // Handle Kakao OAuth callback (access_token in URL hash)
     checkKakaoCallback().then((profile) => {
