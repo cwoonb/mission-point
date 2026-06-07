@@ -27,6 +27,13 @@ export type PointTransactionType =
 export type SubmissionType = 'IMAGE' | 'TEXT' | 'BOTH';
 export type ReviewAction = 'APPROVED' | 'REJECTED';
 
+export interface StatusThresholds {
+  unsubmittedOverdue: number;
+  counselingOverdue: number;
+  counselingRate: number;
+  excellentRate: number;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -41,6 +48,7 @@ export interface User {
   facilitatorId?: string;
   groupId?: string;
   code?: string;
+  statusThresholds?: StatusThresholds;
 }
 
 export interface PendingSocialProfile {

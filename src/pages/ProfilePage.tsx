@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, ChevronRight, Trophy, Target, Star, Gift, Camera, Users, TrendingUp, CheckCircle2, BookOpen, AlertTriangle, Pencil, X, Check, KeyRound, Link2 } from 'lucide-react';
+import { LogOut, ChevronRight, Trophy, Target, Star, Gift, Camera, Users, TrendingUp, CheckCircle2, BookOpen, AlertTriangle, Pencil, X, Check, KeyRound, Link2, SlidersHorizontal } from 'lucide-react';
 import Header from '../components/layout/Header';
 import { useAuthStore } from '../store/authStore';
 import { useGroupStore } from '../store/groupStore';
@@ -10,7 +10,7 @@ import { useShopStore } from '../store/shopStore';
 import { usePointStore } from '../store/pointStore';
 import { formatPoint, formatDate, roleLabel } from '../utils/helpers';
 import {
-  getWeeklyRate, getCompletionRate, getStudentStatus, getUnsubmittedCount,
+  getWeeklyRate, getCompletionRate, getStudentStatus, getUnsubmittedCount, defaultStatusThresholds,
   statusConfig, missionTypeLabel,
 } from '../utils/studentStats';
 import type { MissionType } from '../types';
@@ -53,6 +53,7 @@ export default function ProfilePage() {
   if (!currentUser) return null;
 
   const isFacilitator = currentUser.role !== 'CHILD';
+  const thresholds = currentUser.statusThresholds ?? defaultStatusThresholds;
 
   const handleImageClick = () => fileInputRef.current?.click();
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,14 +95,14 @@ export default function ProfilePage() {
       ? Math.round(members.reduce((acc, s) => acc + getCompletionRate(missions, s.id), 0) / members.length)
       : 0;
     const unsubmitted = members.reduce((acc, s) => acc + getUnsubmittedCount(missions, s.id), 0);
-    const counseling = members.filter((s) => getStudentStatus(missions, s.id) === 'COUNSELING').length;
+    const counseling = members.filter((s) => getStudentStatus(missions, s.id, thresholds) === 'COUNSELING').length;
     return { group: g, members, weekRate, overallRate, unsubmitted, counseling };
   });
 
   // 학생 상태 분포
   const statusDist = (['EXCELLENT', 'CAUTION', 'UNSUBMITTED', 'COUNSELING'] as const).map((status) => ({
     status,
-    count: myStudents.filter((s) => getStudentStatus(missions, s.id) === status).length,
+    count: myStudents.filter((s) => getStudentStatus(missions, s.id, thresholds) === status).length,
     ...statusConfig[status],
   }));
 
@@ -485,6 +486,21 @@ export default function ProfilePage() {
               )}
             </AnimatePresence>
           </div>
+
+          {/* 학생 상태 기준 설정 (진행자 전용) */}
+          {isFacilitator && (
+            <button onClick={() => navigate('/profile/status-settings')}
+              className="w-full flex items-center gap-3 px-5 py-3 border-t border-gray-50 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+              <div className="w-9 h-9 bg-violet-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <SlidersHorizontal size={16} className="text-violet-500" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-gray-800 font-semibold text-sm">학생 상태 기준 설정</p>
+                <p className="text-gray-400 text-xs">미제출·상담필요·우수 기준 조정</p>
+              </div>
+              <ChevronRight size={16} className="text-gray-300" />
+            </button>
+          )}
 
           {/* 프로필 사진 변경 */}
           <button onClick={handleImageClick}

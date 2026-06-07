@@ -15,6 +15,7 @@ import {
   getUnsubmittedCount,
   statusConfig,
   missionTypeLabel,
+  defaultStatusThresholds,
 } from '../utils/studentStats';
 import {
   openKakaoFriendPicker,
@@ -271,7 +272,9 @@ function StudentCard({ student, missions, onMove, onSelect }: {
   onMove: () => void;
   onSelect: (student: User) => void;
 }) {
-  const status = getStudentStatus(missions, student.id);
+  const { currentUser } = useAuthStore();
+  const thresholds = currentUser?.statusThresholds ?? defaultStatusThresholds;
+  const status = getStudentStatus(missions, student.id, thresholds);
   const sc = statusConfig[status];
   const weekRate = getWeeklyRate(missions, student.id);
   const streak = getStreak(missions, student.id);
@@ -314,6 +317,8 @@ function StudentQuickSheet({ student, missions, allStudents, onClose }: {
   onClose: () => void;
 }) {
   const navigate = useNavigate();
+  const { currentUser } = useAuthStore();
+  const thresholds = currentUser?.statusThresholds ?? defaultStatusThresholds;
   const myMissions = missions.filter((m) => m.assigneeId === student.id);
   const successMissions = myMissions.filter((m) => m.status === 'SUCCESS');
   const activeMissions = myMissions.filter((m) => m.status === 'IN_PROGRESS' || m.status === 'REVIEWING');
@@ -321,7 +326,7 @@ function StudentQuickSheet({ student, missions, allStudents, onClose }: {
   const weekRate = getWeeklyRate(missions, student.id);
   const streak = getStreak(missions, student.id);
   const unsubmitted = getUnsubmittedCount(missions, student.id);
-  const status = getStudentStatus(missions, student.id);
+  const status = getStudentStatus(missions, student.id, thresholds);
   const sc = statusConfig[status];
 
   // 같은 반 평균
@@ -618,12 +623,13 @@ export default function PerformerListPage() {
   const otherFacilitators = users.filter((u) => u.id !== currentUser.id && (u.role === 'PARENT' || u.role === 'TEACHER'));
   const transferRecipients = [...otherFacilitators, ...myPerformers];
 
+  const thresholds = currentUser.statusThresholds ?? defaultStatusThresholds;
   const myMissions = missions.filter((m) => m.creatorId === currentUser.id);
   const pendingReview = myMissions.filter((m) => m.status === 'REVIEWING').length;
   const weekRate = myPerformers.length > 0
     ? Math.round(myPerformers.reduce((acc, p) => acc + getWeeklyRate(missions, p.id), 0) / myPerformers.length)
     : 0;
-  const counselingCount = myPerformers.filter((p) => getStudentStatus(missions, p.id) === 'COUNSELING').length;
+  const counselingCount = myPerformers.filter((p) => getStudentStatus(missions, p.id, thresholds) === 'COUNSELING').length;
 
   const sortStudents = (list: User[]) => {
     if (sortBy === 'weekRate') return [...list].sort((a, b) => getWeeklyRate(missions, b.id) - getWeeklyRate(missions, a.id));
@@ -638,11 +644,11 @@ export default function PerformerListPage() {
   const filteredStudents = activeFilter === 'unsubmitted'
     ? myPerformers.filter((p) => getUnsubmittedCount(missions, p.id) > 0)
     : activeFilter === 'counseling'
-    ? myPerformers.filter((p) => getStudentStatus(missions, p.id) === 'COUNSELING')
+    ? myPerformers.filter((p) => getStudentStatus(missions, p.id, thresholds) === 'COUNSELING')
     : activeFilter === 'caution'
-    ? myPerformers.filter((p) => getStudentStatus(missions, p.id) === 'CAUTION')
+    ? myPerformers.filter((p) => getStudentStatus(missions, p.id, thresholds) === 'CAUTION')
     : activeFilter === 'excellent'
-    ? myPerformers.filter((p) => getStudentStatus(missions, p.id) === 'EXCELLENT')
+    ? myPerformers.filter((p) => getStudentStatus(missions, p.id, thresholds) === 'EXCELLENT')
     : null;
 
   const filterConfig: Record<Exclude<FilterType, 'all'>, { label: string; color: string; badge: string }> = {

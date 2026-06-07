@@ -17,6 +17,7 @@ import {
   getOverdueMissions,
   getUnsubmittedCount,
   statusConfig,
+  defaultStatusThresholds,
 } from '../utils/studentStats';
 
 const AD_TOTAL_SECONDS = 5;
@@ -50,6 +51,7 @@ export default function HomePage() {
   const reviewingMissions = myMissions.filter((m) => m.status === 'REVIEWING');
 
   // 선생님 대시보드 데이터 계산
+  const thresholds = currentUser?.statusThresholds ?? defaultStatusThresholds;
   const myStudents = currentUser?.socialProvider
     ? users.filter((u) => u.role === 'CHILD' && u.facilitatorId === currentUser.id)
     : users.filter((u) => u.role === 'CHILD');
@@ -58,7 +60,7 @@ export default function HomePage() {
     (s) => getOverdueMissions(missions, s.id).length > 0
   );
   const counselingStudents = myStudents.filter(
-    (s) => getStudentStatus(missions, s.id) === 'COUNSELING'
+    (s) => getStudentStatus(missions, s.id, thresholds) === 'COUNSELING'
   );
   const weeklyRate = myStudents.length > 0
     ? Math.round(myStudents.reduce((acc, s) => acc + getWeeklyRate(missions, s.id), 0) / myStudents.length)
@@ -401,7 +403,7 @@ export default function HomePage() {
             </div>
             <div className="space-y-2">
               {counselingStudents.map((s) => {
-                const sc = statusConfig[getStudentStatus(missions, s.id)];
+                const sc = statusConfig[getStudentStatus(missions, s.id, thresholds)];
                 const unsubmitted = getUnsubmittedCount(missions, s.id);
                 return (
                   <button key={s.id} onClick={() => navigate(`/students/${s.id}`)}

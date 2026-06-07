@@ -8,7 +8,7 @@ import { useMissionStore } from '../store/missionStore';
 import { formatPoint, formatDate } from '../utils/helpers';
 import {
   getCompletionRate, getWeeklyRate, getStreak, getUnsubmittedCount,
-  getStudentStatus, statusConfig, missionTypeLabel, getWeekRateByOffset,
+  getStudentStatus, statusConfig, missionTypeLabel, getWeekRateByOffset, defaultStatusThresholds,
 } from '../utils/studentStats';
 import type { MissionType } from '../types';
 
@@ -46,7 +46,8 @@ export default function StudentDetailPage() {
   const weekRate = getWeeklyRate(missions, student.id);
   const streak = getStreak(missions, student.id);
   const unsubmitted = getUnsubmittedCount(missions, student.id);
-  const status = getStudentStatus(missions, student.id);
+  const thresholds = currentUser?.statusThresholds ?? defaultStatusThresholds;
+  const status = getStudentStatus(missions, student.id, thresholds);
   const sc = statusConfig[status];
 
   // 미션 유형별 통계

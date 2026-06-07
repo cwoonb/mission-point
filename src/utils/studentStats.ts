@@ -1,4 +1,11 @@
-import type { Mission, StudentStatus } from '../types';
+import type { Mission, StudentStatus, StatusThresholds } from '../types';
+
+export const defaultStatusThresholds: StatusThresholds = {
+  unsubmittedOverdue: 1,
+  counselingOverdue: 3,
+  counselingRate: 40,
+  excellentRate: 75,
+};
 
 export function getCompletionRate(missions: Mission[], studentId: string): number {
   const mine = missions.filter((m) => m.assigneeId === studentId);
@@ -32,17 +39,28 @@ export function getOverdueMissions(missions: Mission[], studentId: string): Miss
   );
 }
 
-export function getStudentStatus(missions: Mission[], studentId: string): StudentStatus {
+export function getStudentStatus(
+  missions: Mission[],
+  studentId: string,
+  thresholds: StatusThresholds = defaultStatusThresholds
+): StudentStatus {
   const mine = missions.filter((m) => m.assigneeId === studentId);
-  const total = mine.length;
-  if (total === 0) return 'CAUTION';
+  if (mine.length === 0) return 'CAUTION';
 
-  const rate = getCompletionRate(missions, studentId);
+  // 미제출(기한이 지났는데 제출 안 함)이 많을수록 상담이 필요한 상태로 판단.
+  // 아직 진행 중이거나 검토 대기 중인 미션은 결과가 나오지 않았으므로 평가에서 제외.
   const overdue = getOverdueMissions(missions, studentId).length;
+  if (overdue >= thresholds.counselingOverdue) return 'COUNSELING';
+  if (overdue >= thresholds.unsubmittedOverdue) return 'UNSUBMITTED';
 
-  if (rate < 40 || overdue >= 3) return 'COUNSELING';
-  if (overdue >= 1) return 'UNSUBMITTED';
-  if (rate >= 75) return 'EXCELLENT';
+  const concluded = mine.filter((m) =>
+    m.status === 'SUCCESS' || m.status === 'REJECTED' || m.status === 'EXPIRED' || m.status === 'FAILED'
+  );
+  if (concluded.length === 0) return 'CAUTION';
+
+  const rate = Math.round((concluded.filter((m) => m.status === 'SUCCESS').length / concluded.length) * 100);
+  if (rate < thresholds.counselingRate) return 'COUNSELING';
+  if (rate >= thresholds.excellentRate) return 'EXCELLENT';
   return 'CAUTION';
 }
 

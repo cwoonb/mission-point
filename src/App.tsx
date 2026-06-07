@@ -26,6 +26,7 @@ import ShopPage from './pages/ShopPage';
 import CouponDetailPage from './pages/CouponDetailPage';
 import PointHistoryPage from './pages/PointHistoryPage';
 import ProfilePage from './pages/ProfilePage';
+import StatusSettingsPage from './pages/StatusSettingsPage';
 import StudentDetailPage from './pages/StudentDetailPage';
 import ParentReportPage from './pages/ParentReportPage';
 import RankingPage from './pages/RankingPage';
@@ -52,6 +53,7 @@ function AuthenticatedRoutes() {
         <Route path="shop/:id" element={<CouponDetailPage />} />
         <Route path="points" element={<PointHistoryPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="profile/status-settings" element={<StatusSettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

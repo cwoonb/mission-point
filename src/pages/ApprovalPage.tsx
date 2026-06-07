@@ -11,7 +11,7 @@ import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { usePointStore } from '../store/pointStore';
 import { formatPoint, formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
-import { getWeeklyRate, getUnsubmittedCount, getCompletionRate, statusConfig, getStudentStatus } from '../utils/studentStats';
+import { getWeeklyRate, getUnsubmittedCount, getCompletionRate, statusConfig, getStudentStatus, defaultStatusThresholds } from '../utils/studentStats';
 import { missionTypeLabel } from '../utils/studentStats';
 import type { Mission } from '../types';
 
@@ -52,6 +52,7 @@ export default function ApprovalPage() {
 
   if (!currentUser) return null;
 
+  const thresholds = currentUser.statusThresholds ?? defaultStatusThresholds;
   const pendingMissions = missions.filter(
     (m) => m.status === 'REVIEWING' && m.creatorId === currentUser.id
   );
@@ -148,7 +149,7 @@ export default function ApprovalPage() {
               const weekRate = assignee ? getWeeklyRate(missions, assignee.id) : 0;
               const unsubmitted = assignee ? getUnsubmittedCount(missions, assignee.id) : 0;
               const overallRate = assignee ? getCompletionRate(missions, assignee.id) : 0;
-              const status = assignee ? getStudentStatus(missions, assignee.id) : 'CAUTION';
+              const status = assignee ? getStudentStatus(missions, assignee.id, thresholds) : 'CAUTION';
               const sc = statusConfig[status];
 
               return (

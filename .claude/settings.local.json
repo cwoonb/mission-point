@@ -7,7 +7,10 @@
       "Bash(curl -s \"https://mission-point-one.vercel.app/\")",
       "Bash(grep -n \"^\\\\s*{isFacilitator\\\\|^\\\\s*\\) : \\(\\\\|^\\\\s*\\)}\\\\|계정 설정\\\\|계정 연결\\\\|^\\\\s*</div>$\" src/pages/ProfilePage.tsx)",
       "Bash(curl -s http://localhost:5180/ -o /dev/null -w \"%{http_code}\\\\n\")",
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "Bash(node check_settings.mjs)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pkill -f \"node_modules/.bin/vite\")"
     ]
   }
 }

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, ViewMode, PendingSocialProfile, SocialProvider, UserRole } from '../types';
+import type { User, ViewMode, PendingSocialProfile, SocialProvider, UserRole, StatusThresholds } from '../types';
 import { initialUsers, initialGroups } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 
@@ -41,6 +41,7 @@ interface UserRow {
   facilitator_id: string | null;
   group_id: string | null;
   code: string | null;
+  status_thresholds: StatusThresholds | null;
   created_at: string;
 }
 
@@ -58,6 +59,7 @@ const rowToUser = (row: UserRow): User => ({
   facilitatorId: row.facilitator_id ?? undefined,
   groupId: row.group_id ?? undefined,
   code: row.code ?? undefined,
+  statusThresholds: row.status_thresholds ?? undefined,
 });
 
 const userToInsertRow = (u: User) => ({
@@ -73,6 +75,7 @@ const userToInsertRow = (u: User) => ({
   facilitator_id: u.facilitatorId ?? null,
   group_id: u.groupId ?? null,
   code: u.code ?? null,
+  status_thresholds: u.statusThresholds ?? null,
   created_at: u.createdAt,
 });
 
@@ -94,6 +97,7 @@ interface AuthState {
   transferPoints: (fromUserId: string, toUserId: string, amount: number) => boolean;
   updateProfileImage: (userId: string, imageDataUrl: string) => void;
   updateUserName: (userId: string, name: string) => void;
+  updateStatusThresholds: (userId: string, thresholds: StatusThresholds) => void;
   addTeacherNote: (studentId: string, text: string) => void;
   deleteTeacherNote: (studentId: string, noteId: string) => void;
 
@@ -288,6 +292,17 @@ export const useAuthStore = create<AuthState>()(
           return { users, currentUser };
         });
         pushUserUpdate(userId, { profile_image: imageDataUrl });
+      },
+
+      updateStatusThresholds: (userId, thresholds) => {
+        set((s) => {
+          const users = s.users.map((u) => u.id === userId ? { ...u, statusThresholds: thresholds } : u);
+          const currentUser = s.currentUser?.id === userId
+            ? users.find((u) => u.id === userId) ?? s.currentUser
+            : s.currentUser;
+          return { users, currentUser };
+        });
+        pushUserUpdate(userId, { status_thresholds: thresholds });
       },
 
       updateUserName: (userId, name) => {
