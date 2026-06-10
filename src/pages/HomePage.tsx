@@ -50,7 +50,7 @@ export default function HomePage() {
   const successMissions = myMissions.filter((m) => m.status === 'SUCCESS');
   const reviewingMissions = myMissions.filter((m) => m.status === 'REVIEWING');
 
-  // 선생님 대시보드 데이터 계산
+  // 리더 대시보드 데이터 계산
   const thresholds = currentUser?.statusThresholds ?? defaultStatusThresholds;
   const myStudents = currentUser?.socialProvider
     ? users.filter((u) => u.role === 'CHILD' && u.facilitatorId === currentUser.id)
@@ -124,7 +124,7 @@ export default function HomePage() {
 
   const isFacilitator = viewMode === 'FACILITATOR';
 
-  // ── 수행자(학생) 뷰 ───────────────────────────────
+  // ── 실천자 뷰 ───────────────────────────────
   if (!isFacilitator) {
     return (
       <div className="page-container">
@@ -145,7 +145,7 @@ export default function HomePage() {
                 ) : currentUser.avatar}
               </div>
               <div>
-                <p className="text-white/70 text-sm">🧒 수행자 모드</p>
+                <p className="text-white/70 text-sm">🧒 실천자 모드</p>
                 <p className="font-black text-xl">{currentUser.name}님 안녕하세요!</p>
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function HomePage() {
     );
   }
 
-  // ── 선생님 대시보드 ───────────────────────────────
+  // ── 리더 대시보드 ───────────────────────────────
   return (
     <div className="page-container">
       <Header />
@@ -281,7 +281,7 @@ export default function HomePage() {
 
       <div className="content-area px-4 py-5 space-y-4">
 
-        {/* 선생님 헤더 */}
+        {/* 리더 헤더 */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
           <div className="flex items-center justify-between mb-4">
@@ -292,8 +292,8 @@ export default function HomePage() {
                 ) : currentUser.avatar}
               </div>
               <div>
-                <p className="text-white/60 text-xs">선생님 대시보드</p>
-                <p className="font-black text-lg">{currentUser.name} 선생님 👋</p>
+                <p className="text-white/60 text-xs">리더 대시보드</p>
+                <p className="font-black text-lg">{currentUser.name} 리더님 👋</p>
               </div>
             </div>
             <div className="bg-amber-400/20 border border-amber-400/30 rounded-xl px-3 py-1.5 text-right">
@@ -301,7 +301,7 @@ export default function HomePage() {
               <p className="text-amber-300 font-black text-sm">⭐ {formatPoint(currentUser.point)}P</p>
             </div>
           </div>
-          <p className="text-white/50 text-xs">학생들의 미션 수행 현황을 확인하세요</p>
+          <p className="text-white/50 text-xs">실천자들의 미션 수행 현황을 확인하세요</p>
         </motion.div>
 
         {/* 오늘의 관리 요약 */}
@@ -313,7 +313,7 @@ export default function HomePage() {
               className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 cursor-pointer active:scale-95 transition-transform ${totalUnsubmitted > 0 ? 'border-orange-400' : 'border-green-400'}`}>
               <div className="flex items-center gap-2 mb-1">
                 <AlertTriangle size={14} className={totalUnsubmitted > 0 ? 'text-orange-500' : 'text-green-500'} />
-                <p className="text-xs font-bold text-gray-500">미제출 학생</p>
+                <p className="text-xs font-bold text-gray-500">미제출 실천자</p>
               </div>
               <p className={`text-2xl font-black ${totalUnsubmitted > 0 ? 'text-orange-500' : 'text-green-600'}`}>
                 {overdueStudents.length}명
@@ -376,7 +376,7 @@ export default function HomePage() {
             </div>
             <div className="text-left">
               <p className="font-bold text-sm">새 미션 만들기</p>
-              <p className="text-white/70 text-[11px]">학생에게 미션 부여</p>
+              <p className="text-white/70 text-[11px]">실천자에게 미션 부여</p>
             </div>
           </motion.button>
 
@@ -387,19 +387,19 @@ export default function HomePage() {
               <Users size={20} />
             </div>
             <div className="text-left">
-              <p className="font-bold text-sm">학생 관리</p>
+              <p className="font-bold text-sm">실천자 관리</p>
               <p className="text-white/70 text-[11px]">{myStudents.length}명 관리 중</p>
             </div>
           </motion.button>
         </div>
 
-        {/* 상담 필요 학생 */}
+        {/* 상담 필요 실천자 */}
         {counselingStudents.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="bg-red-50 border border-red-100 rounded-3xl p-4">
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle size={15} className="text-red-500" />
-              <p className="text-sm font-bold text-red-700">상담 필요 학생</p>
+              <p className="text-sm font-bold text-red-700">상담 필요 실천자</p>
             </div>
             <div className="space-y-2">
               {counselingStudents.map((s) => {
@@ -480,11 +480,11 @@ export default function HomePage() {
         {myStudents.length === 0 && (
           <div className="text-center py-10">
             <p className="text-4xl mb-3">👥</p>
-            <p className="text-gray-600 font-bold mb-1">아직 관리 중인 학생이 없어요</p>
-            <p className="text-gray-400 text-sm mb-4">수행자 탭에서 학생을 초대해보세요</p>
+            <p className="text-gray-600 font-bold mb-1">아직 관리 중인 실천자가 없어요</p>
+            <p className="text-gray-400 text-sm mb-4">실천자 탭에서 실천자를 초대해보세요</p>
             <button onClick={() => navigate('/performers')}
               className="px-5 py-2.5 bg-purple-600 text-white font-bold text-sm rounded-2xl">
-              학생 초대하기 →
+              실천자 초대하기 →
             </button>
           </div>
         )}

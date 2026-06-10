@@ -50,7 +50,7 @@ export default function RankingPage() {
 
       <div className="content-area px-4 py-4 space-y-4">
 
-        {/* 내 순위 배너 (학생) */}
+        {/* 내 순위 배너 (실천자) */}
         {!isFacilitator && myRank > 0 && (
           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
             className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-3xl p-4 text-white shadow-lg">
@@ -112,7 +112,7 @@ export default function RankingPage() {
           {ranked.length === 0 ? (
             <div className="text-center py-14 bg-white rounded-3xl shadow-sm">
               <p className="text-4xl mb-2">🏅</p>
-              <p className="text-gray-500 font-semibold">아직 학생이 없어요</p>
+              <p className="text-gray-500 font-semibold">아직 실천자가 없어요</p>
             </div>
           ) : ranked.map((student, i) => {
             const rank = i + 1;

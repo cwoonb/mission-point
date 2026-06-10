@@ -202,9 +202,9 @@ function InviteModal({ onClose, facilitatorId, facilitatorName }: { onClose: () 
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="font-black text-gray-800 text-lg">{step === 'done' ? '✅ 초대 완료!' : '학생 초대하기'}</h3>
+            <h3 className="font-black text-gray-800 text-lg">{step === 'done' ? '✅ 초대 완료!' : '실천자 초대하기'}</h3>
             <p className="text-gray-400 text-xs mt-0.5">
-              {step === 'selected' ? `${selectedFriends.length}명 선택됨` : step === 'done' ? `${selectedFriends.length}명에게 초대 메시지 전송` : '링크를 공유해서 학생을 추가하세요'}
+              {step === 'selected' ? `${selectedFriends.length}명 선택됨` : step === 'done' ? `${selectedFriends.length}명에게 초대 메시지 전송` : '링크를 공유해서 실천자를 추가하세요'}
             </p>
           </div>
           <button onClick={onClose} className="p-2 rounded-full bg-gray-100"><X size={18} className="text-gray-500" /></button>
@@ -213,7 +213,7 @@ function InviteModal({ onClose, facilitatorId, facilitatorName }: { onClose: () 
         {step === 'done' ? (
           <div className="text-center py-4">
             <p className="text-5xl mb-3">🎉</p>
-            <p className="text-gray-600 text-sm mb-4">학생이 링크를 클릭하면 바로 연결돼요!</p>
+            <p className="text-gray-600 text-sm mb-4">실천자가 링크를 클릭하면 바로 연결돼요!</p>
             <button onClick={onClose} className="w-full py-4 bg-purple-600 text-white rounded-2xl font-bold">확인</button>
           </div>
         ) : step === 'selected' ? (
@@ -265,7 +265,7 @@ function InviteModal({ onClose, facilitatorId, facilitatorName }: { onClose: () 
   );
 }
 
-// ── 학생 카드 ─────────────────────────────────────
+// ── 실천자 카드 ─────────────────────────────────────
 function StudentCard({ student, missions, onMove, onSelect }: {
   student: User;
   missions: Mission[];
@@ -309,7 +309,7 @@ function StudentCard({ student, missions, onMove, onSelect }: {
   );
 }
 
-// ── 학생 퀵뷰 시트 ────────────────────────────────
+// ── 실천자 퀵뷰 시트 ────────────────────────────────
 function StudentQuickSheet({ student, missions, allStudents, onClose }: {
   student: User;
   missions: Mission[];
@@ -479,7 +479,7 @@ function StudentQuickSheet({ student, missions, allStudents, onClose }: {
           <button
             onClick={() => { onClose(); navigate(`/students/${student.id}/report`); }}
             className="w-full py-3.5 bg-emerald-50 text-emerald-700 rounded-2xl font-bold text-sm active:scale-95 transition-transform flex items-center justify-center gap-1.5">
-            <FileText size={16} /> 학부모 리포트 생성
+            <FileText size={16} /> 보호자 리포트 생성
           </button>
         </div>
       </motion.div>
@@ -562,14 +562,14 @@ function GroupCard({ group, performers, allPerformers, index, missions, onSelect
               <div className="relative">
                 <button onClick={() => setShowAddMenu((v) => !v)}
                   className="w-full flex items-center justify-center gap-1.5 py-2.5 border-2 border-dashed border-gray-200 rounded-2xl text-gray-400 text-xs font-semibold">
-                  <Plus size={14} /> 학생 추가
+                  <Plus size={14} /> 실천자 추가
                 </button>
                 <AnimatePresence>
                   {showAddMenu && (
                     <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
                       className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-100 rounded-2xl shadow-lg z-10 overflow-hidden">
                       {unassigned.length === 0 ? (
-                        <p className="text-xs text-gray-400 text-center p-3">추가할 학생이 없어요</p>
+                        <p className="text-xs text-gray-400 text-center p-3">추가할 실천자가 없어요</p>
                       ) : unassigned.map((p) => (
                         <button key={p.id} onClick={() => { updateUserGroup(p.id, group.id); setShowAddMenu(false); }}
                           className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-purple-50 text-left">
@@ -589,7 +589,7 @@ function GroupCard({ group, performers, allPerformers, index, missions, onSelect
   );
 }
 
-type FilterType = 'all' | 'unsubmitted' | 'counseling' | 'caution' | 'excellent';
+type FilterType = 'all' | 'unsubmitted' | 'counseling' | 'caution' | 'excellent' | 'notStarted';
 
 // ── 메인 페이지 ───────────────────────────────────
 export default function PerformerListPage() {
@@ -609,7 +609,8 @@ export default function PerformerListPage() {
     locationFilter === 'unsubmitted' ? 'unsubmitted' :
     locationFilter === 'counseling' ? 'counseling' :
     locationFilter === 'caution' ? 'caution' :
-    locationFilter === 'excellent' ? 'excellent' : 'all'
+    locationFilter === 'excellent' ? 'excellent' :
+    locationFilter === 'notStarted' ? 'notStarted' : 'all'
   );
 
   if (!currentUser) return null;
@@ -649,18 +650,21 @@ export default function PerformerListPage() {
     ? myPerformers.filter((p) => getStudentStatus(missions, p.id, thresholds) === 'CAUTION')
     : activeFilter === 'excellent'
     ? myPerformers.filter((p) => getStudentStatus(missions, p.id, thresholds) === 'EXCELLENT')
+    : activeFilter === 'notStarted'
+    ? myPerformers.filter((p) => getStudentStatus(missions, p.id, thresholds) === 'NOT_STARTED')
     : null;
 
   const filterConfig: Record<Exclude<FilterType, 'all'>, { label: string; color: string; badge: string }> = {
-    unsubmitted: { label: '미제출 학생', color: 'bg-orange-50 border-orange-200 text-orange-700', badge: 'bg-orange-500' },
-    counseling: { label: '상담 필요 학생', color: 'bg-red-50 border-red-200 text-red-700', badge: 'bg-red-500' },
-    caution: { label: '주의 학생', color: 'bg-amber-50 border-amber-200 text-amber-700', badge: 'bg-amber-500' },
-    excellent: { label: '우수 학생', color: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-emerald-500' },
+    unsubmitted: { label: '미제출 실천자', color: 'bg-orange-50 border-orange-200 text-orange-700', badge: 'bg-orange-500' },
+    counseling: { label: '상담 필요 실천자', color: 'bg-red-50 border-red-200 text-red-700', badge: 'bg-red-500' },
+    caution: { label: '진행중 실천자', color: 'bg-amber-50 border-amber-200 text-amber-700', badge: 'bg-amber-500' },
+    excellent: { label: '우수 실천자', color: 'bg-emerald-50 border-emerald-200 text-emerald-700', badge: 'bg-emerald-500' },
+    notStarted: { label: '대기 중 실천자', color: 'bg-gray-50 border-gray-200 text-gray-600', badge: 'bg-gray-400' },
   };
 
   return (
     <div className="page-container">
-      <Header title="👥 학생 관리" />
+      <Header title="👥 실천자 관리" />
 
       <div className="content-area px-4 py-4 space-y-4">
         {/* 관리 요약 */}
@@ -670,7 +674,7 @@ export default function PerformerListPage() {
           <div className="grid grid-cols-4 gap-2">
             {[
               { label: '반', value: myGroups.length },
-              { label: '학생', value: myPerformers.length },
+              { label: '실천자', value: myPerformers.length },
               { label: '이번주\n수행률', value: `${weekRate}%`, highlight: weekRate < 60 ? 'text-amber-300' : 'text-emerald-300' },
               { label: '검토대기', value: pendingReview, badge: pendingReview > 0, highlight: pendingReview > 0 ? 'text-amber-300' : undefined },
             ].map(({ label, value, badge, highlight }) => (
@@ -684,7 +688,7 @@ export default function PerformerListPage() {
           {counselingCount > 0 && (
             <div className="mt-3 bg-red-500/20 border border-red-500/30 rounded-2xl px-3 py-2 flex items-center gap-2">
               <AlertTriangle size={13} className="text-red-300 flex-shrink-0" />
-              <p className="text-red-200 text-xs font-semibold">상담 필요 학생 {counselingCount}명 — 빠른 확인이 필요해요</p>
+              <p className="text-red-200 text-xs font-semibold">상담 필요 실천자 {counselingCount}명 — 빠른 확인이 필요해요</p>
             </div>
           )}
         </motion.div>
@@ -716,7 +720,7 @@ export default function PerformerListPage() {
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="학생 이름으로 검색..."
+              placeholder="실천자 이름으로 검색..."
               className="flex-1 text-sm text-gray-700 outline-none bg-transparent placeholder-gray-300"
             />
             {searchQuery && (
@@ -742,7 +746,7 @@ export default function PerformerListPage() {
           <motion.button whileTap={{ scale: 0.96 }} onClick={() => setShowInvite(true)}
             className="flex flex-col items-center gap-1.5 py-3.5 rounded-2xl font-bold text-xs shadow-md"
             style={{ backgroundColor: '#FEE500', color: '#191919' }}>
-            <UserPlus size={18} /> 학생 초대
+            <UserPlus size={18} /> 실천자 초대
           </motion.button>
           <motion.button whileTap={{ scale: 0.96 }} onClick={() => setShowTransfer(true)}
             className="flex flex-col items-center gap-1.5 py-3.5 bg-amber-500 text-white rounded-2xl font-bold text-xs shadow-md">
@@ -759,7 +763,7 @@ export default function PerformerListPage() {
             {searchResults.length === 0 ? (
               <div className="text-center py-8 bg-white rounded-2xl shadow-sm">
                 <p className="text-2xl mb-2">🤷</p>
-                <p className="text-gray-500 text-sm">일치하는 학생이 없어요</p>
+                <p className="text-gray-500 text-sm">일치하는 실천자가 없어요</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -771,13 +775,13 @@ export default function PerformerListPage() {
           </motion.div>
         )}
 
-        {/* 필터된 학생 목록 */}
+        {/* 필터된 실천자 목록 */}
         {searchResults === null && (filteredStudents !== null ? (
           filteredStudents.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-4xl mb-3">✅</p>
-              <p className="text-gray-600 font-bold">해당하는 학생이 없어요</p>
-              <p className="text-gray-400 text-sm mt-1">모든 학생이 정상 상태예요!</p>
+              <p className="text-gray-600 font-bold">해당하는 실천자가 없어요</p>
+              <p className="text-gray-400 text-sm mt-1">모든 실천자가 정상 상태예요!</p>
             </div>
           ) : (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
@@ -794,7 +798,7 @@ export default function PerformerListPage() {
                 allPerformers={myPerformers} index={i} missions={missions} onSelect={setSelectedStudent} />
             ))}
 
-            {/* 미배정 학생 */}
+            {/* 미배정 실천자 */}
             {unassigned.length > 0 && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-white rounded-3xl shadow-sm p-4">
                 <p className="text-xs font-bold text-gray-400 mb-3">👤 반 미배정 ({unassigned.length}명)</p>
@@ -810,10 +814,10 @@ export default function PerformerListPage() {
             {myPerformers.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-5xl mb-3">👤</p>
-                <p className="text-gray-600 font-bold mb-1">아직 관리 중인 학생이 없어요</p>
-                <p className="text-gray-400 text-sm mb-4">학생 초대 버튼으로 초대해보세요!</p>
+                <p className="text-gray-600 font-bold mb-1">아직 관리 중인 실천자가 없어요</p>
+                <p className="text-gray-400 text-sm mb-4">실천자 초대 버튼으로 초대해보세요!</p>
                 <button onClick={() => setShowInvite(true)}
-                  className="px-5 py-2.5 bg-purple-600 text-white font-bold text-sm rounded-2xl">학생 초대하기 →</button>
+                  className="px-5 py-2.5 bg-purple-600 text-white font-bold text-sm rounded-2xl">실천자 초대하기 →</button>
               </div>
             )}
           </>

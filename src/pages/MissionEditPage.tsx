@@ -99,13 +99,13 @@ export default function MissionEditPage() {
           </div>
         </motion.div>
 
-        {/* 수행자 선택 */}
+        {/* 실천자 선택 */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-3xl shadow-sm p-5">
           <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <Users size={13} /> 수행자 <span className="text-red-400">*</span>
+            <Users size={13} /> 실천자 <span className="text-red-400">*</span>
           </label>
           {children.length === 0 ? (
-            <p className="text-gray-400 text-sm text-center py-4">등록된 수행자가 없습니다.</p>
+            <p className="text-gray-400 text-sm text-center py-4">등록된 실천자가 없습니다.</p>
           ) : (
             <div className="grid grid-cols-2 gap-2">
               {children.map((child) => (

@@ -39,7 +39,7 @@ export async function openKakaoFriendPicker(): Promise<KakaoFriend[]> {
   (window.Kakao.Auth as any).setAccessToken(token);
 
   const result = await window.Kakao.Picker.selectFriends({
-    title: '수행자로 초대할 친구 선택',
+    title: '실천자로 초대할 친구 선택',
     maxPickableCount: 30,
     minPickableCount: 1,
     enableSearch: true,
@@ -64,7 +64,7 @@ export async function sendKakaoInviteMessages(
     object_type: 'feed',
     content: {
       title: '🎯 미션 포인트 초대',
-      description: `${facilitatorName}님이 수행자로 초대했어요! 미션을 수행하고 포인트를 모아보세요 🌟`,
+      description: `${facilitatorName}님이 실천자로 초대했어요! 미션을 수행하고 포인트를 모아보세요 🌟`,
       link: { mobile_web_url: inviteUrl, web_url: inviteUrl },
     },
     buttons: [{ title: '참여하기', link: { mobile_web_url: inviteUrl, web_url: inviteUrl } }],

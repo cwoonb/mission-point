@@ -52,7 +52,7 @@ export default function ParentReportPage() {
   const weekEndStr = formatDate(today.toISOString());
 
   const handleShare = async () => {
-    const text = `[주간 학습 리포트] ${student.name} 학생\n\n이번 주 미션 수행률: ${weekRate}%\n완료 미션: ${weekSuccess.length}개\n미제출 미션: ${weekUnsubmitted.length}개\n연속 수행일: ${streak}일\n\n선생님 코멘트: 꾸준히 참여하고 있어 긍정적입니다.`;
+    const text = `[주간 학습 리포트] ${student.name} 실천자\n\n이번 주 미션 수행률: ${weekRate}%\n완료 미션: ${weekSuccess.length}개\n미제출 미션: ${weekUnsubmitted.length}개\n연속 수행일: ${streak}일\n\n리더 코멘트: 꾸준히 참여하고 있어 긍정적입니다.`;
     if (typeof navigator.share === 'function') {
       try { await navigator.share({ title: `${student.name} 주간 리포트`, text }); } catch {}
     } else {
@@ -70,7 +70,7 @@ export default function ParentReportPage() {
           <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-xl shadow-sm">
             <ArrowLeft size={18} className="text-gray-600" />
           </button>
-          <h1 className="font-black text-gray-800">학부모 리포트</h1>
+          <h1 className="font-black text-gray-800">보호자 리포트</h1>
           <button onClick={handleShare}
             className="ml-auto flex items-center gap-1.5 px-4 py-2 bg-emerald-500 text-white rounded-xl font-bold text-sm shadow-md active:scale-95 transition-all">
             <Share2 size={14} /> 공유하기
@@ -92,8 +92,8 @@ export default function ParentReportPage() {
                 {student.profileImage ? <img src={student.profileImage} alt="" className="w-full h-full object-cover" /> : student.avatar}
               </div>
               <div>
-                <p className="font-black text-2xl">{student.name} 학생</p>
-                <p className="text-white/60 text-xs">{currentUser.name} 선생님 반</p>
+                <p className="font-black text-2xl">{student.name} 실천자</p>
+                <p className="text-white/60 text-xs">{currentUser.name} 리더 반</p>
               </div>
             </div>
           </div>
@@ -194,11 +194,11 @@ export default function ParentReportPage() {
             </div>
           </div>
 
-          {/* 선생님 코멘트 */}
+          {/* 리더 코멘트 */}
           <div className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-7 h-7 bg-purple-100 rounded-xl flex items-center justify-center text-sm">{currentUser.avatar}</div>
-              <p className="text-sm font-bold text-gray-700">선생님 코멘트</p>
+              <p className="text-sm font-bold text-gray-700">리더 코멘트</p>
             </div>
             <div className="bg-purple-50 rounded-2xl p-4">
               <p className="text-sm text-purple-800 leading-relaxed">
@@ -211,7 +211,7 @@ export default function ParentReportPage() {
         </motion.div>
 
         {/* 하단 브랜딩 */}
-        <p className="text-center text-xs text-gray-400 pb-4">Mission Point · 학생 관리 플랫폼</p>
+        <p className="text-center text-xs text-gray-400 pb-4">Mission Point · 실천자 관리 플랫폼</p>
       </div>
     </div>
   );

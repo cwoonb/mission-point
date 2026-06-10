@@ -4,7 +4,7 @@ import type { PerformerGroup } from '../types';
 export const initialUsers: User[] = [
   {
     id: 'user-parent-1',
-    name: '부모님',
+    name: '리더',
     role: 'PARENT',
     point: 50000,
     avatar: '👨‍👩‍👧‍👦',
@@ -307,7 +307,7 @@ export const initialMissions: Mission[] = [
     missionType: 'READING',
     missionGoal: 'STUDY_HABIT',
   },
-  // 부모 미션 (기존 호환)
+  // 리더 미션 (기존 호환)
   {
     id: 'mission-p1',
     title: '방 청소하기',

@@ -15,29 +15,19 @@ const ROLES: Array<{
 }> = [
   {
     role: 'PARENT',
-    emoji: '👨‍👩‍👧‍👦',
-    title: '부모님',
-    desc: '자녀에게 미션을 부여하고 포인트를 지급해요',
+    emoji: '🧑‍🏫',
+    title: '리더',
+    desc: '미션을 만들고 관리하며 피드백을 줘요',
     examples: '미션 생성 · 승인/반려 · 포인트 관리',
     gradient: 'from-violet-500 to-purple-600',
     lightBg: 'bg-purple-50 border-purple-200',
     textColor: 'text-purple-700',
   },
   {
-    role: 'TEACHER',
-    emoji: '👩‍🏫',
-    title: '선생님',
-    desc: '학생들에게 학습 미션을 부여하고 관리해요',
-    examples: '미션 설계 · 진행 관리 · 성취 확인',
-    gradient: 'from-blue-500 to-indigo-600',
-    lightBg: 'bg-blue-50 border-blue-200',
-    textColor: 'text-blue-700',
-  },
-  {
     role: 'CHILD',
     emoji: '🧒',
-    title: '어린이 / 학생',
-    desc: '미션을 완료하고 포인트로 선물을 받아요',
+    title: '실천자',
+    desc: '미션을 수행하고 포인트로 선물을 받아요',
     examples: '미션 수행 · 포인트 적립 · 쿠폰 교환',
     gradient: 'from-pink-400 to-rose-500',
     lightBg: 'bg-pink-50 border-pink-200',
@@ -107,7 +97,7 @@ export default function RoleSelectionPage() {
             <p className="text-2xl mb-1">🎉</p>
             <p className="font-black text-yellow-800 text-sm">초대를 받았어요!</p>
             <p className="text-yellow-700 text-xs mt-1">
-              <span className="font-bold">수행자</span>로 가입하면 초대한 분과 바로 연결돼요
+              <span className="font-bold">실천자</span>로 가입하면 초대한 분과 바로 연결돼요
             </p>
           </motion.div>
         )}

@@ -74,18 +74,20 @@ export default function StatusSettingsPage() {
 
   return (
     <div className="page-container">
-      <Header title="⚙️ 학생 상태 기준 설정" showBack showPoints={false} />
+      <Header title="⚙️ 실천자 상태 기준 설정" showBack showPoints={false} />
 
       <div className="content-area px-4 py-5 space-y-4">
         <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4">
-          <p className="text-sm text-purple-700 font-bold mb-1">학생 상태는 이렇게 정해져요</p>
+          <p className="text-sm text-purple-700 font-bold mb-1">실천자 상태는 이렇게 정해져요</p>
           <p className="text-xs text-purple-500 leading-relaxed">
             기한이 지났는데 제출하지 않은 미션 개수와, 완료된 미션의 성공률을 기준으로
             <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.EXCELLENT.bg} ${statusConfig.EXCELLENT.color}`}>우수</span>
-            <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.CAUTION.bg} ${statusConfig.CAUTION.color}`}>주의</span>
+            <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.CAUTION.bg} ${statusConfig.CAUTION.color}`}>진행중</span>
             <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.UNSUBMITTED.bg} ${statusConfig.UNSUBMITTED.color}`}>미제출</span>
             <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.COUNSELING.bg} ${statusConfig.COUNSELING.color}`}>상담필요</span>
-            로 분류해요. 아래에서 그 기준을 직접 조정할 수 있어요.
+            로 분류해요. 아직 시작한 미션이 없거나 결과가 나온 미션이 없는 실천자는
+            <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.NOT_STARTED.bg} ${statusConfig.NOT_STARTED.color}`}>대기</span>
+            로 표시돼요. 아래에서 그 기준을 직접 조정할 수 있어요.
           </p>
         </div>
 

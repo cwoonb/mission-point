@@ -23,6 +23,7 @@ export default function MissionDetailPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [deleteModal, setDeleteModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [successAssigneeName, setSuccessAssigneeName] = useState('');
 
   const mission = getMission(id!);
   if (!mission || !currentUser) {
@@ -73,6 +74,7 @@ export default function MissionDetailPage() {
       );
     }
 
+    setSuccessAssigneeName(assigneeUser?.name ?? '실천자');
     setShowSuccess(true);
   };
 
@@ -122,7 +124,8 @@ export default function MissionDetailPage() {
 
       <SuccessAnimation
         isVisible={showSuccess}
-        points={mission.rewardPoint}
+        title="승인 완료!"
+        description={`${successAssigneeName}님에게 +${mission.rewardPoint.toLocaleString('ko-KR')}P 지급했어요! ⭐`}
         onClose={() => setShowSuccess(false)}
       />
 
@@ -156,12 +159,12 @@ export default function MissionDetailPage() {
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-gray-600">
               <User size={14} className="text-gray-400" />
-              <span className="text-gray-400">수행자:</span>
+              <span className="text-gray-400">실천자:</span>
               <span className="font-semibold">{assignee?.avatar} {assignee?.name}</span>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
               <User size={14} className="text-gray-400" />
-              <span className="text-gray-400">진행자:</span>
+              <span className="text-gray-400">리더:</span>
               <span className="font-semibold">{creator?.avatar} {creator?.name}</span>
             </div>
             <div className="flex items-center gap-2 text-gray-600">
@@ -174,7 +177,7 @@ export default function MissionDetailPage() {
           </div>
         </motion.div>
 
-        {/* 수행자 제출 버튼 */}
+        {/* 실천자 제출 버튼 */}
         {canSubmit && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
             <Button
@@ -193,11 +196,11 @@ export default function MissionDetailPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
             <p className="text-2xl mb-1">⏳</p>
             <p className="text-amber-700 font-bold">검토 중입니다</p>
-            <p className="text-amber-600 text-sm mt-0.5">진행자가 확인하고 있어요!</p>
+            <p className="text-amber-600 text-sm mt-0.5">리더가 확인하고 있어요!</p>
           </div>
         )}
 
-        {/* 진행자 검토 */}
+        {/* 리더 검토 */}
         {canReview && latestSubmission && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -245,7 +248,7 @@ export default function MissionDetailPage() {
           </motion.div>
         )}
 
-        {/* 최신 제출 내용 (진행자 – 검토 외 상태) */}
+        {/* 최신 제출 내용 (리더 – 검토 외 상태) */}
         {isFacilitator && !canReview && latestSubmission && (
           <div className="bg-white rounded-3xl shadow-sm p-5 space-y-3">
             <h3 className="font-bold text-gray-700">📄 최근 제출 내용</h3>

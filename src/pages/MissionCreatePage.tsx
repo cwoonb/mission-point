@@ -31,7 +31,7 @@ const MISSION_GOALS: Array<{ key: MissionGoal; label: string }> = [
   { key: 'SINCERITY', label: '성실도 향상' },
   { key: 'STUDY_HABIT', label: '학습 습관 형성' },
   { key: 'SUBMISSION_MGMT', label: '과제 제출 관리' },
-  { key: 'PARENT_REPORT', label: '학부모 공유용 기록' },
+  { key: 'PARENT_REPORT', label: '보호자 공유용 기록' },
   { key: 'REWARD_EVENT', label: '보상용 이벤트' },
 ];
 
@@ -220,10 +220,10 @@ export default function MissionCreatePage() {
           {children.length === 0 ? (
             <div className="text-center py-5">
               <p className="text-3xl mb-2">👤</p>
-              <p className="text-gray-600 text-sm font-semibold mb-1">아직 학생이 없어요</p>
-              <p className="text-gray-400 text-xs mb-4">학생을 먼저 초대해야 미션을 만들 수 있어요</p>
+              <p className="text-gray-600 text-sm font-semibold mb-1">아직 실천자가 없어요</p>
+              <p className="text-gray-400 text-xs mb-4">실천자를 먼저 초대해야 미션을 만들 수 있어요</p>
               <button onClick={() => navigate('/performers')} className="px-5 py-2.5 bg-purple-600 text-white font-bold text-sm rounded-2xl">
-                학생 초대하러 가기 →
+                실천자 초대하러 가기 →
               </button>
             </div>
           ) : (
@@ -250,7 +250,7 @@ export default function MissionCreatePage() {
                     </div>
                   </button>
 
-                  {/* 학생 목록 */}
+                  {/* 실천자 목록 */}
                   {children.map((child) => {
                     const checked = selectedIds.has(child.id);
                     return (
@@ -271,7 +271,7 @@ export default function MissionCreatePage() {
                   })}
                 </div>
               ) : myGroups.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-4">아직 반이 없어요. 학생 탭에서 반을 먼저 만들어주세요.</p>
+                <p className="text-gray-400 text-sm text-center py-4">아직 반이 없어요. 실천자 탭에서 반을 먼저 만들어주세요.</p>
               ) : (
                 <div className="space-y-2">
                   {myGroups.map((group) => {
@@ -369,10 +369,10 @@ export default function MissionCreatePage() {
           </div>
         </motion.div>
 
-        {/* 학부모 공유 */}
+        {/* 보호자 공유 */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-3xl shadow-sm p-5">
           <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <Share2 size={13} /> 학부모 공유
+            <Share2 size={13} /> 보호자 공유
           </label>
           <div className="space-y-2">
             {PARENT_SHARES.map((s) => (

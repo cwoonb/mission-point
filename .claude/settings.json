@@ -11,7 +11,9 @@
       "Bash(node -e \"require\\('pg'\\)\")",
       "Bash(sleep 5 && cat /tmp/vite.log)",
       "Read(//tmp/**)",
-      "Bash(curl -s http://localhost:5180/)"
+      "Bash(curl -s http://localhost:5180/)",
+      "Bash(cat .env.local)",
+      "Bash(cat .env)"
     ]
   }
 }

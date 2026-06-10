@@ -18,7 +18,7 @@ export default function BottomNav() {
     ...(viewMode === 'FACILITATOR'
       ? [
           { to: '/approvals', icon: ClipboardCheck, label: '승인', badge: pendingReviews },
-          { to: '/performers', icon: Users, label: '학생' },
+          { to: '/performers', icon: Users, label: '실천자' },
         ]
       : [
           { to: '/ranking', icon: Trophy, label: '랭킹' },

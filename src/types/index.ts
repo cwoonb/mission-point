@@ -3,7 +3,7 @@ export type MissionType = 'HOMEWORK' | 'VOCABULARY' | 'READING' | 'ATTENDANCE' |
 export type MissionGoal = 'SINCERITY' | 'STUDY_HABIT' | 'SUBMISSION_MGMT' | 'PARENT_REPORT' | 'REWARD_EVENT';
 export type RepeatType = 'ONCE' | 'DAILY' | 'WEEKLY' | 'WEEKDAYS';
 export type ParentShareType = 'NONE' | 'ON_COMPLETE' | 'WEEKLY_REPORT';
-export type StudentStatus = 'EXCELLENT' | 'CAUTION' | 'UNSUBMITTED' | 'COUNSELING';
+export type StudentStatus = 'EXCELLENT' | 'CAUTION' | 'UNSUBMITTED' | 'COUNSELING' | 'NOT_STARTED';
 export type ViewMode = 'FACILITATOR' | 'PERFORMER';
 export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER';
 

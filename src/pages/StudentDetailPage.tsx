@@ -32,9 +32,9 @@ export default function StudentDetailPage() {
   const student = users.find((u) => u.id === id);
   if (!student) return (
     <div className="page-container">
-      <Header title="학생 정보" showBack />
+      <Header title="실천자 정보" showBack />
       <div className="content-area flex items-center justify-center">
-        <p className="text-gray-400">학생을 찾을 수 없어요.</p>
+        <p className="text-gray-400">실천자를 찾을 수 없어요.</p>
       </div>
     </div>
   );
@@ -83,11 +83,11 @@ export default function StudentDetailPage() {
 
   return (
     <div className="page-container">
-      <Header title="학생 성장 리포트" showBack showPoints={false} />
+      <Header title="실천자 성장 리포트" showBack showPoints={false} />
 
       <div className="content-area px-4 py-5 space-y-4">
 
-        {/* 학생 프로필 카드 */}
+        {/* 실천자 프로필 카드 */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
           className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
           <div className="flex items-center gap-4 mb-4">
@@ -362,12 +362,12 @@ export default function StudentDetailPage() {
           </div>
         </motion.div>
 
-        {/* 학부모 리포트 버튼 */}
+        {/* 보호자 리포트 버튼 */}
         <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
           onClick={() => navigate(`/students/${id}/report`)}
           className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all">
           <FileText size={18} />
-          학부모 리포트 생성하기
+          보호자 리포트 생성하기
           <ChevronRight size={16} />
         </motion.button>
       </div>
@@ -382,11 +382,11 @@ function generateAIReport(
   const parts: string[] = [];
 
   if (weekRate >= 80) {
-    parts.push(`${name} 학생은 이번 주 수행률이 ${weekRate}%로 매우 우수합니다.`);
+    parts.push(`${name} 실천자는 이번 주 수행률이 ${weekRate}%로 매우 우수합니다.`);
   } else if (weekRate >= 60) {
-    parts.push(`${name} 학생은 이번 주 수행률이 ${weekRate}%로 양호한 편입니다.`);
+    parts.push(`${name} 실천자는 이번 주 수행률이 ${weekRate}%로 양호한 편입니다.`);
   } else {
-    parts.push(`${name} 학생은 이번 주 수행률이 ${weekRate}%로, 관리가 필요한 상태입니다.`);
+    parts.push(`${name} 실천자는 이번 주 수행률이 ${weekRate}%로, 관리가 필요한 상태입니다.`);
   }
 
   if (bestType && bestType !== worstType) {

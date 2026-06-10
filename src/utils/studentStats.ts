@@ -45,7 +45,7 @@ export function getStudentStatus(
   thresholds: StatusThresholds = defaultStatusThresholds
 ): StudentStatus {
   const mine = missions.filter((m) => m.assigneeId === studentId);
-  if (mine.length === 0) return 'CAUTION';
+  if (mine.length === 0) return 'NOT_STARTED';
 
   // 미제출(기한이 지났는데 제출 안 함)이 많을수록 상담이 필요한 상태로 판단.
   // 아직 진행 중이거나 검토 대기 중인 미션은 결과가 나오지 않았으므로 평가에서 제외.
@@ -56,7 +56,7 @@ export function getStudentStatus(
   const concluded = mine.filter((m) =>
     m.status === 'SUCCESS' || m.status === 'REJECTED' || m.status === 'EXPIRED' || m.status === 'FAILED'
   );
-  if (concluded.length === 0) return 'CAUTION';
+  if (concluded.length === 0) return 'NOT_STARTED';
 
   const rate = Math.round((concluded.filter((m) => m.status === 'SUCCESS').length / concluded.length) * 100);
   if (rate < thresholds.counselingRate) return 'COUNSELING';
@@ -66,9 +66,10 @@ export function getStudentStatus(
 
 export const statusConfig: Record<StudentStatus, { label: string; color: string; bg: string }> = {
   EXCELLENT: { label: '우수', color: 'text-emerald-700', bg: 'bg-emerald-100' },
-  CAUTION: { label: '주의', color: 'text-amber-700', bg: 'bg-amber-100' },
+  CAUTION: { label: '진행중', color: 'text-amber-700', bg: 'bg-amber-100' },
   UNSUBMITTED: { label: '미제출', color: 'text-orange-700', bg: 'bg-orange-100' },
   COUNSELING: { label: '상담필요', color: 'text-red-700', bg: 'bg-red-100' },
+  NOT_STARTED: { label: '대기', color: 'text-gray-500', bg: 'bg-gray-100' },
 };
 
 export function getStreak(missions: Mission[], studentId: string): number {
@@ -123,7 +124,7 @@ export const missionGoalLabel: Record<string, string> = {
   SINCERITY: '성실도 향상',
   STUDY_HABIT: '학습 습관 형성',
   SUBMISSION_MGMT: '과제 제출 관리',
-  PARENT_REPORT: '학부모 공유용 기록',
+  PARENT_REPORT: '보호자 공유용 기록',
   REWARD_EVENT: '보상용 이벤트',
 };
 

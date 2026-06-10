@@ -48,6 +48,7 @@ export default function ApprovalPage() {
   const [comment, setComment] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successPoints, setSuccessPoints] = useState(0);
+  const [successAssigneeName, setSuccessAssigneeName] = useState('');
   const [sharedStudentId, setSharedStudentId] = useState<string | null>(null);
 
   if (!currentUser) return null;
@@ -67,6 +68,7 @@ export default function ApprovalPage() {
       addTransaction(mission.creatorId, -mission.rewardPoint, 'MISSION_DEDUCT', `포인트 지급: ${mission.title}`);
     }
     setSuccessPoints(mission.rewardPoint);
+    setSuccessAssigneeName(getUser(mission.assigneeId)?.name ?? '실천자');
     setShowSuccess(true);
     setSelectedMission(null);
     setDetailMission(null);
@@ -110,7 +112,7 @@ export default function ApprovalPage() {
   const handleShareToParent = async () => {
     if (!parentShareMission || !currentUser) return;
     const student = getUser(parentShareMission.assigneeId);
-    const text = `[미션 알림] ${student?.name ?? ''} 학생\n\n미션: ${parentShareMission.title}\n\n선생님 의견:\n${parentShareMsg}\n\n— ${currentUser.name} 선생님`;
+    const text = `[미션 알림] ${student?.name ?? ''} 실천자\n\n미션: ${parentShareMission.title}\n\n리더 의견:\n${parentShareMsg}\n\n— ${currentUser.name} 리더`;
     if (typeof navigator.share === 'function') {
       try { await navigator.share({ title: `${student?.name} 미션 알림`, text }); } catch {}
     } else {
@@ -125,8 +127,13 @@ export default function ApprovalPage() {
 
   return (
     <div className="page-container">
-      <Header title="📋 학생 행동 검토" />
-      <SuccessAnimation isVisible={showSuccess} points={successPoints} onClose={() => setShowSuccess(false)} />
+      <Header title="📋 실천자 행동 검토" />
+      <SuccessAnimation
+        isVisible={showSuccess}
+        title="승인 완료!"
+        description={`${successAssigneeName}님에게 +${successPoints.toLocaleString('ko-KR')}P 지급했어요! ⭐`}
+        onClose={() => setShowSuccess(false)}
+      />
 
       <div className="content-area px-4 py-5">
         {pendingMissions.length === 0 ? (
@@ -156,7 +163,7 @@ export default function ApprovalPage() {
                 <motion.div key={mission.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.06 }} className="bg-white rounded-3xl shadow-sm overflow-hidden">
 
-                  {/* 학생 정보 헤더 */}
+                  {/* 실천자 정보 헤더 */}
                   <div className="bg-slate-50 px-4 py-3 border-b border-gray-100">
                     <div className="flex items-center justify-between">
                       <button onClick={() => navigate(`/students/${mission.assigneeId}`)}
@@ -171,7 +178,7 @@ export default function ApprovalPage() {
                             <span className="text-sm font-black text-gray-800">{assignee?.name}</span>
                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${sc.bg} ${sc.color}`}>{sc.label}</span>
                           </div>
-                          <p className="text-[11px] text-gray-400">학생 리포트 보기 →</p>
+                          <p className="text-[11px] text-gray-400">실천자 리포트 보기 →</p>
                         </div>
                       </button>
                       <div className="text-right">
@@ -180,7 +187,7 @@ export default function ApprovalPage() {
                       </div>
                     </div>
 
-                    {/* 학생 간단 통계 */}
+                    {/* 실천자 간단 통계 */}
                     <div className="flex items-center gap-3 mt-2">
                       <div className="flex items-center gap-1">
                         <TrendingUp size={11} className="text-indigo-400" />
@@ -256,7 +263,7 @@ export default function ApprovalPage() {
                       <button
                         onClick={() => openParentShare(mission)}
                         className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${sharedStudentId === mission.assigneeId ? 'bg-green-100 text-green-700' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {sharedStudentId === mission.assigneeId ? '✅ 공유됨' : '📤 학부모 공유'}
+                        {sharedStudentId === mission.assigneeId ? '✅ 공유됨' : '📤 보호자 공유'}
                       </button>
                     </div>
                   </div>
@@ -318,14 +325,14 @@ export default function ApprovalPage() {
                     </div>
                   </div>
 
-                  {/* 수행자 / 기간 */}
+                  {/* 실천자 / 기간 */}
                   <div className="bg-gray-50 rounded-2xl p-4 space-y-2 text-sm">
                     <div className="flex items-center gap-2 text-gray-600">
-                      <span className="text-gray-400 text-xs w-14">수행자</span>
+                      <span className="text-gray-400 text-xs w-14">실천자</span>
                       <span className="font-semibold">{dmAssignee?.avatar} {dmAssignee?.name}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600">
-                      <span className="text-gray-400 text-xs w-14">진행자</span>
+                      <span className="text-gray-400 text-xs w-14">리더</span>
                       <span className="font-semibold">{dmCreator?.avatar} {dmCreator?.name}</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-600">
@@ -402,7 +409,7 @@ export default function ApprovalPage() {
                         </button>
                         <button onClick={() => { setDetailMission(null); openParentShare(dm); }}
                           className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${sharedStudentId === dm.assigneeId ? 'bg-green-100 text-green-700' : 'bg-emerald-50 text-emerald-600'}`}>
-                          {sharedStudentId === dm.assigneeId ? '✅ 공유됨' : '📤 학부모 공유'}
+                          {sharedStudentId === dm.assigneeId ? '✅ 공유됨' : '📤 보호자 공유'}
                         </button>
                       </div>
                     </div>
@@ -432,15 +439,15 @@ export default function ApprovalPage() {
         </div>
       </Modal>
 
-      {/* 학부모 공유 모달 */}
-      <Modal isOpen={parentShareModal} onClose={() => setParentShareModal(false)} title="📤 학부모 공유">
+      {/* 보호자 공유 모달 */}
+      <Modal isOpen={parentShareModal} onClose={() => setParentShareModal(false)} title="📤 보호자 공유">
         {parentShareMission && (() => {
           const student = getUser(parentShareMission.assigneeId);
           const weekRate = student ? getWeeklyRate(missions, student.id) : 0;
           const unsubmitted = student ? getUnsubmittedCount(missions, student.id) : 0;
           return (
             <div className="space-y-4">
-              {/* 학생 요약 */}
+              {/* 실천자 요약 */}
               <div className="bg-slate-50 rounded-2xl p-3 flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
                   {student?.profileImage
@@ -448,7 +455,7 @@ export default function ApprovalPage() {
                     : student?.avatar}
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-gray-800 text-sm">{student?.name} 학생</p>
+                  <p className="font-bold text-gray-800 text-sm">{student?.name} 실천자</p>
                   <div className="flex items-center gap-3 mt-0.5">
                     <span className="text-[11px] text-gray-400">이번 주 {weekRate}%</span>
                     {unsubmitted > 0 && <span className="text-[11px] text-red-500">미제출 {unsubmitted}건</span>}
@@ -460,9 +467,9 @@ export default function ApprovalPage() {
                 </div>
               </div>
 
-              {/* 선생님 의견 */}
+              {/* 리더 의견 */}
               <div>
-                <p className="text-xs font-bold text-gray-500 mb-2">선생님 의견 <span className="text-red-400">*</span></p>
+                <p className="text-xs font-bold text-gray-500 mb-2">리더 의견 <span className="text-red-400">*</span></p>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {[
                     '잘 따라오고 있어요 👍',
@@ -479,7 +486,7 @@ export default function ApprovalPage() {
                 <textarea
                   value={parentShareMsg}
                   onChange={(e) => setParentShareMsg(e.target.value)}
-                  placeholder="학부모에게 전달할 의견을 입력하세요..."
+                  placeholder="보호자에게 전달할 의견을 입력하세요..."
                   rows={4}
                   className="input-field resize-none"
                   maxLength={300}
@@ -491,12 +498,12 @@ export default function ApprovalPage() {
               <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3">
                 <p className="text-[10px] font-bold text-emerald-600 mb-1.5">📋 전송 미리보기</p>
                 <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">
-                  {`[미션 알림] ${student?.name ?? ''} 학생\n\n미션: ${parentShareMission.title}\n\n선생님 의견:\n${parentShareMsg || '(의견을 입력해주세요)'}\n\n— ${currentUser?.name} 선생님`}
+                  {`[미션 알림] ${student?.name ?? ''} 실천자\n\n미션: ${parentShareMission.title}\n\n리더 의견:\n${parentShareMsg || '(의견을 입력해주세요)'}\n\n— ${currentUser?.name} 리더`}
                 </p>
               </div>
 
               <Button fullWidth variant="primary" onClick={handleShareToParent} disabled={!parentShareMsg.trim()}>
-                📤 학부모에게 공유하기
+                📤 보호자에게 공유하기
               </Button>
             </div>
           );
@@ -507,7 +514,7 @@ export default function ApprovalPage() {
       <Modal isOpen={commentModal} onClose={() => setCommentModal(false)} title="💬 코멘트 남기기">
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
-            <strong>{users.find((u) => u.id === selectedMission?.assigneeId)?.name}</strong> 학생에게 코멘트를 남겨주세요.
+            <strong>{users.find((u) => u.id === selectedMission?.assigneeId)?.name}</strong> 실천자에게 코멘트를 남겨주세요.
           </p>
           <div className="flex flex-wrap gap-2">
             {COMMENT_TEMPLATES.map((t) => (

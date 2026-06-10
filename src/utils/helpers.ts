@@ -43,9 +43,9 @@ export const statusBgColor: Record<MissionStatus, string> = {
 };
 
 export const roleLabel: Record<UserRole, string> = {
-  PARENT: '부모',
-  TEACHER: '선생님',
-  CHILD: '어린이',
+  PARENT: '리더',
+  TEACHER: '리더',
+  CHILD: '실천자',
 };
 
 export const txLabel: Record<PointTransactionType, string> = {

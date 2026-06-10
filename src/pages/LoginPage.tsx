@@ -58,7 +58,7 @@ export default function LoginPage() {
   const demoUsers = users.filter((u) => !u.socialProvider);
 
   return (
-    <div className="page-container min-h-screen flex flex-col bg-white overflow-hidden">
+    <div className="page-container flex flex-col bg-white overflow-y-auto overflow-x-hidden">
       {/* 상단 배경 */}
       <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-br from-purple-600 via-violet-500 to-indigo-600 rounded-b-[3rem] pointer-events-none" />
 
@@ -209,7 +209,7 @@ export default function LoginPage() {
                       <div>
                         <p className="font-bold text-gray-800 text-sm">{user.name}</p>
                         <p className="text-xs text-gray-400">
-                          {user.role === 'CHILD' ? '수행자' : '진행자'} · {user.point.toLocaleString()}P
+                          {user.role === 'CHILD' ? '실천자' : '리더'} · {user.point.toLocaleString()}P
                         </p>
                       </div>
                     </button>

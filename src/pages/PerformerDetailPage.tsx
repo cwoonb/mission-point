@@ -47,7 +47,7 @@ export default function PerformerDetailPage() {
   if (!performer || !currentUser) {
     return (
       <div className="page-container flex items-center justify-center">
-        <p className="text-gray-500">수행자를 찾을 수 없습니다.</p>
+        <p className="text-gray-500">실천자를 찾을 수 없습니다.</p>
       </div>
     );
   }
@@ -119,7 +119,7 @@ export default function PerformerDetailPage() {
   return (
     <div className="page-container">
       <Header
-        title="수행자 분석"
+        title="실천자 분석"
         showBack
         showPoints={false}
         rightElement={
@@ -132,7 +132,12 @@ export default function PerformerDetailPage() {
         }
       />
 
-      <SuccessAnimation isVisible={showSuccess} points={successPts} onClose={() => setShowSuccess(false)} />
+      <SuccessAnimation
+        isVisible={showSuccess}
+        title="승인 완료!"
+        description={`${performer.name}님에게 +${successPts.toLocaleString('ko-KR')}P 지급했어요! ⭐`}
+        onClose={() => setShowSuccess(false)}
+      />
 
       <div className="content-area">
         {/* 프로필 배너 */}

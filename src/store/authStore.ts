@@ -355,7 +355,7 @@ export const useAuthStore = create<AuthState>()(
         if (data) {
           let user = rowToUser(data as UserRow);
 
-          // 대기 중인 초대가 있고, 아직 진행자와 연결되지 않은 수행자라면 연결 처리
+          // 대기 중인 초대가 있고, 아직 리더와 연결되지 않은 실천자라면 연결 처리
           const pendingFacilitatorId = sessionStorage.getItem('pending_invite_id');
           if (pendingFacilitatorId && user.role === 'CHILD' && !user.facilitatorId) {
             sessionStorage.removeItem('pending_invite_id');

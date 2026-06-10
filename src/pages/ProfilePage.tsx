@@ -71,7 +71,7 @@ export default function ProfilePage() {
   const transactions = getTransactionsForUser(currentUser.id);
   const todayAdCount = getTodayAdCount(currentUser.id);
 
-  // 선생님 전용 통계
+  // 리더 전용 통계
   const myStudents = currentUser.socialProvider
     ? users.filter((u) => u.role === 'CHILD' && u.facilitatorId === currentUser.id)
     : users.filter((u) => u.role === 'CHILD');
@@ -99,8 +99,8 @@ export default function ProfilePage() {
     return { group: g, members, weekRate, overallRate, unsubmitted, counseling };
   });
 
-  // 학생 상태 분포
-  const statusDist = (['EXCELLENT', 'CAUTION', 'UNSUBMITTED', 'COUNSELING'] as const).map((status) => ({
+  // 실천자 상태 분포
+  const statusDist = (['EXCELLENT', 'CAUTION', 'UNSUBMITTED', 'COUNSELING', 'NOT_STARTED'] as const).map((status) => ({
     status,
     count: myStudents.filter((s) => getStudentStatus(missions, s.id, thresholds) === status).length,
     ...statusConfig[status],
@@ -119,7 +119,7 @@ export default function ProfilePage() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  // 수행자 통계
+  // 실천자 통계
   const myMissionsAsPerformer = missions.filter((m) => m.assigneeId === currentUser.id);
   const successMissions = myMissionsAsPerformer.filter((m) => m.status === 'SUCCESS');
   const successRate = myMissionsAsPerformer.length > 0
@@ -149,11 +149,11 @@ export default function ProfilePage() {
     const isChild = currentUser.role === 'CHILD';
     const result = await connectByCode(connectCode.trim());
     const messages: Record<typeof result, string> = {
-      OK: isChild ? '연결됐어요! 이제 미션을 받을 수 있어요 🎉' : '학생을 추가했어요! 이제 미션을 줄 수 있어요 🎉',
+      OK: isChild ? '연결됐어요! 이제 미션을 받을 수 있어요 🎉' : '실천자를 추가했어요! 이제 미션을 줄 수 있어요 🎉',
       NOT_FOUND: '코드를 찾을 수 없어요. 다시 확인해주세요',
       SELF: '내 코드는 입력할 수 없어요',
       ALREADY_LINKED: '이미 연결된 상태예요',
-      INVALID_ROLE: isChild ? '선생님/부모님 코드를 입력해주세요' : '학생 코드를 입력해주세요',
+      INVALID_ROLE: isChild ? '리더 코드를 입력해주세요' : '실천자 코드를 입력해주세요',
     };
     setConnectMsg({ ok: result === 'OK', text: messages[result] });
     if (result === 'OK') setConnectCode('');
@@ -210,7 +210,7 @@ export default function ProfilePage() {
           <div className="mt-4 text-white/60 text-xs">가입: {formatDate(currentUser.createdAt)}</div>
         </motion.div>
 
-        {/* 선생님 통계 */}
+        {/* 리더 통계 */}
         {isFacilitator ? (
           <div className="space-y-4">
 
@@ -218,7 +218,7 @@ export default function ProfilePage() {
             <p className="text-xs font-bold text-gray-500 px-1">📊 관리 통계</p>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { icon: Users, value: myStudents.length, label: '관리 중인 학생', color: 'text-indigo-500', iconBg: 'bg-indigo-50', to: '/performers' },
+                { icon: Users, value: myStudents.length, label: '관리 중인 실천자', color: 'text-indigo-500', iconBg: 'bg-indigo-50', to: '/performers' },
                 { icon: BookOpen, value: myMissions.length, label: '생성한 미션', color: 'text-purple-500', iconBg: 'bg-purple-50', to: '/missions' },
                 { icon: TrendingUp, value: `${avgWeekRate}%`, label: '이번 주 평균 수행률', color: avgWeekRate >= 70 ? 'text-emerald-500' : 'text-amber-500', iconBg: avgWeekRate >= 70 ? 'bg-emerald-50' : 'bg-amber-50', to: '/performers' },
                 { icon: CheckCircle2, value: reviewedMissions, label: '검토 완료', color: 'text-blue-500', iconBg: 'bg-blue-50', to: '/approvals' },
@@ -304,16 +304,16 @@ export default function ProfilePage() {
               </motion.div>
             )}
 
-            {/* 학생 상태 분포 */}
+            {/* 실천자 상태 분포 */}
             {myStudents.length > 0 && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
                 className="bg-white rounded-3xl shadow-sm p-5">
                 <p className="text-sm font-black text-gray-700 mb-4 flex items-center gap-2">
-                  <span className="text-base">👥</span> 학생 상태 분포
+                  <span className="text-base">👥</span> 실천자 상태 분포
                 </p>
-                <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="grid grid-cols-5 gap-2 mb-3">
                   {statusDist.map(({ status, count, label, color, bg }) => {
-                    const filterKey = status === 'UNSUBMITTED' ? 'unsubmitted' : status === 'COUNSELING' ? 'counseling' : status === 'CAUTION' ? 'caution' : 'excellent';
+                    const filterKey = status === 'UNSUBMITTED' ? 'unsubmitted' : status === 'COUNSELING' ? 'counseling' : status === 'CAUTION' ? 'caution' : status === 'NOT_STARTED' ? 'notStarted' : 'excellent';
                     return (
                       <button key={status} onClick={() => navigate('/performers', { state: { filter: filterKey } })}
                         className={`${bg} rounded-2xl p-2.5 text-center active:scale-95 transition-transform`}>
@@ -326,14 +326,14 @@ export default function ProfilePage() {
                 <div className="flex rounded-full overflow-hidden h-2.5 gap-0.5">
                   {statusDist.map(({ status, count }) => {
                     const pct = myStudents.length > 0 ? (count / myStudents.length) * 100 : 0;
-                    const barColor = status === 'EXCELLENT' ? 'bg-emerald-400' : status === 'CAUTION' ? 'bg-amber-400' : status === 'UNSUBMITTED' ? 'bg-orange-400' : 'bg-red-400';
+                    const barColor = status === 'EXCELLENT' ? 'bg-emerald-400' : status === 'CAUTION' ? 'bg-amber-400' : status === 'UNSUBMITTED' ? 'bg-orange-400' : status === 'NOT_STARTED' ? 'bg-gray-300' : 'bg-red-400';
                     return pct > 0 ? (
                       <motion.div key={status} initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: 0.35 }}
                         className={`${barColor} h-full rounded-full`} />
                     ) : null;
                   })}
                 </div>
-                <p className="text-[10px] text-gray-400 text-center mt-2">각 상태 탭하면 해당 학생 목록으로 이동</p>
+                <p className="text-[10px] text-gray-400 text-center mt-2">각 상태 탭하면 해당 실천자 목록으로 이동</p>
               </motion.div>
             )}
 
@@ -369,7 +369,7 @@ export default function ProfilePage() {
 
           </div>
         ) : (
-          // 학생 통계
+          // 실천자 통계
           <div className="grid grid-cols-2 gap-3">
             {[
               { icon: Trophy, value: successMissions.length, label: '완료한 미션', color: 'text-amber-400' },
@@ -487,7 +487,7 @@ export default function ProfilePage() {
             </AnimatePresence>
           </div>
 
-          {/* 학생 상태 기준 설정 (진행자 전용) */}
+          {/* 실천자 상태 기준 설정 (리더 전용) */}
           {isFacilitator && (
             <button onClick={() => navigate('/profile/status-settings')}
               className="w-full flex items-center gap-3 px-5 py-3 border-t border-gray-50 hover:bg-gray-50 active:bg-gray-100 transition-colors">
@@ -495,7 +495,7 @@ export default function ProfilePage() {
                 <SlidersHorizontal size={16} className="text-violet-500" />
               </div>
               <div className="flex-1 text-left">
-                <p className="text-gray-800 font-semibold text-sm">학생 상태 기준 설정</p>
+                <p className="text-gray-800 font-semibold text-sm">실천자 상태 기준 설정</p>
                 <p className="text-gray-400 text-xs">미제출·상담필요·우수 기준 조정</p>
               </div>
               <ChevronRight size={16} className="text-gray-300" />
@@ -548,15 +548,15 @@ export default function ProfilePage() {
           </div>
           <p className="text-gray-400 text-[11px] mb-4">
             {currentUser.role === 'CHILD'
-              ? '선생님/부모님께 이 코드를 알려주면 바로 연결돼요'
-              : '학생에게 이 코드를 알려주면 바로 추가할 수 있어요'}
+              ? '리더에게 이 코드를 알려주면 바로 연결돼요'
+              : '실천자에게 이 코드를 알려주면 바로 추가할 수 있어요'}
           </p>
 
           <div className="border-t border-gray-50 pt-4">
             <div className="flex items-center gap-2 mb-2">
               <Link2 size={14} className="text-gray-400" />
               <p className="text-gray-700 font-semibold text-sm">
-                {currentUser.role === 'CHILD' ? '선생님/부모님 코드 입력' : '학생 코드 입력'}
+                {currentUser.role === 'CHILD' ? '리더 코드 입력' : '실천자 코드 입력'}
               </p>
             </div>
             <div className="flex items-center gap-2">
