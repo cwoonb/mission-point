@@ -788,8 +788,17 @@ src/components/game/SceneDecor.tsx  // 벽지/바닥 결 패턴 + 조명 ambient
 
 ## Phase 6 — WebGL 게임 엔진 전환 (Phaser 3) (2026-06-12)
 
-> 상태: **진행 중 (Claude 자율 진행)** — 목표를 "모바일 게임급 WebGL 렌더링"으로 상향. 엔진 선택 근거는 `docs/DECISIONS.md`, 작업 로그/잔여 항목은 `docs/PROGRESS.md`, 에셋 출처는 `docs/ASSETS.md` 참조.
+> 상태: **체크리스트 항목 전부 완료, 빌드/배포 완료** — 엔진 선택 근거는 `docs/DECISIONS.md`, 체크리스트/v1 한계는 `docs/PROGRESS.md`, 에셋 출처는 `docs/ASSETS.md`, 세션 요약은 `docs/SUMMARY.md` 참조.
 
 Phase 5의 SVG/CSS 기반 코지 아트는 **HomePage/HouseInteriorPage의 안전한 베이스라인**으로 유지하고,
-`VillagePage`를 Phaser 3 WebGL 씬으로 신규 구현해 타일맵·카메라·스프라이트 애니메이션·파티클을
-도입한다. 상세 진행 상황과 잔여 체크리스트는 `docs/PROGRESS.md`를 단일 진행 로그로 사용한다.
+`VillagePage`를 Phaser 3 WebGL 씬(`src/components/game/phaser/`)으로 교체했다. 32px 그리드
+타일맵(잔디/길/물+충돌), 카메라 추적/클램프, 캐릭터 4방향 걷기·대기 애니메이션, 동물 NPC
+idle+탭 대사, 물 반짝임/나무 흔들림 환경 애니메이션, 미션완료/레벨업/배치/레어 파티클 효과,
+사운드 훅을 모두 절차적 텍스처(`palette.ts` 기반)로 구현했다. 기존 미션/포인트/배치/주민
+데이터 흐름은 그대로 유지하고 렌더링 레이어만 교체했다.
+
+### 남은 작업 (다음 단계, 선택)
+
+- 풀 3D 전환은 `docs/DECISIONS.md` 2번에 메모된 대로, 3D 에셋 제작 도구가 확보되면 별도 단계로 재검토
+- 페이지 간 파티클 이펙트 연동은 `sessionStorage` 기반 v1 — 실시간 이벤트 버스로 고도화 가능 (`docs/PROGRESS.md` 참고)
+- VillageDecoratePage 인-씬 바텀시트 전환은 여전히 미착수 (Phase 4/5에서 식별, 우선순위 낮음)
