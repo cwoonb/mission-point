@@ -9,6 +9,8 @@ import { useAuthStore } from '../store/authStore';
 import { useVillageStore } from '../store/villageStore';
 import { useDecorationStore } from '../store/decorationStore';
 import { VILLAGE_SLOT_LABELS, getZoneForSlot } from '../utils/villageRewards';
+import { markItemPlaced } from '../utils/villageEffects';
+import { playSound } from '../utils/sound';
 import type { VillageSlotType, VillageZone } from '../types';
 
 const PLACEABLE_SLOTS: VillageSlotType[] = ['HOUSE', 'GARDEN', 'YARD', 'PATH', 'SCHOOL', 'WINDOW', 'BED', 'DESK', 'BOOKSHELF', 'RUG', 'PLANT', 'INTERIOR'];
@@ -54,6 +56,8 @@ export default function VillageDecoratePage() {
   const handleSelect = (itemId: string) => {
     if (!activeSlot) return;
     placeItem(currentUser.id, activeSlot, itemId);
+    markItemPlaced(currentUser.id);
+    playSound('itemPlace');
     setActiveSlot(null);
   };
 

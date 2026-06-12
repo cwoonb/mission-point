@@ -1,4 +1,5 @@
 import { clsx } from 'clsx';
+import { playSound } from '../../utils/sound';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'success' | 'danger' | 'amber' | 'ghost';
@@ -30,11 +31,16 @@ export default function Button({
   disabled,
   className,
   children,
+  onClick,
   ...props
 }: ButtonProps) {
   return (
     <button
       disabled={disabled || loading}
+      onClick={(e) => {
+        playSound('tap');
+        onClick?.(e);
+      }}
       className={clsx(
         'font-bold active:scale-90 transition-all duration-100 ease-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2',
         variants[variant],

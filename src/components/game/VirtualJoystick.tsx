@@ -41,6 +41,7 @@ export default function VirtualJoystick({ onMove, size = 84, speed = 2.2 }: Virt
     setStick({ x: 0, y: 0 });
     dirRef.current = { x: 0, y: 0 };
     pointerIdRef.current = null;
+    onMoveRef.current(0, 0);
   };
 
   useEffect(() => {
