@@ -51,6 +51,7 @@ export default function PlayerCharacter({ profile, cosmetics, size = 96, facing 
         hatColor={hatId ? cosmeticById.get(hatId)?.color : undefined}
         glassesColor={glassesId ? cosmeticById.get(glassesId)?.color : undefined}
         bagColor={bagId ? cosmeticById.get(bagId)?.color : undefined}
+        walking={walking}
       />
     </motion.div>
   );
