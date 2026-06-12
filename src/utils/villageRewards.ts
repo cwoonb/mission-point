@@ -153,6 +153,7 @@ export const VILLAGE_SLOT_LABELS: Record<string, string> = {
   BOOKSHELF: '책장',
   RUG: '러그',
   WINDOW: '창문',
+  PLANT: '화분',
 };
 
 export const DECORATION_CATEGORY_LABELS: Record<string, string> = {
@@ -198,6 +199,7 @@ export function getZoneForSlot(slot: VillageSlotType): VillageZone {
     case 'BOOKSHELF':
     case 'RUG':
     case 'WINDOW':
+    case 'PLANT':
       return 'HOUSE_INTERIOR';
     default:
       return 'VILLAGE';

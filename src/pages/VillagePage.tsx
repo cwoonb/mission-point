@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Pencil, Store, Backpack, Palette, Home, DoorOpen } from 'lucide-react';
+import { Pencil, Store, Backpack, Palette } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
@@ -9,6 +9,9 @@ import GameScene from '../components/game/GameScene';
 import GameObject from '../components/game/GameObject';
 import MovementControls from '../components/game/MovementControls';
 import PlayerCharacter from '../components/game/PlayerCharacter';
+import ResidentNPC from '../components/game/ResidentNPC';
+import HouseBuilding, { houseTierFromItemId } from '../components/game/HouseBuilding';
+import { Clouds, TileMap } from '../components/game/SceneDecor';
 import { useAuthStore } from '../store/authStore';
 import { useVillageStore } from '../store/villageStore';
 import { useDecorationStore } from '../store/decorationStore';
@@ -17,17 +20,28 @@ import { formatPoint } from '../utils/helpers';
 import { levelThreshold } from '../utils/villageRewards';
 import type { VillageSlotType } from '../types';
 
+const VILLAGE_LAYOUT = [
+  'TGGGGGGGGT',
+  'GgGFGGFgGg',
+  'GGGGPPGGGG',
+  'GGGGPPGGGG',
+  'PPPPPPPPPP',
+  'GGGGPPGGGG',
+  'GgGFGGFgGg',
+  'TGGGGGGGGT',
+];
+
 const VILLAGE_SLOT_POSITIONS: Partial<Record<VillageSlotType, { x: number; y: number }>> = {
-  SCHOOL: { x: 78, y: 30 },
-  GARDEN: { x: 20, y: 35 },
-  YARD: { x: 50, y: 62 },
-  PATH: { x: 50, y: 90 },
+  SCHOOL: { x: 22, y: 32 },
+  GARDEN: { x: 14, y: 68 },
+  YARD: { x: 86, y: 68 },
+  PATH: { x: 50, y: 58 },
 };
 
 const SLOT_FALLBACK_EMOJI: Partial<Record<VillageSlotType, string>> = {
-  GARDEN: '🌱',
-  YARD: '🌿',
-  PATH: '⬜',
+  GARDEN: '🌳',
+  YARD: '🌻',
+  PATH: '⛲',
   SCHOOL: '🏫',
 };
 
@@ -40,7 +54,7 @@ export default function VillagePage() {
 
   const [editNameOpen, setEditNameOpen] = useState(false);
   const [nameInput, setNameInput] = useState('');
-  const [charPos, setCharPos] = useState({ x: 50, y: 70 });
+  const [charPos, setCharPos] = useState({ x: 50, y: 76 });
   const [facing, setFacing] = useState<'down' | 'left' | 'right'>('down');
   const [walking, setWalking] = useState(false);
   const walkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,14 +67,15 @@ export default function VillagePage() {
   const housePlacement = getPlacement(currentUser.id, 'HOUSE');
   const houseItem = housePlacement ? getItem(housePlacement.itemId) : undefined;
   const residents = getUserResidents(currentUser.id);
+  const sceneResidents = residents.slice(0, 5);
 
   const expNeeded = levelThreshold(village.level);
   const expProgress = Math.min(100, Math.round((village.exp / expNeeded) * 100));
 
   const handleMove = (dx: number, dy: number) => {
     setCharPos((p) => ({
-      x: Math.min(92, Math.max(8, p.x + dx)),
-      y: Math.min(92, Math.max(20, p.y + dy)),
+      x: Math.min(94, Math.max(6, p.x + dx)),
+      y: Math.min(94, Math.max(28, p.y + dy)),
     }));
     if (dx < 0) setFacing('left');
     else if (dx > 0) setFacing('right');
@@ -110,32 +125,41 @@ export default function VillagePage() {
           </div>
         </div>
 
-        {/* 마을 풍경 */}
-        <GameScene background="bg-gradient-to-b from-sky-100 via-emerald-50 to-emerald-200" height={380}>
-          <GameObject x={50} y={14} emoji={houseItem?.emoji ?? '🏠'} size={56} bob label="우리 집" onClick={() => navigate('/')} />
+        {/* 타일맵 마을 풍경 */}
+        <GameScene height={440}>
+          <Clouds />
+          <TileMap layout={VILLAGE_LAYOUT} />
 
+          {/* 우리 집 (앞마당으로 이동) */}
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '2%' }}>
+            <HouseBuilding
+              tier={houseTierFromItemId(houseItem?.id)}
+              size={100}
+              onClick={() => navigate('/')}
+              label="우리 집"
+            />
+          </div>
+
+          {/* 놀이터 */}
+          <GameObject x={78} y={30} emoji="🛝" size={34} bob label="놀이터" />
+
+          {/* 꾸미기 슬롯 시설 */}
           {Object.entries(VILLAGE_SLOT_POSITIONS).map(([slot, pos]) => {
             const placement = placements.find((p) => p.slot === (slot as VillageSlotType));
             const item = placement ? getItem(placement.itemId) : undefined;
             const fallback = SLOT_FALLBACK_EMOJI[slot as VillageSlotType];
             if (!item && !fallback) return null;
             return (
-              <GameObject key={slot} x={pos.x} y={pos.y} emoji={item?.emoji ?? fallback} size={38} bob />
+              <GameObject key={slot} x={pos.x} y={pos.y} emoji={item?.emoji ?? fallback} size={34} bob label={item?.name} />
             );
           })}
 
-          {residents.map((r, i) => (
-            <GameObject
-              key={r.id}
-              x={28 + i * 22}
-              y={48}
-              emoji={r.emoji}
-              size={34}
-              bob
-              label={r.name}
-            />
+          {/* 마을 주민 */}
+          {sceneResidents.map((r, i) => (
+            <ResidentNPC key={r.id} x={14 + i * 18} y={88} resident={r} size={32} />
           ))}
 
+          {/* 플레이어 캐릭터 */}
           <GameObject x={charPos.x} y={charPos.y}>
             <PlayerCharacter profile={profile} cosmetics={cosmetics} size={64} facing={facing} walking={walking} />
           </GameObject>
@@ -143,17 +167,7 @@ export default function VillagePage() {
           <MovementControls onMove={handleMove} />
         </GameScene>
 
-        {/* 이동 버튼 */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <Button fullWidth size="lg" variant="secondary" onClick={() => navigate('/')} className="rounded-2xl">
-            <Home size={18} className="mr-1.5" /> 집 앞으로
-          </Button>
-          <Button fullWidth size="lg" variant="amber" onClick={() => navigate('/village/house')} className="rounded-2xl">
-            <DoorOpen size={18} className="mr-1.5" /> 집 안으로
-          </Button>
-        </div>
-
-        {/* 동물 주민 */}
+        {/* 동물 주민 도감 */}
         {residents.length > 0 && (
           <div>
             <p className="text-sm font-bold text-gray-700 mb-2">🐾 우리 마을 주민 ({residents.length})</p>

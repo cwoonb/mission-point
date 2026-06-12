@@ -7,27 +7,30 @@ import GameScene from '../components/game/GameScene';
 import GameObject from '../components/game/GameObject';
 import MovementControls from '../components/game/MovementControls';
 import PlayerCharacter from '../components/game/PlayerCharacter';
+import { RoomBackdrop, CeilingLamp } from '../components/game/SceneDecor';
 import { useAuthStore } from '../store/authStore';
 import { useVillageStore } from '../store/villageStore';
 import { useDecorationStore } from '../store/decorationStore';
 import { useCharacterStore } from '../store/characterStore';
 import type { VillageSlotType } from '../types';
 
-const INTERIOR_SLOT_POSITIONS: Partial<Record<VillageSlotType, { x: number; y: number }>> = {
-  WINDOW: { x: 50, y: 14 },
-  BED: { x: 22, y: 35 },
-  DESK: { x: 78, y: 38 },
-  BOOKSHELF: { x: 82, y: 68 },
-  RUG: { x: 40, y: 75 },
-  INTERIOR: { x: 18, y: 68 },
+const INTERIOR_SLOT_POSITIONS: Partial<Record<VillageSlotType, { x: number; y: number; size: number }>> = {
+  WINDOW: { x: 50, y: 14, size: 52 },
+  RUG: { x: 50, y: 88, size: 64 },
+  BED: { x: 20, y: 64, size: 50 },
+  BOOKSHELF: { x: 84, y: 40, size: 40 },
+  DESK: { x: 80, y: 66, size: 42 },
+  PLANT: { x: 10, y: 80, size: 30 },
+  INTERIOR: { x: 50, y: 66, size: 36 },
 };
 
 const SLOT_FALLBACK_EMOJI: Partial<Record<VillageSlotType, string>> = {
   WINDOW: '🪟',
-  BED: '🛏️',
-  DESK: '🪑',
-  BOOKSHELF: '📚',
   RUG: '🟫',
+  BED: '🛏️',
+  BOOKSHELF: '📚',
+  DESK: '🪑',
+  PLANT: '🪴',
   INTERIOR: '🪑',
 };
 
@@ -38,7 +41,7 @@ export default function HouseInteriorPage() {
   const { getItem } = useDecorationStore();
   const { getProfile, ensureProfile, cosmetics } = useCharacterStore();
 
-  const [charPos, setCharPos] = useState({ x: 50, y: 60 });
+  const [charPos, setCharPos] = useState({ x: 50, y: 76 });
   const [facing, setFacing] = useState<'down' | 'left' | 'right'>('down');
   const [walking, setWalking] = useState(false);
   const walkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -51,7 +54,7 @@ export default function HouseInteriorPage() {
   const handleMove = (dx: number, dy: number) => {
     setCharPos((p) => ({
       x: Math.min(90, Math.max(10, p.x + dx)),
-      y: Math.min(90, Math.max(25, p.y + dy)),
+      y: Math.min(94, Math.max(60, p.y + dy)),
     }));
     if (dx < 0) setFacing('left');
     else if (dx > 0) setFacing('right');
@@ -65,17 +68,19 @@ export default function HouseInteriorPage() {
       <Header title="🏠 우리 집" showBack />
 
       <div className="content-area px-4 py-4 space-y-4">
-        <GameScene background="bg-gradient-to-b from-amber-100 via-orange-50 to-amber-200" height={420}>
-          {/* 바닥 */}
-          <div className="absolute bottom-0 left-0 right-0 h-1/4 bg-amber-300/40" />
+        <GameScene height={440}>
+          <RoomBackdrop wallPct={58} />
+          <CeilingLamp />
 
-          {Object.entries(INTERIOR_SLOT_POSITIONS).map(([slot, pos]) => {
-            const placement = placements.find((p) => p.slot === (slot as VillageSlotType));
+          {(['RUG', 'WINDOW', 'BED', 'BOOKSHELF', 'DESK', 'PLANT', 'INTERIOR'] as VillageSlotType[]).map((slot) => {
+            const pos = INTERIOR_SLOT_POSITIONS[slot];
+            if (!pos) return null;
+            const placement = placements.find((p) => p.slot === slot);
             const item = placement ? getItem(placement.itemId) : undefined;
-            const fallback = SLOT_FALLBACK_EMOJI[slot as VillageSlotType];
+            const fallback = SLOT_FALLBACK_EMOJI[slot];
             if (!item && !fallback) return null;
             return (
-              <GameObject key={slot} x={pos.x} y={pos.y} emoji={item?.emoji ?? fallback} size={42} bob={!!item} />
+              <GameObject key={slot} x={pos.x} y={pos.y} emoji={item?.emoji ?? fallback} size={pos.size} bob={!!item} label={item?.name} />
             );
           })}
 

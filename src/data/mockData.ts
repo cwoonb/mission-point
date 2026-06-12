@@ -445,6 +445,8 @@ export const initialDecorationItems: DecorationItem[] = [
   { id: 'deco-rug-stripe', name: '줄무늬 러그', description: '알록달록한 줄무늬 러그예요.', emoji: '🟧', category: 'FURNITURE', slot: 'RUG', rarity: 'RARE', requiredPoint: 140, requiredLevel: 2, enabled: true },
   { id: 'deco-window-basic', name: '동그란 창문', description: '햇살이 잘 들어오는 작은 창문이에요.', emoji: '🪟', category: 'FURNITURE', slot: 'WINDOW', rarity: 'COMMON', requiredPoint: 60, requiredLevel: 1, enabled: true },
   { id: 'deco-window-curtain', name: '커튼 창문', description: '예쁜 커튼이 달린 창문이에요.', emoji: '🌇', category: 'FURNITURE', slot: 'WINDOW', rarity: 'RARE', requiredPoint: 150, requiredLevel: 3, enabled: true },
+  { id: 'deco-plant-small', name: '작은 화분', description: '방 안에 싱그러움을 더해주는 화분이에요.', emoji: '🪴', category: 'FURNITURE', slot: 'PLANT', rarity: 'COMMON', requiredPoint: 50, requiredLevel: 1, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'deco-plant-flower', name: '꽃 화분', description: '예쁜 꽃이 핀 화분이에요.', emoji: '💐', category: 'FURNITURE', slot: 'PLANT', rarity: 'RARE', requiredPoint: 130, requiredLevel: 2, enabled: true },
   { id: 'deco-tree-small', name: '어린 나무', description: '마을 마당에 심은 작은 나무예요.', emoji: '🌳', category: 'TREE', slot: 'GARDEN', rarity: 'COMMON', requiredPoint: 50, requiredLevel: 1, unlockMissionType: 'LIFESTYLE', enabled: true },
   { id: 'deco-tree-big', name: '튼튼한 나무', description: '오랫동안 자라온 튼튼한 나무예요.', emoji: '🌲', category: 'TREE', slot: 'GARDEN', rarity: 'RARE', requiredPoint: 200, requiredLevel: 3, enabled: true },
   { id: 'deco-flower-tulip', name: '튤립 화단', description: '알록달록한 튤립이 피어 있어요.', emoji: '🌷', category: 'FLOWER', slot: 'GARDEN', rarity: 'COMMON', requiredPoint: 50, requiredLevel: 1, unlockMissionType: 'LIFESTYLE', enabled: true },
@@ -465,14 +467,16 @@ export const initialDecorationItems: DecorationItem[] = [
 
 // ── 마을 꾸미기: 동물 주민 카탈로그 ────────────────────────
 export const initialVillageResidents: VillageResident[] = [
-  { id: 'resident-rabbit', name: '토끼', emoji: '🐰', personality: '활발하고 발이 빠른', description: '아침 일찍부터 마을을 신나게 뛰어다녀요.', relatedMissionTypes: ['ATTENDANCE', 'LIFESTYLE'], requiredLevel: 1, unlockHint: '출석과 생활습관 미션을 잘 챙기면 만날 수 있어요.' },
-  { id: 'resident-dog', name: '강아지', emoji: '🐶', personality: '꾸준하고 친근한', description: '매일매일 변함없이 곁을 지켜줘요.', relatedMissionTypes: [], requiredLevel: 1, unlockHint: '미션을 연속으로 성공하면 만날 수 있어요.' },
-  { id: 'resident-squirrel', name: '다람쥐', emoji: '🐿️', personality: '차곡차곡 모으는 걸 좋아하는', description: '도토리를 모으듯 단어를 차곡차곡 모아요.', relatedMissionTypes: ['VOCABULARY', 'READING'], requiredLevel: 2, unlockHint: '단어 암기와 독서를 꾸준히 하면 만날 수 있어요.' },
-  { id: 'resident-cat', name: '고양이', emoji: '🐱', personality: '조용히 책 읽는 걸 좋아하는', description: '햇살 좋은 자리에서 책 읽기를 즐겨요.', relatedMissionTypes: ['READING'], requiredLevel: 2, unlockHint: '독서 미션을 꾸준히 하면 만날 수 있어요.' },
-  { id: 'resident-penguin', name: '펭귄', emoji: '🐧', personality: '차분하고 규칙적인', description: '매일 같은 시간에 마을을 산책해요.', relatedMissionTypes: ['ATTENDANCE'], requiredLevel: 2, unlockHint: '출석 미션을 꾸준히 하면 만날 수 있어요.' },
-  { id: 'resident-beaver', name: '비버', emoji: '🦫', personality: '성실하고 손재주가 좋은', description: '무엇이든 차근차근 만들고 정리해요.', relatedMissionTypes: ['HOMEWORK', 'REVIEW_NOTES'], requiredLevel: 3, unlockHint: '숙제와 오답정리를 꾸준히 하면 만날 수 있어요.' },
-  { id: 'resident-fox', name: '여우', emoji: '🦊', personality: '똑똑하고 문제 해결을 좋아하는', description: '어려운 문제도 척척 풀어내요.', relatedMissionTypes: ['HOMEWORK', 'REVIEW_NOTES'], requiredLevel: 4, unlockHint: '오답정리를 열심히 하면 만날 수 있어요.' },
-  { id: 'resident-bear', name: '곰', emoji: '🐻', personality: '든든하고 포근한', description: '마을이 잘 자라도록 든든하게 지켜줘요.', relatedMissionTypes: ['LIFESTYLE'], requiredLevel: 5, unlockHint: '마을이 충분히 성장하면 만날 수 있어요.' },
+  { id: 'resident-rabbit', name: '토끼', emoji: '🐰', personality: '활발하고 발이 빠른', description: '아침 일찍부터 마을을 신나게 뛰어다녀요.', dialogue: ['오늘도 일찍 일어났구나, 대단해!', '같이 마을을 한 바퀴 뛰어볼까?', '꾸준한 생활습관이 제일 멋진 거야!'], rarity: 'COMMON', relatedMissionTypes: ['ATTENDANCE', 'LIFESTYLE'], requiredLevel: 1, unlockHint: '출석과 생활습관 미션을 잘 챙기면 만날 수 있어요.' },
+  { id: 'resident-dog', name: '강아지', emoji: '🐶', personality: '꾸준하고 친근한', description: '매일매일 변함없이 곁을 지켜줘요.', dialogue: ['오늘도 와줘서 정말 기뻐!', '꾸준히 하는 게 제일 어려운 건데, 잘하고 있어!', '내일도 또 보자, 약속!'], rarity: 'COMMON', relatedMissionTypes: [], requiredLevel: 1, unlockHint: '미션을 연속으로 성공하면 만날 수 있어요.' },
+  { id: 'resident-squirrel', name: '다람쥐', emoji: '🐿️', personality: '차곡차곡 모으는 걸 좋아하는', description: '도토리를 모으듯 단어를 차곡차곡 모아요.', dialogue: ['오늘 외운 단어, 도토리처럼 잘 모아뒀어!', '하나씩 쌓다 보면 어느새 가득 차 있을 거야.', '책 읽는 것도 잊지 마!'], rarity: 'COMMON', relatedMissionTypes: ['VOCABULARY', 'READING'], requiredLevel: 2, unlockHint: '단어 암기와 독서를 꾸준히 하면 만날 수 있어요.' },
+  { id: 'resident-cat', name: '고양이', emoji: '🐱', personality: '조용히 책 읽는 걸 좋아하는', description: '햇살 좋은 자리에서 책 읽기를 즐겨요.', dialogue: ['이 책 정말 재미있어, 너도 읽어볼래?', '조용히 책 읽는 시간이 제일 좋아.', '오늘은 어떤 이야기를 읽었어?'], rarity: 'COMMON', relatedMissionTypes: ['READING'], requiredLevel: 2, unlockHint: '독서 미션을 꾸준히 하면 만날 수 있어요.' },
+  { id: 'resident-penguin', name: '펭귄', emoji: '🐧', personality: '차분하고 규칙적인', description: '매일 같은 시간에 마을을 산책해요.', dialogue: ['오늘도 정해진 시간에 딱! 멋지다.', '규칙적인 습관이 큰 힘이 될 거야.', '같이 산책할까?'], rarity: 'RARE', relatedMissionTypes: ['ATTENDANCE'], requiredLevel: 2, unlockHint: '출석 미션을 꾸준히 하면 만날 수 있어요.' },
+  { id: 'resident-beaver', name: '비버', emoji: '🦫', personality: '성실하고 손재주가 좋은', description: '무엇이든 차근차근 만들고 정리해요.', dialogue: ['오늘 숙제도 차근차근 잘 해냈구나!', '정리정돈은 내 전문이야, 같이 해볼까?', '꼼꼼한 게 최고의 무기야.'], rarity: 'RARE', relatedMissionTypes: ['HOMEWORK', 'REVIEW_NOTES'], requiredLevel: 3, unlockHint: '숙제와 오답정리를 꾸준히 하면 만날 수 있어요.' },
+  { id: 'resident-fox', name: '여우', emoji: '🦊', personality: '똑똑하고 문제 해결을 좋아하는', description: '어려운 문제도 척척 풀어내요.', dialogue: ['오답을 다시 보는 건 정말 똑똑한 습관이야.', '어려운 문제일수록 재밌지 않아?', '다음 문제도 같이 풀어볼까?'], rarity: 'EPIC', relatedMissionTypes: ['HOMEWORK', 'REVIEW_NOTES'], requiredLevel: 4, unlockHint: '오답정리를 열심히 하면 만날 수 있어요.' },
+  { id: 'resident-bear', name: '곰', emoji: '🐻', personality: '든든하고 포근한', description: '마을이 잘 자라도록 든든하게 지켜줘요.', dialogue: ['마을이 점점 멋져지고 있어, 네 덕분이야.', '힘들 땐 잠깐 쉬어가도 괜찮아.', '오늘도 우리 마을을 지켜줄게.'], rarity: 'EPIC', relatedMissionTypes: ['LIFESTYLE'], requiredLevel: 5, unlockHint: '마을이 충분히 성장하면 만날 수 있어요.' },
+  { id: 'resident-panda', name: '판다', emoji: '🐼', personality: '느긋하고 여유로운', description: '바쁜 하루 속에서도 여유를 찾아주는 친구예요.', dialogue: ['천천히 가도 괜찮아, 꾸준한 게 더 중요해.', '오늘 하루도 참 잘 보냈네.', '같이 느긋하게 쉬었다 가자.'], rarity: 'EPIC', relatedMissionTypes: ['LIFESTYLE'], requiredLevel: 6, unlockHint: '연속 14일 동안 미션을 성공하면 만날 수 있어요.' },
+  { id: 'resident-owl', name: '부엉이', emoji: '🦉', personality: '지혜롭고 차분한 밤의 친구', description: '밤마다 마을을 조용히 지켜보며 지혜를 나눠줘요.', dialogue: ['오늘 외운 단어들, 머릿속에 잘 담아뒀니?', '복습은 늦은 시간에 해도 늦지 않아.', '꾸준한 공부가 가장 큰 지혜야.'], rarity: 'LEGENDARY', relatedMissionTypes: ['VOCABULARY', 'REVIEW_NOTES'], requiredLevel: 7, unlockHint: '단어암기 미션을 10회 완료하면 만날 수 있어요.' },
 ];
 
 // ── 마을 꾸미기: 업적 카탈로그 ─────────────────────────────
@@ -487,6 +491,8 @@ export const initialAchievements: Achievement[] = [
   { id: 'ach-lifestyle-5', name: '생활왕', description: '생활습관 미션을 5회 완료했어요!', emoji: '🌱', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 5, conditionMissionType: 'LIFESTYLE', rewardPoint: 0, rewardResidentId: 'resident-rabbit' },
   { id: 'ach-review-5', name: '복습 마스터', description: '오답정리 미션을 5회 완료했어요!', emoji: '🦊', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 5, conditionMissionType: 'REVIEW_NOTES', rewardPoint: 0, rewardResidentId: 'resident-fox' },
   { id: 'ach-village-5', name: '마을 번영', description: '마을 레벨 5를 달성했어요!', emoji: '🏆', conditionType: 'VILLAGE_LEVEL', conditionValue: 5, rewardPoint: 0, rewardItemId: 'deco-school', rewardResidentId: 'resident-bear' },
+  { id: 'ach-streak-14', name: '느긋한 꾸준함', description: '14일 연속으로 미션을 성공했어요!', emoji: '🔥', conditionType: 'STREAK', conditionValue: 14, rewardPoint: 150, rewardResidentId: 'resident-panda' },
+  { id: 'ach-vocab-10', name: '단어 박사', description: '단어암기 미션을 10회 완료했어요!', emoji: '🦉', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 10, conditionMissionType: 'VOCABULARY', rewardPoint: 150, rewardResidentId: 'resident-owl' },
 ];
 
 // ── 마을 ────────────────────────────────────────────────

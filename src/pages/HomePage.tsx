@@ -1,16 +1,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronRight, Play, AlertTriangle, TrendingUp, Clock, Users, CheckCircle2, DoorOpen } from 'lucide-react';
+import { Plus, ChevronRight, Play, AlertTriangle, TrendingUp, Clock, Users, CheckCircle2 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import CoinAnimation from '../components/animations/CoinAnimation';
 import GameScene from '../components/game/GameScene';
 import GameObject from '../components/game/GameObject';
-import MissionSign from '../components/game/MissionSign';
 import MovementControls from '../components/game/MovementControls';
 import PlayerCharacter from '../components/game/PlayerCharacter';
+import { Clouds, SunBadge, GrassGround } from '../components/game/SceneDecor';
+import HouseBuilding, { houseTierFromItemId } from '../components/game/HouseBuilding';
+import ResidentNPC from '../components/game/ResidentNPC';
+import MissionBoard from '../components/game/MissionBoard';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { usePointStore } from '../store/pointStore';
@@ -26,16 +29,28 @@ import {
   getUnsubmittedCount,
   statusConfig,
   defaultStatusThresholds,
+  missionTypeEmoji,
+  missionTypeLabel,
 } from '../utils/studentStats';
 
 const AD_TOTAL_SECONDS = 5;
 const MAX_ADS = 5;
 
-const SIGNPOST_CONFIG: Record<string, { emoji: string; label: string; border: string; textColor: string }> = {
-  IN_PROGRESS: { emoji: '📋', label: '오늘 할 일이에요', border: 'border-blue-400', textColor: 'text-blue-500' },
-  REVIEWING: { emoji: '⏳', label: '확인 기다리는 중이에요', border: 'border-amber-400', textColor: 'text-amber-500' },
-  REJECTED: { emoji: '🔄', label: '다시 제출해주세요', border: 'border-red-400', textColor: 'text-red-500' },
+const MISSION_TYPE_ACCENT: Record<string, string> = {
+  HOMEWORK: '#60A5FA',
+  VOCABULARY: '#F472B6',
+  READING: '#34D399',
+  ATTENDANCE: '#FBBF24',
+  REVIEW_NOTES: '#A78BFA',
+  LIFESTYLE: '#4ADE80',
+  OTHER: '#F87171',
 };
+
+const BOARD_POSITIONS = [
+  { x: 16, y: 84 },
+  { x: 50, y: 90 },
+  { x: 84, y: 84 },
+];
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -61,7 +76,7 @@ export default function HomePage() {
   const handleMove = (dx: number, dy: number) => {
     setCharPos((p) => ({
       x: Math.min(92, Math.max(8, p.x + dx)),
-      y: Math.min(90, Math.max(35, p.y + dy)),
+      y: Math.min(94, Math.max(55, p.y + dy)),
     }));
     if (dx < 0) setFacing('left');
     else if (dx > 0) setFacing('right');
@@ -186,16 +201,22 @@ export default function HomePage() {
     };
 
     const profile = getProfile(currentUser.id);
-    const signMissions = activeMissions.slice(0, 2);
-    const signX = [25, 75];
+
+    const missionsByType: Record<string, typeof activeMissions> = {};
+    activeMissions.forEach((m) => {
+      const type = m.missionType ?? 'OTHER';
+      if (!missionsByType[type]) missionsByType[type] = [];
+      missionsByType[type].push(m);
+    });
+    const missionBoardEntries = Object.entries(missionsByType).slice(0, BOARD_POSITIONS.length);
 
     return (
       <div className="page-container">
         <Header />
         <CoinAnimation trigger={coinTrigger} onComplete={() => setCoinTrigger(false)} />
 
-        <div className="content-area px-4 py-5 space-y-5">
-          {/* 내 집 앞 정보 */}
+        <div className="content-area px-4 py-5 space-y-4">
+          {/* 마을 정보 */}
           <div className="flex items-center justify-between px-1">
             <div>
               <p className="text-gray-500 text-xs font-bold">{villageName}</p>
@@ -208,7 +229,7 @@ export default function HomePage() {
               내역 보기 <ChevronRight size={12} />
             </button>
           </div>
-          <div className="h-1.5 bg-white rounded-full overflow-hidden -mt-3 shadow-sm">
+          <div className="h-1.5 bg-white rounded-full overflow-hidden -mt-2 shadow-sm">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${expProgress}%` }}
@@ -217,30 +238,46 @@ export default function HomePage() {
             />
           </div>
 
-          {/* 내 집 앞 게임 화면 */}
-          <GameScene>
-            {gardenItem && <GameObject x={12} y={78} emoji={gardenItem.emoji} size={32} bob />}
-            {yardItem && <GameObject x={88} y={78} emoji={yardItem.emoji} size={32} bob />}
-            <GameObject x={50} y={50} emoji={houseItem?.emoji ?? '🏠'} size={84} bob />
-            {mainResident && (
-              <GameObject x={70} y={70} emoji={mainResident.emoji} size={36} bob label={mainResident.name} />
+          {/* 우리 집 앞마당 — 메인 게임 씬 */}
+          <GameScene height={460}>
+            <Clouds />
+            <SunBadge />
+            <GrassGround heightPct={58} />
+
+            <GameObject x={7} y={46} emoji="🌳" size={42} bob />
+            <GameObject x={93} y={48} emoji="🌲" size={38} bob />
+            {gardenItem && <GameObject x={16} y={80} emoji={gardenItem.emoji} size={30} bob />}
+            {yardItem && <GameObject x={84} y={80} emoji={yardItem.emoji} size={30} bob />}
+            <GameObject x={30} y={92} emoji="🌷" size={20} />
+            <GameObject x={70} y={92} emoji="🌼" size={20} />
+
+            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '18%' }}>
+              <HouseBuilding
+                tier={houseTierFromItemId(houseItem?.id)}
+                size={140}
+                onClick={() => navigate('/village/house')}
+                label="우리 집"
+              />
+            </div>
+
+            {missionBoardEntries.length === 0 ? (
+              <GameObject x={50} y={84} emoji="🌟" size={32} label="오늘 할 일 끝!" bob />
+            ) : (
+              missionBoardEntries.map(([type, list], i) => (
+                <MissionBoard
+                  key={type}
+                  x={BOARD_POSITIONS[i].x}
+                  y={BOARD_POSITIONS[i].y}
+                  emoji={missionTypeEmoji[type] ?? '🪧'}
+                  label={missionTypeLabel[type] ?? '기타'}
+                  count={list.length}
+                  accentColor={MISSION_TYPE_ACCENT[type] ?? '#60A5FA'}
+                  onClick={() => navigate(list.length === 1 ? `/missions/${list[0].id}` : '/missions')}
+                />
+              ))
             )}
 
-            {signMissions.map((m, i) => {
-              const config = SIGNPOST_CONFIG[m.status] ?? SIGNPOST_CONFIG.IN_PROGRESS;
-              return (
-                <MissionSign
-                  key={m.id}
-                  x={signX[i]}
-                  y={32}
-                  emoji={config.emoji}
-                  label={m.title}
-                  sublabel={`+${formatPoint(m.rewardPoint)}P`}
-                  accentColor="#60A5FA"
-                  onClick={() => navigate(`/missions/${m.id}`)}
-                />
-              );
-            })}
+            {mainResident && <ResidentNPC x={50} y={62} resident={mainResident} size={30} />}
 
             {profile ? (
               <GameObject x={charPos.x} y={charPos.y}>
@@ -253,69 +290,21 @@ export default function HomePage() {
             <MovementControls onMove={handleMove} />
           </GameScene>
 
-          {/* 이동 버튼 */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={handleEnterVillage}
-              className="bg-gradient-to-r from-emerald-400 to-teal-500 text-white font-black text-sm py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-1.5"
-            >
-              🏘️ 마을 들어가기
-            </motion.button>
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={() => navigate('/village/house')}
-              className="bg-gradient-to-r from-amber-400 to-orange-400 text-white font-black text-sm py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-1.5"
-            >
-              <DoorOpen size={16} /> 집 내부 보기
-            </motion.button>
-          </div>
+          {/* 마을 들어가기 */}
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={handleEnterVillage}
+            className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 text-white font-black text-sm py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-1.5"
+          >
+            🏘️ 마을 들어가기
+          </motion.button>
 
-          {/* 오늘의 미션 */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="section-title mb-0">📌 오늘의 미션</h2>
-              <button onClick={() => navigate('/missions')} className="text-purple-500 text-xs font-semibold flex items-center gap-0.5">
-                전체보기 <ChevronRight size={12} />
-              </button>
+          {successMissions.length > 0 && (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2.5 flex items-center gap-2">
+              <span className="text-lg">✨</span>
+              <p className="text-xs text-emerald-600 font-semibold">완료한 미션 {successMissions.length}개 · 마을이 자라고 있어요!</p>
             </div>
-            {activeMissions.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
-                <p className="text-3xl mb-2">🌟</p>
-                <p className="text-gray-500 text-sm">오늘 할 일을 모두 끝냈어요!</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {activeMissions.map((m, i) => {
-                  const config = SIGNPOST_CONFIG[m.status] ?? SIGNPOST_CONFIG.IN_PROGRESS;
-                  return (
-                    <motion.div
-                      key={m.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.05 * i }}
-                      onClick={() => navigate(`/missions/${m.id}`)}
-                      className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 ${config.border} flex items-center gap-3 cursor-pointer active:scale-95 transition-transform`}
-                    >
-                      <div className="text-2xl flex-shrink-0">{config.emoji}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-gray-800 truncate">{m.title}</p>
-                        <p className={`text-xs font-semibold ${config.textColor}`}>{config.label}</p>
-                      </div>
-                      <span className="text-amber-500 font-bold text-xs flex-shrink-0">+{formatPoint(m.rewardPoint)}P</span>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-
-            {successMissions.length > 0 && (
-              <div className="mt-3 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2.5 flex items-center gap-2">
-                <span className="text-lg">✨</span>
-                <p className="text-xs text-emerald-600 font-semibold">완료한 미션 {successMissions.length}개 · 마을이 자라고 있어요!</p>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* 광고 보상 (간단히) */}
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}

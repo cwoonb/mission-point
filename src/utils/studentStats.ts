@@ -120,6 +120,16 @@ export const missionTypeLabel: Record<string, string> = {
   OTHER: '기타',
 };
 
+export const missionTypeEmoji: Record<string, string> = {
+  HOMEWORK: '📝',
+  VOCABULARY: '🔤',
+  READING: '📖',
+  ATTENDANCE: '✅',
+  REVIEW_NOTES: '📓',
+  LIFESTYLE: '🌱',
+  OTHER: '🪧',
+};
+
 export const missionGoalLabel: Record<string, string> = {
   SINCERITY: '성실도 향상',
   STUDY_HABIT: '학습 습관 형성',

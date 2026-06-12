@@ -51,7 +51,8 @@ export type VillageSlotType =
   | 'DESK'
   | 'BOOKSHELF'
   | 'RUG'
-  | 'WINDOW';
+  | 'WINDOW'
+  | 'PLANT';
 
 /** 마을 배치가 어느 화면(구역)에 속하는지 구분 */
 export type VillageZone = 'HOUSE_INTERIOR' | 'HOUSE_EXTERIOR' | 'VILLAGE';
@@ -115,6 +116,8 @@ export interface VillageResident {
   emoji: string;
   personality: string;
   description: string;
+  dialogue: string[];
+  rarity: ItemRarity;
   relatedMissionTypes: MissionType[];
   requiredLevel: number;
   unlockHint: string;

@@ -11,7 +11,7 @@ import { useDecorationStore } from '../store/decorationStore';
 import { VILLAGE_SLOT_LABELS, getZoneForSlot } from '../utils/villageRewards';
 import type { VillageSlotType, VillageZone } from '../types';
 
-const PLACEABLE_SLOTS: VillageSlotType[] = ['HOUSE', 'GARDEN', 'YARD', 'PATH', 'SCHOOL', 'WINDOW', 'BED', 'DESK', 'BOOKSHELF', 'RUG', 'INTERIOR'];
+const PLACEABLE_SLOTS: VillageSlotType[] = ['HOUSE', 'GARDEN', 'YARD', 'PATH', 'SCHOOL', 'WINDOW', 'BED', 'DESK', 'BOOKSHELF', 'RUG', 'PLANT', 'INTERIOR'];
 
 const SLOT_FALLBACK_EMOJI: Record<VillageSlotType, string> = {
   HOUSE: '🏚️',
@@ -26,6 +26,7 @@ const SLOT_FALLBACK_EMOJI: Record<VillageSlotType, string> = {
   BOOKSHELF: '📚',
   RUG: '🟫',
   WINDOW: '🪟',
+  PLANT: '🪴',
 };
 
 export default function VillageDecoratePage() {
