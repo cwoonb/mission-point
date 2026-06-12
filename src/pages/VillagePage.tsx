@@ -7,11 +7,24 @@ import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import GameScene from '../components/game/GameScene';
 import GameObject from '../components/game/GameObject';
-import MovementControls from '../components/game/MovementControls';
+import VirtualJoystick from '../components/game/VirtualJoystick';
 import PlayerCharacter from '../components/game/PlayerCharacter';
 import ResidentNPC from '../components/game/ResidentNPC';
-import HouseBuilding, { houseTierFromItemId } from '../components/game/HouseBuilding';
-import { Clouds, TileMap } from '../components/game/SceneDecor';
+import HouseRenderer, { houseTierFromItemId } from '../components/game/house/HouseRenderer';
+import { Clouds } from '../components/game/assets/SkyDecor';
+import GroundField from '../components/game/assets/GroundField';
+import PathRibbon from '../components/game/assets/PathRibbon';
+import TreeObject from '../components/game/assets/TreeObject';
+import FlowerObject from '../components/game/assets/FlowerObject';
+import FenceObject from '../components/game/assets/FenceObject';
+import BenchObject from '../components/game/assets/BenchObject';
+import FountainObject from '../components/game/assets/FountainObject';
+import MailboxObject from '../components/game/assets/MailboxObject';
+import SchoolObject from '../components/game/assets/SchoolObject';
+import LibraryObject from '../components/game/assets/LibraryObject';
+import ShopObject from '../components/game/assets/ShopObject';
+import StorageChestObject from '../components/game/assets/StorageChestObject';
+import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { useAuthStore } from '../store/authStore';
 import { useVillageStore } from '../store/villageStore';
 import { useDecorationStore } from '../store/decorationStore';
@@ -20,30 +33,28 @@ import { formatPoint } from '../utils/helpers';
 import { levelThreshold } from '../utils/villageRewards';
 import type { VillageSlotType } from '../types';
 
-const VILLAGE_LAYOUT = [
-  'TGGGGGGGGT',
-  'GgGFGGFgGg',
-  'GGGGPPGGGG',
-  'GGGGPPGGGG',
-  'PPPPPPPPPP',
-  'GGGGPPGGGG',
-  'GgGFGGFgGg',
-  'TGGGGGGGGT',
-];
-
 const VILLAGE_SLOT_POSITIONS: Partial<Record<VillageSlotType, { x: number; y: number }>> = {
-  SCHOOL: { x: 22, y: 32 },
-  GARDEN: { x: 14, y: 68 },
-  YARD: { x: 86, y: 68 },
+  SCHOOL: { x: 18, y: 38 },
+  GARDEN: { x: 14, y: 58 },
+  YARD: { x: 86, y: 58 },
   PATH: { x: 50, y: 58 },
 };
 
-const SLOT_FALLBACK_EMOJI: Partial<Record<VillageSlotType, string>> = {
-  GARDEN: '🌳',
-  YARD: '🌻',
-  PATH: '⛲',
-  SCHOOL: '🏫',
-};
+/** 꾸미기 아이템이 배치되지 않은 슬롯에 표시할 기본 SVG 오브젝트 */
+function renderSlotFallback(slot: VillageSlotType, size: number) {
+  switch (slot) {
+    case 'GARDEN':
+      return <TreeObject variant="round" size={size} />;
+    case 'YARD':
+      return <FlowerObject color="purple" size={size * 0.6} />;
+    case 'PATH':
+      return <FountainObject size={size} />;
+    case 'SCHOOL':
+      return <SchoolObject size={size} />;
+    default:
+      return null;
+  }
+}
 
 export default function VillagePage() {
   const navigate = useNavigate();
@@ -54,10 +65,10 @@ export default function VillagePage() {
 
   const [editNameOpen, setEditNameOpen] = useState(false);
   const [nameInput, setNameInput] = useState('');
-  const [charPos, setCharPos] = useState({ x: 50, y: 76 });
-  const [facing, setFacing] = useState<'down' | 'left' | 'right'>('down');
-  const [walking, setWalking] = useState(false);
-  const walkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { pos: charPos, facing, walking, move, moveTo } = usePlayerMovement(
+    { x: 50, y: 70 },
+    { xMin: 6, xMax: 94, yMin: 28, yMax: 94 }
+  );
 
   if (!currentUser) return null;
 
@@ -71,18 +82,6 @@ export default function VillagePage() {
 
   const expNeeded = levelThreshold(village.level);
   const expProgress = Math.min(100, Math.round((village.exp / expNeeded) * 100));
-
-  const handleMove = (dx: number, dy: number) => {
-    setCharPos((p) => ({
-      x: Math.min(94, Math.max(6, p.x + dx)),
-      y: Math.min(94, Math.max(28, p.y + dy)),
-    }));
-    if (dx < 0) setFacing('left');
-    else if (dx > 0) setFacing('right');
-    setWalking(true);
-    if (walkTimeoutRef.current) clearTimeout(walkTimeoutRef.current);
-    walkTimeoutRef.current = setTimeout(() => setWalking(false), 300);
-  };
 
   const openEditName = () => {
     setNameInput(village.name);
@@ -125,38 +124,71 @@ export default function VillagePage() {
           </div>
         </div>
 
-        {/* 타일맵 마을 풍경 */}
-        <GameScene height={440}>
+        {/* 작은 게임 맵처럼 구현된 마을 풍경 */}
+        <GameScene height={460} onBackgroundTap={moveTo}>
+          <GroundField />
+          <PathRibbon
+            d="M50 18 C28 20 16 38 16 56 C16 78 32 94 50 94 C68 94 84 78 84 56 C84 38 72 20 50 18 Z M50 18 L50 2"
+            width={11}
+          />
           <Clouds />
-          <TileMap layout={VILLAGE_LAYOUT} />
+
+          {/* 울타리 — 마을 외곽 */}
+          <GameObject x={4} y={10}><FenceObject size={36} /></GameObject>
+          <GameObject x={96} y={10}><FenceObject size={36} /></GameObject>
+          <GameObject x={4} y={96}><FenceObject size={36} /></GameObject>
+          <GameObject x={96} y={96}><FenceObject size={36} /></GameObject>
+
+          {/* 나무 & 꽃밭 */}
+          <GameObject x={8} y={28} bob><TreeObject variant="pine" size={46} /></GameObject>
+          <GameObject x={92} y={28} bob><TreeObject variant="round" size={50} /></GameObject>
+          <GameObject x={10} y={84} bob><TreeObject variant="round" size={44} /></GameObject>
+          <GameObject x={90} y={84} bob><TreeObject variant="pine" size={42} /></GameObject>
+          <GameObject x={36} y={97}><FlowerObject color="pink" size={24} /></GameObject>
+          <GameObject x={64} y={97}><FlowerObject color="white" size={24} /></GameObject>
+
+          {/* 도서관 (고정 시설) */}
+          <GameObject x={82} y={42} bob label="도서관" onClick={() => navigate('/village/decorate')}>
+            <LibraryObject size={64} />
+          </GameObject>
+
+          {/* 상점 & 보유함 (고정 시설) */}
+          <GameObject x={32} y={46} bob label="상점" onClick={() => navigate('/village/shop')}>
+            <ShopObject size={62} />
+          </GameObject>
+          <GameObject x={68} y={32} bob label="보유함" onClick={() => navigate('/village/inventory')}>
+            <StorageChestObject size={48} />
+          </GameObject>
+
+          {/* 벤치 & 우체통 */}
+          <GameObject x={30} y={78}><BenchObject size={40} /></GameObject>
+          <GameObject x={70} y={78}><BenchObject size={40} /></GameObject>
+          <GameObject x={50} y={88}><MailboxObject size={28} /></GameObject>
 
           {/* 우리 집 (앞마당으로 이동) */}
-          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '2%' }}>
-            <HouseBuilding
+          <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '0%' }}>
+            <HouseRenderer
               tier={houseTierFromItemId(houseItem?.id)}
-              size={100}
+              size={92}
               onClick={() => navigate('/')}
               label="우리 집"
             />
           </div>
 
-          {/* 놀이터 */}
-          <GameObject x={78} y={30} emoji="🛝" size={34} bob label="놀이터" />
-
-          {/* 꾸미기 슬롯 시설 */}
+          {/* 꾸미기 슬롯 시설 (학교/정원/마당/분수) */}
           {Object.entries(VILLAGE_SLOT_POSITIONS).map(([slot, pos]) => {
             const placement = placements.find((p) => p.slot === (slot as VillageSlotType));
             const item = placement ? getItem(placement.itemId) : undefined;
-            const fallback = SLOT_FALLBACK_EMOJI[slot as VillageSlotType];
-            if (!item && !fallback) return null;
             return (
-              <GameObject key={slot} x={pos.x} y={pos.y} emoji={item?.emoji ?? fallback} size={34} bob label={item?.name} />
+              <GameObject key={slot} x={pos.x} y={pos.y} bob label={item?.name} onClick={() => navigate('/village/decorate')}>
+                {item ? <span style={{ fontSize: 34 }}>{item.emoji}</span> : renderSlotFallback(slot as VillageSlotType, 60)}
+              </GameObject>
             );
           })}
 
           {/* 마을 주민 */}
           {sceneResidents.map((r, i) => (
-            <ResidentNPC key={r.id} x={14 + i * 18} y={88} resident={r} size={32} />
+            <ResidentNPC key={r.id} x={20 + i * 15} y={66} resident={r} size={34} />
           ))}
 
           {/* 플레이어 캐릭터 */}
@@ -164,7 +196,7 @@ export default function VillagePage() {
             <PlayerCharacter profile={profile} cosmetics={cosmetics} size={64} facing={facing} walking={walking} />
           </GameObject>
 
-          <MovementControls onMove={handleMove} />
+          <VirtualJoystick onMove={move} />
         </GameScene>
 
         {/* 동물 주민 도감 */}

@@ -1,13 +1,14 @@
-import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DoorOpen, Palette } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Button from '../components/ui/Button';
 import GameScene from '../components/game/GameScene';
 import GameObject from '../components/game/GameObject';
-import MovementControls from '../components/game/MovementControls';
+import VirtualJoystick from '../components/game/VirtualJoystick';
 import PlayerCharacter from '../components/game/PlayerCharacter';
 import { RoomBackdrop, CeilingLamp } from '../components/game/SceneDecor';
+import { BedObject, DeskObject, BookshelfObject, PlantObject, RugObject, WindowObject, ChairObject } from '../components/game/assets/InteriorObjects';
+import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { useAuthStore } from '../store/authStore';
 import { useVillageStore } from '../store/villageStore';
 import { useDecorationStore } from '../store/decorationStore';
@@ -24,14 +25,15 @@ const INTERIOR_SLOT_POSITIONS: Partial<Record<VillageSlotType, { x: number; y: n
   INTERIOR: { x: 50, y: 66, size: 36 },
 };
 
-const SLOT_FALLBACK_EMOJI: Partial<Record<VillageSlotType, string>> = {
-  WINDOW: '🪟',
-  RUG: '🟫',
-  BED: '🛏️',
-  BOOKSHELF: '📚',
-  DESK: '🪑',
-  PLANT: '🪴',
-  INTERIOR: '🪑',
+/** 꾸미기 아이템이 배치되지 않은 슬롯에 표시할 기본 SVG 가구 */
+const SLOT_FALLBACK_RENDER: Partial<Record<VillageSlotType, (size: number) => JSX.Element>> = {
+  WINDOW: (size) => <WindowObject size={size} />,
+  RUG: (size) => <RugObject size={size} />,
+  BED: (size) => <BedObject size={size} />,
+  BOOKSHELF: (size) => <BookshelfObject size={size} />,
+  DESK: (size) => <DeskObject size={size} />,
+  PLANT: (size) => <PlantObject size={size} />,
+  INTERIOR: (size) => <ChairObject size={size} />,
 };
 
 export default function HouseInteriorPage() {
@@ -41,34 +43,22 @@ export default function HouseInteriorPage() {
   const { getItem } = useDecorationStore();
   const { getProfile, ensureProfile, cosmetics } = useCharacterStore();
 
-  const [charPos, setCharPos] = useState({ x: 50, y: 76 });
-  const [facing, setFacing] = useState<'down' | 'left' | 'right'>('down');
-  const [walking, setWalking] = useState(false);
-  const walkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { pos: charPos, facing, walking, move, moveTo } = usePlayerMovement(
+    { x: 50, y: 76 },
+    { xMin: 10, xMax: 90, yMin: 60, yMax: 94 }
+  );
 
   if (!currentUser) return null;
 
   const profile = getProfile(currentUser.id) ?? ensureProfile(currentUser.id, currentUser.name);
   const placements = getPlacementsByZone(currentUser.id, 'HOUSE_INTERIOR');
 
-  const handleMove = (dx: number, dy: number) => {
-    setCharPos((p) => ({
-      x: Math.min(90, Math.max(10, p.x + dx)),
-      y: Math.min(94, Math.max(60, p.y + dy)),
-    }));
-    if (dx < 0) setFacing('left');
-    else if (dx > 0) setFacing('right');
-    setWalking(true);
-    if (walkTimeoutRef.current) clearTimeout(walkTimeoutRef.current);
-    walkTimeoutRef.current = setTimeout(() => setWalking(false), 300);
-  };
-
   return (
     <div className="page-container">
       <Header title="🏠 우리 집" showBack />
 
       <div className="content-area px-4 py-4 space-y-4">
-        <GameScene height={440}>
+        <GameScene height={440} onBackgroundTap={moveTo}>
           <RoomBackdrop wallPct={58} />
           <CeilingLamp />
 
@@ -77,10 +67,12 @@ export default function HouseInteriorPage() {
             if (!pos) return null;
             const placement = placements.find((p) => p.slot === slot);
             const item = placement ? getItem(placement.itemId) : undefined;
-            const fallback = SLOT_FALLBACK_EMOJI[slot];
+            const fallback = SLOT_FALLBACK_RENDER[slot];
             if (!item && !fallback) return null;
             return (
-              <GameObject key={slot} x={pos.x} y={pos.y} emoji={item?.emoji ?? fallback} size={pos.size} bob={!!item} label={item?.name} />
+              <GameObject key={slot} x={pos.x} y={pos.y} bob={!!item} label={item?.name}>
+                {item ? <span style={{ fontSize: pos.size }}>{item.emoji}</span> : fallback?.(pos.size)}
+              </GameObject>
             );
           })}
 
@@ -88,7 +80,7 @@ export default function HouseInteriorPage() {
             <PlayerCharacter profile={profile} cosmetics={cosmetics} size={64} facing={facing} walking={walking} />
           </GameObject>
 
-          <MovementControls onMove={handleMove} />
+          <VirtualJoystick onMove={move} />
         </GameScene>
 
         <div className="grid grid-cols-2 gap-2.5 pb-4">

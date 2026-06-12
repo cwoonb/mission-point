@@ -8,12 +8,18 @@ import Button from '../components/ui/Button';
 import CoinAnimation from '../components/animations/CoinAnimation';
 import GameScene from '../components/game/GameScene';
 import GameObject from '../components/game/GameObject';
-import MovementControls from '../components/game/MovementControls';
+import VirtualJoystick from '../components/game/VirtualJoystick';
 import PlayerCharacter from '../components/game/PlayerCharacter';
-import { Clouds, SunBadge, GrassGround } from '../components/game/SceneDecor';
-import HouseBuilding, { houseTierFromItemId } from '../components/game/HouseBuilding';
+import { Clouds, SunBadge } from '../components/game/assets/SkyDecor';
+import GroundField from '../components/game/assets/GroundField';
+import PathRibbon from '../components/game/assets/PathRibbon';
+import TreeObject from '../components/game/assets/TreeObject';
+import FlowerObject from '../components/game/assets/FlowerObject';
+import FenceObject from '../components/game/assets/FenceObject';
+import HouseRenderer, { houseTierFromItemId } from '../components/game/house/HouseRenderer';
 import ResidentNPC from '../components/game/ResidentNPC';
 import MissionBoard from '../components/game/MissionBoard';
+import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { usePointStore } from '../store/pointStore';
@@ -67,23 +73,11 @@ export default function HomePage() {
   const [coinTrigger, setCoinTrigger] = useState(false);
   const [rewardMsg, setRewardMsg] = useState('');
   const [villageTransition, setVillageTransition] = useState(false);
-  const [charPos, setCharPos] = useState({ x: 50, y: 80 });
-  const [facing, setFacing] = useState<'down' | 'left' | 'right'>('down');
-  const [walking, setWalking] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const walkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleMove = (dx: number, dy: number) => {
-    setCharPos((p) => ({
-      x: Math.min(92, Math.max(8, p.x + dx)),
-      y: Math.min(94, Math.max(55, p.y + dy)),
-    }));
-    if (dx < 0) setFacing('left');
-    else if (dx > 0) setFacing('right');
-    setWalking(true);
-    if (walkTimeoutRef.current) clearTimeout(walkTimeoutRef.current);
-    walkTimeoutRef.current = setTimeout(() => setWalking(false), 300);
-  };
+  const { pos: charPos, facing, walking, move, moveTo } = usePlayerMovement(
+    { x: 50, y: 80 },
+    { xMin: 8, xMax: 92, yMin: 55, yMax: 94 }
+  );
 
   const todayAdCount = currentUser ? getTodayAdCount(currentUser.id) : 0;
   const canWatchAd = todayAdCount < MAX_ADS;
@@ -239,22 +233,37 @@ export default function HomePage() {
           </div>
 
           {/* 우리 집 앞마당 — 메인 게임 씬 */}
-          <GameScene height={460}>
+          <GameScene height={460} onBackgroundTap={moveTo}>
+            <GroundField heightPct={64} />
+            <PathRibbon d="M50 100 C50 88 48 70 50 50 C51 38 50 30 50 22" width={13} />
             <Clouds />
             <SunBadge />
-            <GrassGround heightPct={58} />
 
-            <GameObject x={7} y={46} emoji="🌳" size={42} bob />
-            <GameObject x={93} y={48} emoji="🌲" size={38} bob />
+            <GameObject x={7} y={50} bob>
+              <TreeObject variant="round" size={56} />
+            </GameObject>
+            <GameObject x={93} y={52} bob>
+              <TreeObject variant="pine" size={50} />
+            </GameObject>
+            <GameObject x={4} y={76}>
+              <FenceObject size={44} />
+            </GameObject>
+            <GameObject x={96} y={76}>
+              <FenceObject size={44} />
+            </GameObject>
             {gardenItem && <GameObject x={16} y={80} emoji={gardenItem.emoji} size={30} bob />}
             {yardItem && <GameObject x={84} y={80} emoji={yardItem.emoji} size={30} bob />}
-            <GameObject x={30} y={92} emoji="🌷" size={20} />
-            <GameObject x={70} y={92} emoji="🌼" size={20} />
+            <GameObject x={28} y={94}>
+              <FlowerObject color="pink" size={26} />
+            </GameObject>
+            <GameObject x={72} y={94}>
+              <FlowerObject color="yellow" size={26} />
+            </GameObject>
 
-            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '18%' }}>
-              <HouseBuilding
+            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '14%' }}>
+              <HouseRenderer
                 tier={houseTierFromItemId(houseItem?.id)}
-                size={140}
+                size={150}
                 onClick={() => navigate('/village/house')}
                 label="우리 집"
               />
@@ -287,7 +296,7 @@ export default function HomePage() {
               <GameObject x={charPos.x} y={charPos.y} emoji="🧑" size={40} />
             )}
 
-            <MovementControls onMove={handleMove} />
+            <VirtualJoystick onMove={move} />
           </GameScene>
 
           {/* 마을 들어가기 */}

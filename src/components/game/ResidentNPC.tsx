@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { VillageResident } from '../../types';
+import AnimalResident from './assets/AnimalResident';
+import BirdResident from './assets/BirdResident';
+import { RESIDENT_SPECIES } from './assets/residentSpecies';
 
 interface ResidentNPCProps {
   x: number;
@@ -20,6 +23,8 @@ export default function ResidentNPC({ x, y, resident, size = 34 }: ResidentNPCPr
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => setBubble(null), 3000);
   };
+
+  const speciesInfo = RESIDENT_SPECIES[resident.emoji];
 
   return (
     <motion.div
@@ -42,7 +47,11 @@ export default function ResidentNPC({ x, y, resident, size = 34 }: ResidentNPCPr
           </motion.div>
         )}
       </AnimatePresence>
-      <span style={{ fontSize: size }}>{resident.emoji}</span>
+      {speciesInfo?.kind === 'bird' ? (
+        <BirdResident species={speciesInfo.species} size={size} />
+      ) : (
+        <AnimalResident species={speciesInfo?.species ?? 'dog'} size={size} />
+      )}
       <span className="mt-0.5 text-[10px] font-bold text-gray-600 bg-white/70 rounded-full px-1.5 py-0.5 whitespace-nowrap">{resident.name}</span>
     </motion.div>
   );

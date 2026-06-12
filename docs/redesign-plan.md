@@ -704,3 +704,35 @@ insert into achievements (id, name, description, emoji, condition_type, conditio
 3. **아이템 드랍 확률**(2.4): 미션 승인 시 30% 확률 제안 — 너무 잦거나 드물지 않은지
 4. **기존 쿠폰 데이터**: 운영 중인 쿠폰/교환 이력이 있다면 보존 방식(이력만 유지 vs 완전 삭제) 확인 필요
 5. **`PARENT`/`TEACHER`(리더) 계정의 마을**: 리더도 자신의 마을을 가질지, 아니면 학생 마을 모아보기 전용 화면만 가질지
+
+---
+
+## Phase 4 — "진짜 생활 시뮬레이션 게임" 전환 (2026-06-12)
+
+> 상태: **진행 중 (Claude 자율 진행, 추가 확인 없이 최선 판단으로 구현)**
+
+Phase 2/3까지 SVG 에셋 라이브러리(인물/동물/집/마을 풍경)와 기본 이동(D-Pad)을 갖춘 GameScene 기반 화면을 완성했다. Phase 4는 다음 방향으로 한 단계 더 게임에 가깝게 다듬는다.
+
+### 핵심 변경 — 이동 UX (완료)
+
+- **방향키 버튼(D-Pad) UI 전면 금지** → `MovementControls.tsx` 삭제
+- `src/hooks/usePlayerMovement.ts` 신규: 캐릭터 위치/방향(`facing`)/걷기(`walking`) 상태 + 경계 클램핑을 한 곳에서 관리
+  - `move(dx, dy)`: 가상 조이스틱/키보드용 즉시 이동
+  - `moveTo(xPct, yPct)`: 탭-이동(목적지까지 매 프레임 한 걸음씩 이동)
+  - 키보드(WASD/방향키) 입력은 훅 내부에서 자체 처리 (UI 노출 없음)
+- `src/components/game/VirtualJoystick.tsx` 신규: 화면 좌하단 반투명 원형 조이스틱 (pointer 이벤트, 누르는 동안 방향으로 이동, 떼면 자동 중앙 복귀)
+- `GameScene`에 `onBackgroundTap?: (xPct, yPct) => void` 옵션 추가 (배경을 직접 탭했을 때만 발동, 자식 오브젝트 클릭과 충돌 없음) → 탭-이동에 사용
+- `HomePage` / `VillagePage` / `HouseInteriorPage` 3곳 모두 `usePlayerMovement` + `VirtualJoystick` + `onBackgroundTap`으로 교체 완료, `npm run build` 통과
+
+### 마을 화면 — 게임 월드 진입점 추가 (완료)
+
+- `src/components/game/assets/ShopObject.tsx`(장터 가판대), `StorageChestObject.tsx`(보물상자) 신규 SVG
+- `VillagePage` 씬 안에 상점/보유함을 실제 오브젝트로 배치해 탭하면 `/village/shop`, `/village/inventory`로 이동 (기존 하단 버튼은 보조 진입점으로 유지)
+
+### 남은 작업 (다음 세션 우선순위)
+
+1. **하우스/마을 꾸미기 인-씬 바텀시트**: 현재 `/village/decorate`는 별도 폼/리스트 페이지 — 게임 씬 하단에서 슬라이드업되는 바텀시트로 통합해 "관리 페이지" 느낌 제거
+2. **동물 주민 4종 추가**: 오리/고슴도치/수달/사슴 — `residentSpecies.ts` SVG 추가 + `mockData.ts`의 `initialVillageResidents`/업적 보상 연계
+3. **상점/보유함 화면 자체의 게임형 UX 개선**: 현재 리스트형 UI를 진열대/선반 비주얼로 점진 개선
+4. **미션 보상 → 코스튬/주민/장식 드랍 연계 강화** (P3.5 항목의 실제 동작 점검 및 빈틈 보완)
+5. **HomePage 잔여 이모지 정리**: `🌟`(빈 미션 배지), `🚶`(마을 전환 연출), `🧑`(프로필 없을 때 폴백), 정원/마당 장식 아이템(`gardenItem.emoji`/`yardItem.emoji`) — SVG 오브젝트로 점진 교체
