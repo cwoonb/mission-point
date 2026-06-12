@@ -736,3 +736,60 @@ Phase 2/3까지 SVG 에셋 라이브러리(인물/동물/집/마을 풍경)와 �
 3. **상점/보유함 화면 자체의 게임형 UX 개선**: 현재 리스트형 UI를 진열대/선반 비주얼로 점진 개선
 4. **미션 보상 → 코스튬/주민/장식 드랍 연계 강화** (P3.5 항목의 실제 동작 점검 및 빈틈 보완)
 5. **HomePage 잔여 이모지 정리**: `🌟`(빈 미션 배지), `🚶`(마을 전환 연출), `🧑`(프로필 없을 때 폴백), 정원/마당 장식 아이템(`gardenItem.emoji`/`yardItem.emoji`) — SVG 오브젝트로 점진 교체
+
+---
+
+## Phase 5 — 2026년 코지 라이프시뮬 아트 리뉴얼 (2026-06-12)
+
+> 상태: **진행 중 (Claude 자율 진행)** — "교육용 플래시 게임" 인상을 벗기 위한 아트 전면 재작업
+
+### 채택한 아트 스타일
+
+**2D 코지 일러스트 스타일**(둥근 형태 + 2단 명암 + 톤다운 아웃라인/무외곽선 + 파스텔)을 채택했다.
+이유: (1) 기존 SVG 컴포넌트 구조를 그대로 확장할 수 있어 가장 빠르게 품질을 올릴 수 있고,
+(2) 픽셀아트(1안)는 격자 정렬·해상도 일관성 요구가 높아 기존 비정수 좌표 SVG 자산을 전면
+재작업해야 하는 반면, 2단 명암+텍스처 패턴 방식은 기존 좌표/뷰박스를 유지한 채
+`shade()`/`tint()` 헬퍼만 추가해 단계적으로 입혀나갈 수 있음.
+
+### 공용 팔레트 & 셰이딩 규칙 (`src/components/game/assets/palette.ts`)
+
+- `palette` 객체에 잔디(`grassLight/Mid/Dark`), 흙길(`dirt/dirtEdge`), 지붕(`roofRed/Brown/Blue/Green` + `*Shade`),
+  벽(`wallCream/wallCreamShade`), 나무/꽃/물/돌 등 전 에셋 공용 색을 정의 — **신규 에셋은 이 팔레트 밖의 색을 임의로 추가하지 않는다.**
+- `shade(hex, amount)` / `tint(hex, amount)`: 임의 hex를 비율만큼 어둡게/밝게 변환 — 모든 2단 명암은 이 두 함수로만 생성한다.
+- **광원 규칙**: 좌상단 광원 고정. 모든 오브젝트는 좌상단에 `tint()` 하이라이트, 우하단/아래쪽에 `shade()` 음영을 배치한다.
+- **그림자**: `assets/Shadow.tsx`의 `GroundShadow({cx,cy,rx,ry,opacity})` — 반투명 갈색(`#4A3526`) 타원을 각 오브젝트 SVG 자체 viewBox 안에 베이크. 지면에 닿는 모든 오브젝트(나무/꽃/울타리/벤치/우체통/분수/건물/캐릭터/동물/가구)에 적용.
+- **크기 계층**: 집 > 나무 > 캐릭터 > 동물 > 꽃/소품 순서를 각 에셋 기본 `size` prop 기본값으로 유지.
+- **텍스처**: `GroundField`(잔디 타일 패턴+스캘럽 경계), `PathRibbon`(자갈/얼룩 패턴 길), `BuildingDetails.tsx`(`ShingleRows`/`PlankLines`/`CrossWindow` — 기와·판자·창틀 텍스처 공용 헬퍼)로 "평면 도형" 인상을 제거.
+
+### 변경된 에셋 구조
+
+```
+src/components/game/assets/
+  palette.ts          // 공용 팔레트 + shade()/tint()
+  Shadow.tsx          // GroundShadow (공용 그림자 타원)
+  BuildingDetails.tsx // ShingleRows/PlankLines/CrossWindow (건물 공용 텍스처)
+  GroundField.tsx, PathRibbon.tsx        // 잔디/길 텍스처 (재작성)
+  TreeObject/FlowerObject/FenceObject/BenchObject/MailboxObject/FountainObject.tsx  // 2단 명암+그림자 (재작성)
+  SchoolObject/LibraryObject/ShopObject/StorageChestObject.tsx  // 기와·판자·창틀 텍스처 적용 (재작성)
+  AnimalResident.tsx / BirdResident.tsx  // 큰 눈+반짝임, 볼터치, 2단 명암, 그림자 (재작성)
+  InteriorObjects.tsx // 실내 가구 2단 명암 + 바닥 그림자 (재작성)
+src/components/game/house/HouseRenderer.tsx  // 기와 지붕, 판자 벽, 유리 반사광 창문, 나뭇결 문, 마당(디딤돌+화분) 추가
+src/components/game/character/CharacterRenderer.tsx  // 2단 명암, 얼굴 입체감, 걷기 시 팔다리 교차 바운스, 그림자, 비율 100x108로 조정
+src/components/game/SceneDecor.tsx  // 벽지/바닥 결 패턴 + 조명 ambient glow
+```
+
+### 남은 작업
+
+- HomePage/VillagePage/HouseInteriorPage 구성을 새 에셋 비율/디테일에 맞춰 재배치 (간격/겹침 조정)
+- VillageDecoratePage 인-씬 바텀시트 전환 (Phase 4에서 이미 식별된 항목)
+- 위 항목들은 Phase 6(WebGL 엔진 전환)에서 Village 화면을 Phaser 씬으로 교체하면서 함께 재구성
+
+---
+
+## Phase 6 — WebGL 게임 엔진 전환 (Phaser 3) (2026-06-12)
+
+> 상태: **진행 중 (Claude 자율 진행)** — 목표를 "모바일 게임급 WebGL 렌더링"으로 상향. 엔진 선택 근거는 `docs/DECISIONS.md`, 작업 로그/잔여 항목은 `docs/PROGRESS.md`, 에셋 출처는 `docs/ASSETS.md` 참조.
+
+Phase 5의 SVG/CSS 기반 코지 아트는 **HomePage/HouseInteriorPage의 안전한 베이스라인**으로 유지하고,
+`VillagePage`를 Phaser 3 WebGL 씬으로 신규 구현해 타일맵·카메라·스프라이트 애니메이션·파티클을
+도입한다. 상세 진행 상황과 잔여 체크리스트는 `docs/PROGRESS.md`를 단일 진행 로그로 사용한다.
