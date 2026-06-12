@@ -31,7 +31,7 @@ export default function ResidentNPC({ x, y, resident, size = 34 }: ResidentNPCPr
       className="absolute flex flex-col items-center -translate-x-1/2 -translate-y-1/2 cursor-pointer active:scale-95"
       style={{ left: `${x}%`, top: `${y}%` }}
       onClick={handleClick}
-      animate={{ y: [0, -5, 0] }}
+      animate={{ y: [0, -5, 0], rotate: [-4, 4, -4] }}
       transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
     >
       <AnimatePresence>
