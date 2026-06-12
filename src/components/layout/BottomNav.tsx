@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Target, ShoppingBag, User, ClipboardCheck, Users, Trophy } from 'lucide-react';
+import { Home, Target, TreePine, User, ClipboardCheck, Users, Trophy } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useMissionStore } from '../../store/missionStore';
 import { clsx } from 'clsx';
@@ -23,7 +23,7 @@ export default function BottomNav() {
       : [
           { to: '/ranking', icon: Trophy, label: '랭킹' },
         ]),
-    { to: '/shop', icon: ShoppingBag, label: '상점' },
+    { to: '/village', icon: TreePine, label: '마을' },
     { to: '/profile', icon: User, label: '내 정보' },
   ];
 

@@ -1,16 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronRight, Play, AlertTriangle, TrendingUp, Clock, Users, CheckCircle2 } from 'lucide-react';
+import { Plus, ChevronRight, Play, AlertTriangle, TrendingUp, Clock, Users, CheckCircle2, DoorOpen } from 'lucide-react';
 import Header from '../components/layout/Header';
-import MissionCard from '../components/mission/MissionCard';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import CoinAnimation from '../components/animations/CoinAnimation';
+import GameScene from '../components/game/GameScene';
+import GameObject from '../components/game/GameObject';
+import MissionSign from '../components/game/MissionSign';
+import MovementControls from '../components/game/MovementControls';
+import PlayerCharacter from '../components/game/PlayerCharacter';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { usePointStore } from '../store/pointStore';
+import { useVillageStore } from '../store/villageStore';
+import { useDecorationStore } from '../store/decorationStore';
+import { useCharacterStore } from '../store/characterStore';
 import { formatPoint, formatDateTime } from '../utils/helpers';
+import { levelThreshold } from '../utils/villageRewards';
 import {
   getStudentStatus,
   getWeeklyRate,
@@ -23,18 +31,44 @@ import {
 const AD_TOTAL_SECONDS = 5;
 const MAX_ADS = 5;
 
+const SIGNPOST_CONFIG: Record<string, { emoji: string; label: string; border: string; textColor: string }> = {
+  IN_PROGRESS: { emoji: '📋', label: '오늘 할 일이에요', border: 'border-blue-400', textColor: 'text-blue-500' },
+  REVIEWING: { emoji: '⏳', label: '확인 기다리는 중이에요', border: 'border-amber-400', textColor: 'text-amber-500' },
+  REJECTED: { emoji: '🔄', label: '다시 제출해주세요', border: 'border-red-400', textColor: 'text-red-500' },
+};
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { currentUser, viewMode, updateUserPoint, users } = useAuthStore();
   const { missions } = useMissionStore();
   const { recordAdWatch, addTransaction, getTodayAdCount } = usePointStore();
+  const { getVillage, ensureVillage, getPlacements } = useVillageStore();
+  const { getItem, getUserResidents } = useDecorationStore();
+  const { getProfile, ensureProfile, cosmetics } = useCharacterStore();
 
   const [adModal, setAdModal] = useState(false);
   const [adCountdown, setAdCountdown] = useState(AD_TOTAL_SECONDS);
   const [adDone, setAdDone] = useState(false);
   const [coinTrigger, setCoinTrigger] = useState(false);
   const [rewardMsg, setRewardMsg] = useState('');
+  const [villageTransition, setVillageTransition] = useState(false);
+  const [charPos, setCharPos] = useState({ x: 50, y: 80 });
+  const [facing, setFacing] = useState<'down' | 'left' | 'right'>('down');
+  const [walking, setWalking] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const walkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMove = (dx: number, dy: number) => {
+    setCharPos((p) => ({
+      x: Math.min(92, Math.max(8, p.x + dx)),
+      y: Math.min(90, Math.max(35, p.y + dy)),
+    }));
+    if (dx < 0) setFacing('left');
+    else if (dx > 0) setFacing('right');
+    setWalking(true);
+    if (walkTimeoutRef.current) clearTimeout(walkTimeoutRef.current);
+    walkTimeoutRef.current = setTimeout(() => setWalking(false), 300);
+  };
 
   const todayAdCount = currentUser ? getTodayAdCount(currentUser.id) : 0;
   const canWatchAd = todayAdCount < MAX_ADS;
@@ -108,6 +142,13 @@ export default function HomePage() {
     };
   }, [adModal, adDone]);
 
+  useEffect(() => {
+    if (currentUser && viewMode === 'PERFORMER') {
+      ensureVillage(currentUser.id, currentUser.name);
+      ensureProfile(currentUser.id, currentUser.name);
+    }
+  }, [currentUser?.id, viewMode, ensureVillage, ensureProfile]);
+
   const handleAdReward = () => {
     if (!currentUser || !adDone) return;
     const result = recordAdWatch(currentUser.id);
@@ -124,86 +165,116 @@ export default function HomePage() {
 
   const isFacilitator = viewMode === 'FACILITATOR';
 
-  // ── 실천자 뷰 ───────────────────────────────
+  // ── 실천자 뷰: 내 집 앞 ───────────────────────────────
   if (!isFacilitator) {
+    const village = getVillage(currentUser.id);
+    const placements = village ? getPlacements(currentUser.id) : [];
+    const placementBySlot = new Map(placements.map((p) => [p.slot, p]));
+    const houseItem = placementBySlot.has('HOUSE') ? getItem(placementBySlot.get('HOUSE')!.itemId) : undefined;
+    const gardenItem = placementBySlot.has('GARDEN') ? getItem(placementBySlot.get('GARDEN')!.itemId) : undefined;
+    const yardItem = placementBySlot.has('YARD') ? getItem(placementBySlot.get('YARD')!.itemId) : undefined;
+    const residents = getUserResidents(currentUser.id);
+    const mainResident = residents[0];
+    const villageLevel = village?.level ?? 1;
+    const villageName = village?.name ?? `${currentUser.name}의 마을`;
+    const expNeeded = levelThreshold(villageLevel);
+    const expProgress = village ? Math.min(100, Math.round((village.exp / expNeeded) * 100)) : 0;
+
+    const handleEnterVillage = () => {
+      setVillageTransition(true);
+      setTimeout(() => navigate('/village'), 650);
+    };
+
+    const profile = getProfile(currentUser.id);
+    const signMissions = activeMissions.slice(0, 2);
+    const signX = [25, 75];
+
     return (
       <div className="page-container">
         <Header />
         <CoinAnimation trigger={coinTrigger} onComplete={() => setCoinTrigger(false)} />
 
         <div className="content-area px-4 py-5 space-y-5">
-          {/* 환영 카드 */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-purple-500 to-indigo-500 rounded-3xl p-5 text-white shadow-lg"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-14 h-14 bg-white/20 rounded-2xl overflow-hidden flex items-center justify-center text-3xl flex-shrink-0">
-                {currentUser.profileImage ? (
-                  <img src={currentUser.profileImage} alt="프로필" className="w-full h-full object-cover" />
-                ) : currentUser.avatar}
-              </div>
-              <div>
-                <p className="text-white/70 text-sm">🧒 실천자 모드</p>
-                <p className="font-black text-xl">{currentUser.name}님 안녕하세요!</p>
-              </div>
+          {/* 내 집 앞 정보 */}
+          <div className="flex items-center justify-between px-1">
+            <div>
+              <p className="text-gray-500 text-xs font-bold">{villageName}</p>
+              <p className="font-black text-gray-700 text-sm">Lv.{villageLevel} · ⭐ {formatPoint(currentUser.point)}P</p>
             </div>
-            <div className="mt-4 bg-white/20 rounded-2xl px-4 py-3 flex items-center justify-between">
-              <div>
-                <p className="text-white/70 text-xs">현재 포인트</p>
-                <p className="font-black text-2xl">⭐ {formatPoint(currentUser.point)}P</p>
-              </div>
-              <button
-                onClick={() => navigate('/points')}
-                className="text-white/80 text-xs flex items-center gap-0.5 bg-white/10 px-3 py-1.5 rounded-xl"
-              >
-                내역 보기 <ChevronRight size={12} />
-              </button>
-            </div>
-          </motion.div>
-
-          {/* 통계 */}
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: '진행중', value: activeMissions.length, color: 'text-blue-500' },
-              { label: '완료', value: successMissions.length, color: 'text-green-500' },
-              { label: '광고시청', value: `${todayAdCount}/${MAX_ADS}`, color: 'text-purple-500' },
-            ].map((s, i) => (
-              <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                className="bg-white rounded-2xl p-3 shadow-sm text-center">
-                <p className={`text-2xl font-black ${s.color}`}>{s.value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-              </motion.div>
-            ))}
+            <button
+              onClick={() => navigate('/points')}
+              className="text-gray-500 text-[11px] flex items-center gap-0.5 bg-white px-3 py-1.5 rounded-xl shadow-sm"
+            >
+              내역 보기 <ChevronRight size={12} />
+            </button>
+          </div>
+          <div className="h-1.5 bg-white rounded-full overflow-hidden -mt-3 shadow-sm">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${expProgress}%` }}
+              transition={{ duration: 0.6 }}
+              className="h-full bg-emerald-400 rounded-full"
+            />
           </div>
 
-          {/* 광고 보상 */}
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
-            className="bg-gradient-to-r from-amber-400 to-orange-400 rounded-3xl p-5 shadow-md">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="text-3xl">📺</div>
-              <div>
-                <p className="text-white font-black text-base">광고 보고 포인트 받기</p>
-                <p className="text-white/80 text-xs">+10P · 오늘 {todayAdCount}/{MAX_ADS}회 시청</p>
-              </div>
-            </div>
-            <button onClick={openAd} disabled={!canWatchAd}
-              className="w-full bg-white text-amber-600 font-black py-3 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50">
-              <Play size={16} className="fill-amber-500 text-amber-500" />
-              {canWatchAd ? '▶ 광고 시청하기' : '오늘 시청 완료! 내일 다시 오세요 🌙'}
-            </button>
-            <div className="flex gap-1 mt-2 justify-center">
-              {Array.from({ length: MAX_ADS }).map((_, i) => (
-                <div key={i} className={`h-1.5 flex-1 rounded-full ${i < todayAdCount ? 'bg-white' : 'bg-white/30'}`} />
-              ))}
-            </div>
-          </motion.div>
+          {/* 내 집 앞 게임 화면 */}
+          <GameScene>
+            {gardenItem && <GameObject x={12} y={78} emoji={gardenItem.emoji} size={32} bob />}
+            {yardItem && <GameObject x={88} y={78} emoji={yardItem.emoji} size={32} bob />}
+            <GameObject x={50} y={50} emoji={houseItem?.emoji ?? '🏠'} size={84} bob />
+            {mainResident && (
+              <GameObject x={70} y={70} emoji={mainResident.emoji} size={36} bob label={mainResident.name} />
+            )}
 
-          {/* 미션 목록 */}
+            {signMissions.map((m, i) => {
+              const config = SIGNPOST_CONFIG[m.status] ?? SIGNPOST_CONFIG.IN_PROGRESS;
+              return (
+                <MissionSign
+                  key={m.id}
+                  x={signX[i]}
+                  y={32}
+                  emoji={config.emoji}
+                  label={m.title}
+                  sublabel={`+${formatPoint(m.rewardPoint)}P`}
+                  accentColor="#60A5FA"
+                  onClick={() => navigate(`/missions/${m.id}`)}
+                />
+              );
+            })}
+
+            {profile ? (
+              <GameObject x={charPos.x} y={charPos.y}>
+                <PlayerCharacter profile={profile} cosmetics={cosmetics} size={64} facing={facing} walking={walking} />
+              </GameObject>
+            ) : (
+              <GameObject x={charPos.x} y={charPos.y} emoji="🧑" size={40} />
+            )}
+
+            <MovementControls onMove={handleMove} />
+          </GameScene>
+
+          {/* 이동 버튼 */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={handleEnterVillage}
+              className="bg-gradient-to-r from-emerald-400 to-teal-500 text-white font-black text-sm py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-1.5"
+            >
+              🏘️ 마을 들어가기
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.96 }}
+              onClick={() => navigate('/village/house')}
+              className="bg-gradient-to-r from-amber-400 to-orange-400 text-white font-black text-sm py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-1.5"
+            >
+              <DoorOpen size={16} /> 집 내부 보기
+            </motion.button>
+          </div>
+
+          {/* 오늘의 미션 */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="section-title mb-0">🎯 내 미션</h2>
+              <h2 className="section-title mb-0">📌 오늘의 미션</h2>
               <button onClick={() => navigate('/missions')} className="text-purple-500 text-xs font-semibold flex items-center gap-0.5">
                 전체보기 <ChevronRight size={12} />
               </button>
@@ -211,19 +282,86 @@ export default function HomePage() {
             {activeMissions.length === 0 ? (
               <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
                 <p className="text-3xl mb-2">🌟</p>
-                <p className="text-gray-500 text-sm">진행 중인 미션이 없어요.</p>
+                <p className="text-gray-500 text-sm">오늘 할 일을 모두 끝냈어요!</p>
               </div>
             ) : (
               <div className="flex flex-col gap-3">
-                {activeMissions.slice(0, 3).map((m, i) => (
-                  <motion.div key={m.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.05 * i }}>
-                    <MissionCard mission={m} showAssignee={false} />
-                  </motion.div>
-                ))}
+                {activeMissions.map((m, i) => {
+                  const config = SIGNPOST_CONFIG[m.status] ?? SIGNPOST_CONFIG.IN_PROGRESS;
+                  return (
+                    <motion.div
+                      key={m.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.05 * i }}
+                      onClick={() => navigate(`/missions/${m.id}`)}
+                      className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 ${config.border} flex items-center gap-3 cursor-pointer active:scale-95 transition-transform`}
+                    >
+                      <div className="text-2xl flex-shrink-0">{config.emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-gray-800 truncate">{m.title}</p>
+                        <p className={`text-xs font-semibold ${config.textColor}`}>{config.label}</p>
+                      </div>
+                      <span className="text-amber-500 font-bold text-xs flex-shrink-0">+{formatPoint(m.rewardPoint)}P</span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+
+            {successMissions.length > 0 && (
+              <div className="mt-3 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2.5 flex items-center gap-2">
+                <span className="text-lg">✨</span>
+                <p className="text-xs text-emerald-600 font-semibold">완료한 미션 {successMissions.length}개 · 마을이 자라고 있어요!</p>
               </div>
             )}
           </div>
+
+          {/* 광고 보상 (간단히) */}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
+            className="bg-white rounded-2xl p-3.5 shadow-sm flex items-center gap-3">
+            <div className="text-2xl">📺</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-700 font-bold text-sm">광고 보고 포인트 받기</p>
+              <p className="text-gray-400 text-[11px]">+10P · 오늘 {todayAdCount}/{MAX_ADS}회</p>
+            </div>
+            <button onClick={openAd} disabled={!canWatchAd}
+              className="bg-amber-400 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1 active:scale-95 transition-all disabled:opacity-40 flex-shrink-0">
+              <Play size={12} className="fill-white" />
+              {canWatchAd ? '시청' : '완료'}
+            </button>
+          </motion.div>
         </div>
+
+        {/* 마을 들어가기 전환 애니메이션 */}
+        <AnimatePresence>
+          {villageTransition && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-gradient-to-b from-sky-300 via-sky-200 to-emerald-300 flex items-end overflow-hidden max-w-md mx-auto"
+            >
+              <div className="absolute bottom-0 left-0 right-0 h-20 bg-emerald-400" />
+              <motion.div
+                initial={{ x: '-20vw' }}
+                animate={{ x: '120vw' }}
+                transition={{ duration: 0.65, ease: 'easeInOut' }}
+                className="text-6xl mb-6 relative z-10"
+              >
+                🚶
+              </motion.div>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.15 }}
+                className="absolute top-1/3 left-0 right-0 text-center text-white font-black text-lg"
+              >
+                마을로 이동 중...
+              </motion.p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {rewardMsg && (

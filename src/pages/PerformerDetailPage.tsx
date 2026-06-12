@@ -11,6 +11,7 @@ import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { usePointStore } from '../store/pointStore';
 import { useShopStore } from '../store/shopStore';
+import { useVillageStore } from '../store/villageStore';
 import { formatPoint, formatDate, formatDateTime, statusLabel, txLabel, txColor, txSign } from '../utils/helpers';
 import type { MissionStatus } from '../types';
 
@@ -35,12 +36,14 @@ export default function PerformerDetailPage() {
   const { missions, getLatestSubmission, approveMission, rejectMission } = useMissionStore();
   const { addTransaction, getTransactionsForUser, getTodayAdCount } = usePointStore();
   const { getExchangesForUser, getCoupon } = useShopStore();
+  const { grantMissionReward } = useVillageStore();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'missions' | 'points'>('overview');
   const [rejectModal, setRejectModal] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [successExtra, setSuccessExtra] = useState('');
   const [successPts, setSuccessPts] = useState(0);
 
   const performer = getUser(id!);
@@ -78,6 +81,29 @@ export default function PerformerDetailPage() {
       updateUserPoint(creatorId, -rewardPoint);
       addTransaction(creatorId, -rewardPoint, 'MISSION_DEDUCT', `포인트 지급: ${performer.name}`);
     }
+
+    const mission = missions.find((m) => m.id === missionId);
+    const extraLines: string[] = [];
+    if (mission) {
+      const summary = grantMissionReward(assigneeId, mission, missions);
+      extraLines.push(`경험치 +${summary.expGained} EXP`);
+      if (summary.leveledUp) {
+        extraLines.push(`🎉 마을 레벨 업! Lv.${summary.oldLevel} → Lv.${summary.newLevel}`);
+      }
+      if (summary.itemGained) {
+        extraLines.push(`🎁 ${summary.itemGained.emoji} ${summary.itemGained.name} 획득!`);
+      }
+      if (summary.cosmeticGained) {
+        extraLines.push(`👕 ${summary.cosmeticGained.emoji} ${summary.cosmeticGained.name} 의상 획득!`);
+      }
+      summary.achievementsUnlocked.forEach((a) => {
+        extraLines.push(`🏆 업적 달성: ${a.achievement.name}`);
+        if (a.item) extraLines.push(`🎁 ${a.item.emoji} ${a.item.name} 획득!`);
+        if (a.resident) extraLines.push(`🐾 ${a.resident.emoji} ${a.resident.name} 주민 합류!`);
+      });
+    }
+
+    setSuccessExtra(extraLines.join('\n'));
     setSuccessPts(rewardPoint);
     setShowSuccess(true);
   };
@@ -135,7 +161,7 @@ export default function PerformerDetailPage() {
       <SuccessAnimation
         isVisible={showSuccess}
         title="승인 완료!"
-        description={`${performer.name}님에게 +${successPts.toLocaleString('ko-KR')}P 지급했어요! ⭐`}
+        description={`${performer.name}님에게 +${successPts.toLocaleString('ko-KR')}P 지급했어요! ⭐\n${successExtra}`}
         onClose={() => setShowSuccess(false)}
       />
 

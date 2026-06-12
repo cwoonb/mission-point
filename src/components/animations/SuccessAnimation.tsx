@@ -74,7 +74,7 @@ export default function SuccessAnimation({ isVisible, points, title, description
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.3 }}
-                  className="text-amber-500 font-bold text-xl"
+                  className="text-amber-500 font-bold text-base whitespace-pre-line leading-relaxed"
                 >
                   {description ?? `+${points!.toLocaleString('ko-KR')}P 획득! ⭐`}
                 </motion.p>

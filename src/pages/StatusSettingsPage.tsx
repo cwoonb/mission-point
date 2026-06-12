@@ -85,7 +85,7 @@ export default function StatusSettingsPage() {
             <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.CAUTION.bg} ${statusConfig.CAUTION.color}`}>진행중</span>
             <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.UNSUBMITTED.bg} ${statusConfig.UNSUBMITTED.color}`}>미제출</span>
             <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.COUNSELING.bg} ${statusConfig.COUNSELING.color}`}>상담필요</span>
-            로 분류해요. 아직 시작한 미션이 없거나 결과가 나온 미션이 없는 실천자는
+            로 분류해요. 아직 배정된 미션이 없는 실천자는
             <span className={`mx-1 px-1.5 py-0.5 rounded-md font-bold ${statusConfig.NOT_STARTED.bg} ${statusConfig.NOT_STARTED.color}`}>대기</span>
             로 표시돼요. 아래에서 그 기준을 직접 조정할 수 있어요.
           </p>

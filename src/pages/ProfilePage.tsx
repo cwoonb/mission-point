@@ -8,7 +8,11 @@ import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
 import { useShopStore } from '../store/shopStore';
 import { usePointStore } from '../store/pointStore';
+import { useVillageStore } from '../store/villageStore';
+import { useCharacterStore } from '../store/characterStore';
+import PlayerCharacter from '../components/game/PlayerCharacter';
 import { formatPoint, formatDate, roleLabel } from '../utils/helpers';
+import { levelThreshold } from '../utils/villageRewards';
 import {
   getWeeklyRate, getCompletionRate, getStudentStatus, getUnsubmittedCount, defaultStatusThresholds,
   statusConfig, missionTypeLabel,
@@ -42,6 +46,8 @@ export default function ProfilePage() {
   const { getMyGroups } = useGroupStore();
   const { getExchangesForUser } = useShopStore();
   const { getTransactionsForUser, getTodayAdCount } = usePointStore();
+  const { getVillage, ensureVillage } = useVillageStore();
+  const { getProfile, ensureProfile, cosmetics } = useCharacterStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -70,6 +76,10 @@ export default function ProfilePage() {
   const exchanges = getExchangesForUser(currentUser.id);
   const transactions = getTransactionsForUser(currentUser.id);
   const todayAdCount = getTodayAdCount(currentUser.id);
+
+  const village = getVillage(currentUser.id) ?? ensureVillage(currentUser.id, currentUser.name);
+  const charProfile = getProfile(currentUser.id) ?? ensureProfile(currentUser.id, currentUser.name);
+  const villageExpNeeded = levelThreshold(village.level);
 
   // 리더 전용 통계
   const myStudents = currentUser.socialProvider
@@ -209,6 +219,22 @@ export default function ProfilePage() {
           </div>
           <div className="mt-4 text-white/60 text-xs">가입: {formatDate(currentUser.createdAt)}</div>
         </motion.div>
+
+        {/* 캐릭터 & 마을 */}
+        <motion.button
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          onClick={() => navigate('/character')}
+          className="w-full bg-gradient-to-br from-emerald-400 via-teal-400 to-sky-400 rounded-3xl p-4 shadow-md flex items-center gap-4 active:scale-[0.98] transition-transform">
+          <div className="w-16 h-20 flex items-center justify-center flex-shrink-0">
+            <PlayerCharacter profile={charProfile} cosmetics={cosmetics} size={72} />
+          </div>
+          <div className="flex-1 text-left text-white">
+            <p className="font-black text-lg">{village.name}</p>
+            <p className="text-xs text-white/80 mb-1">Lv.{village.level} · {village.exp}/{villageExpNeeded} EXP</p>
+            <p className="text-[11px] bg-white/20 inline-block rounded-full px-2.5 py-1 font-semibold">🧑 캐릭터 꾸미기 →</p>
+          </div>
+          <ChevronRight size={18} className="text-white/70" />
+        </motion.button>
 
         {/* 리더 통계 */}
         {isFacilitator ? (

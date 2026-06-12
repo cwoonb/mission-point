@@ -3,7 +3,12 @@ import { motion } from 'framer-motion';
 import { Share2, ArrowLeft, CheckCircle2, AlertTriangle, Star } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
+import { useVillageStore } from '../store/villageStore';
+import { useDecorationStore } from '../store/decorationStore';
+import { useCharacterStore } from '../store/characterStore';
+import PlayerCharacter from '../components/game/PlayerCharacter';
 import { formatDate } from '../utils/helpers';
+import { levelThreshold } from '../utils/villageRewards';
 import {
   getCompletionRate, getWeeklyRate, getStreak, getUnsubmittedCount,
   missionTypeLabel,
@@ -15,9 +20,19 @@ export default function ParentReportPage() {
   const navigate = useNavigate();
   const { users, currentUser } = useAuthStore();
   const { missions } = useMissionStore();
+  const { getVillage } = useVillageStore();
+  const { getUserResidents } = useDecorationStore();
+  const { getProfile, ensureProfile, cosmetics } = useCharacterStore();
 
   const student = users.find((u) => u.id === id);
   if (!student || !currentUser) return null;
+
+  const village = getVillage(student.id);
+  const charProfile = getProfile(student.id) ?? ensureProfile(student.id, student.name);
+  const villageLevel = village?.level ?? 1;
+  const expNeeded = levelThreshold(villageLevel);
+  const expProgress = village ? Math.min(100, Math.round((village.exp / expNeeded) * 100)) : 0;
+  const residents = getUserResidents(student.id);
 
   const myMissions = missions.filter((m) => m.assigneeId === student.id && m.creatorId === currentUser.id);
   const successMissions = myMissions.filter((m) => m.status === 'SUCCESS');
@@ -114,6 +129,33 @@ export default function ParentReportPage() {
                   <p className="text-xs text-gray-500">{s.label}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* 마을 성장 현황 */}
+          <div className="p-5 border-b border-gray-50">
+            <p className="text-xs font-bold text-gray-500 mb-3">🏘️ 마을 성장 현황</p>
+            <div className="bg-gradient-to-br from-emerald-50 to-sky-50 rounded-2xl p-4 flex items-center gap-3">
+              <div className="w-12 h-16 flex items-center justify-center flex-shrink-0">
+                <PlayerCharacter profile={charProfile} cosmetics={cosmetics} size={56} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-black text-gray-700 text-sm truncate">{village?.name ?? `${student.name}의 마을`}</p>
+                  <span className="text-xs font-bold text-emerald-600 flex-shrink-0">Lv.{villageLevel}</span>
+                </div>
+                <div className="h-2 bg-white rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${expProgress}%` }} />
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">{village?.exp ?? 0} / {expNeeded} EXP</p>
+                {residents.length > 0 && (
+                  <div className="flex gap-1.5 mt-2">
+                    {residents.map((r) => (
+                      <span key={r.id} className="text-xl" title={r.name}>{r.emoji}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

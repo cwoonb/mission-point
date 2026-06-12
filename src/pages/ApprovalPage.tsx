@@ -10,6 +10,7 @@ import { StatusBadge } from '../components/ui/Badge';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { usePointStore } from '../store/pointStore';
+import { useVillageStore } from '../store/villageStore';
 import { formatPoint, formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
 import { getWeeklyRate, getUnsubmittedCount, getCompletionRate, statusConfig, getStudentStatus, defaultStatusThresholds } from '../utils/studentStats';
 import { missionTypeLabel } from '../utils/studentStats';
@@ -36,6 +37,7 @@ export default function ApprovalPage() {
   const { currentUser, getUser, updateUserPoint, users } = useAuthStore();
   const { missions, getLatestSubmission, approveMission, rejectMission } = useMissionStore();
   const { addTransaction } = usePointStore();
+  const { grantMissionReward } = useVillageStore();
 
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [detailMission, setDetailMission] = useState<Mission | null>(null);
@@ -49,6 +51,7 @@ export default function ApprovalPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successPoints, setSuccessPoints] = useState(0);
   const [successAssigneeName, setSuccessAssigneeName] = useState('');
+  const [successExtra, setSuccessExtra] = useState('');
   const [sharedStudentId, setSharedStudentId] = useState<string | null>(null);
 
   if (!currentUser) return null;
@@ -67,8 +70,27 @@ export default function ApprovalPage() {
       updateUserPoint(mission.creatorId, -mission.rewardPoint);
       addTransaction(mission.creatorId, -mission.rewardPoint, 'MISSION_DEDUCT', `포인트 지급: ${mission.title}`);
     }
+
+    const summary = grantMissionReward(mission.assigneeId, mission, missions);
+    const extraLines: string[] = [`경험치 +${summary.expGained} EXP`];
+    if (summary.leveledUp) {
+      extraLines.push(`🎉 마을 레벨 업! Lv.${summary.oldLevel} → Lv.${summary.newLevel}`);
+    }
+    if (summary.itemGained) {
+      extraLines.push(`🎁 ${summary.itemGained.emoji} ${summary.itemGained.name} 획득!`);
+    }
+    if (summary.cosmeticGained) {
+      extraLines.push(`👕 ${summary.cosmeticGained.emoji} ${summary.cosmeticGained.name} 의상 획득!`);
+    }
+    summary.achievementsUnlocked.forEach((a) => {
+      extraLines.push(`🏆 업적 달성: ${a.achievement.name}`);
+      if (a.item) extraLines.push(`🎁 ${a.item.emoji} ${a.item.name} 획득!`);
+      if (a.resident) extraLines.push(`🐾 ${a.resident.emoji} ${a.resident.name} 주민 합류!`);
+    });
+
     setSuccessPoints(mission.rewardPoint);
     setSuccessAssigneeName(getUser(mission.assigneeId)?.name ?? '실천자');
+    setSuccessExtra(extraLines.join('\n'));
     setShowSuccess(true);
     setSelectedMission(null);
     setDetailMission(null);
@@ -131,7 +153,7 @@ export default function ApprovalPage() {
       <SuccessAnimation
         isVisible={showSuccess}
         title="승인 완료!"
-        description={`${successAssigneeName}님에게 +${successPoints.toLocaleString('ko-KR')}P 지급했어요! ⭐`}
+        description={`${successAssigneeName}님에게 +${successPoints.toLocaleString('ko-KR')}P 지급했어요! ⭐${successExtra ? `\n${successExtra}` : ''}`}
         onClose={() => setShowSuccess(false)}
       />
 

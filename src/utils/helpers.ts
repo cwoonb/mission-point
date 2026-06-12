@@ -52,7 +52,8 @@ export const txLabel: Record<PointTransactionType, string> = {
   MISSION_REWARD: '미션 보상 🎯',
   MISSION_DEDUCT: '미션 포인트 지급',
   AD_REWARD: '광고 시청 📺',
-  COUPON_EXCHANGE: '쿠폰 교환 🎁',
+  COUPON_EXCHANGE: '쿠폰 교환 🎁 (legacy)',
+  DECORATION_PURCHASE: '마을 꾸미기 🏡',
   ADMIN_GRANT: '관리자 지급',
   ADMIN_DEDUCT: '관리자 차감',
 };
@@ -62,6 +63,7 @@ export const txColor: Record<PointTransactionType, string> = {
   MISSION_DEDUCT: 'text-red-500',
   AD_REWARD: 'text-purple-600',
   COUPON_EXCHANGE: 'text-orange-600',
+  DECORATION_PURCHASE: 'text-emerald-600',
   ADMIN_GRANT: 'text-blue-600',
   ADMIN_DEDUCT: 'text-red-500',
 };

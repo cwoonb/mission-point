@@ -7,6 +7,9 @@ import { useMissionStore } from './store/missionStore';
 import { useShopStore } from './store/shopStore';
 import { useGroupStore } from './store/groupStore';
 import { useTemplateStore } from './store/templateStore';
+import { useVillageStore } from './store/villageStore';
+import { useDecorationStore } from './store/decorationStore';
+import { useCharacterStore } from './store/characterStore';
 import { checkNaverCallback, checkKakaoCallback } from './lib/socialAuth';
 
 import AppLayout from './components/layout/AppLayout';
@@ -22,8 +25,13 @@ import MissionSubmitPage from './pages/MissionSubmitPage';
 import ApprovalPage from './pages/ApprovalPage';
 import PerformerListPage from './pages/PerformerListPage';
 import PerformerDetailPage from './pages/PerformerDetailPage';
-import ShopPage from './pages/ShopPage';
-import CouponDetailPage from './pages/CouponDetailPage';
+import VillagePage from './pages/VillagePage';
+import HouseInteriorPage from './pages/HouseInteriorPage';
+import VillageShopPage from './pages/VillageShopPage';
+import DecorationDetailPage from './pages/DecorationDetailPage';
+import VillageInventoryPage from './pages/VillageInventoryPage';
+import VillageDecoratePage from './pages/VillageDecoratePage';
+import CharacterCustomizePage from './pages/CharacterCustomizePage';
 import PointHistoryPage from './pages/PointHistoryPage';
 import ProfilePage from './pages/ProfilePage';
 import StatusSettingsPage from './pages/StatusSettingsPage';
@@ -49,8 +57,13 @@ function AuthenticatedRoutes() {
         <Route path="students/:id" element={<StudentDetailPage />} />
         <Route path="students/:id/report" element={<ParentReportPage />} />
         <Route path="ranking" element={<RankingPage />} />
-        <Route path="shop" element={<ShopPage />} />
-        <Route path="shop/:id" element={<CouponDetailPage />} />
+        <Route path="village" element={<VillagePage />} />
+        <Route path="village/house" element={<HouseInteriorPage />} />
+        <Route path="character" element={<CharacterCustomizePage />} />
+        <Route path="village/shop" element={<VillageShopPage />} />
+        <Route path="village/shop/:id" element={<DecorationDetailPage />} />
+        <Route path="village/inventory" element={<VillageInventoryPage />} />
+        <Route path="village/decorate" element={<VillageDecoratePage />} />
         <Route path="points" element={<PointHistoryPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="profile/status-settings" element={<StatusSettingsPage />} />
@@ -77,6 +90,9 @@ function AppContent() {
   const { initializeData: initShop } = useShopStore();
   const { initializeData: initGroups } = useGroupStore();
   const { initializeData: initTemplates } = useTemplateStore();
+  const { initializeData: initVillages } = useVillageStore();
+  const { initializeData: initDecorations } = useDecorationStore();
+  const { initializeData: initCharacters } = useCharacterStore();
 
   useEffect(() => {
     (async () => {
@@ -86,6 +102,9 @@ function AppContent() {
       initShop();
       initGroups();
       initTemplates();
+      initDecorations();
+      initCharacters();
+      initVillages();
       autoGenerateRepeatMissions();
     })();
 

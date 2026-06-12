@@ -5,6 +5,7 @@ import Header from '../components/layout/Header';
 import { useAuthStore } from '../store/authStore';
 import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
+import { useVillageStore } from '../store/villageStore';
 import { formatPoint } from '../utils/helpers';
 import { getWeeklyRate } from '../utils/studentStats';
 
@@ -16,6 +17,7 @@ export default function RankingPage() {
   const { users, currentUser } = useAuthStore();
   const { getMyGroups } = useGroupStore();
   const { missions } = useMissionStore();
+  const { getVillage } = useVillageStore();
   const [groupFilter, setGroupFilter] = useState('all');
 
   if (!currentUser) return null;
@@ -43,6 +45,7 @@ export default function RankingPage() {
 
   const myRank = ranked.findIndex((s) => s.id === currentUser.id) + 1;
   const myWeekRate = getWeeklyRate(missions, currentUser.id);
+  const myVillage = getVillage(currentUser.id);
 
   return (
     <div className="page-container">
@@ -60,6 +63,7 @@ export default function RankingPage() {
               <div className="flex-1">
                 <p className="font-black text-lg">{currentUser.name}</p>
                 <p className="text-white/70 text-sm">⭐ {formatPoint(currentUser.point)}P · 이번 주 {myWeekRate}%</p>
+                <p className="text-white/60 text-xs mt-0.5">🏘️ {myVillage?.name ?? '마을'} · Lv.{myVillage?.level ?? 1}</p>
               </div>
               <span className="text-4xl">{myRank <= 3 ? MEDALS[myRank - 1] : '🏃'}</span>
             </div>
@@ -119,6 +123,7 @@ export default function RankingPage() {
             const isMe = student.id === currentUser.id;
             const weekly = weeklyEarned(student.id);
             const weekRate = getWeeklyRate(missions, student.id);
+            const village = getVillage(student.id);
 
             return (
               <motion.div key={student.id}
@@ -134,6 +139,7 @@ export default function RankingPage() {
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <p className={`text-sm font-bold truncate ${isMe ? 'text-purple-700' : 'text-gray-800'}`}>{student.name}</p>
                     {isMe && <span className="text-[9px] bg-purple-100 text-purple-600 font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">나</span>}
+                    <span className="text-[9px] bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">🏘️ Lv.{village?.level ?? 1}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] text-gray-400">이번 주 {weekRate}%</span>

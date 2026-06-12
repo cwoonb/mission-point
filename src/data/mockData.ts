@@ -1,5 +1,18 @@
 import type { User, Mission, Coupon } from '../types';
 import type { PerformerGroup } from '../types';
+import type {
+  DecorationItem,
+  VillageResident,
+  Achievement,
+  Village,
+  VillagePlacement,
+  InventoryItem,
+  UserResident,
+  UserAchievement,
+  CharacterProfile,
+  CharacterCosmetic,
+  UserCosmetic,
+} from '../types';
 
 export const initialUsers: User[] = [
   {
@@ -412,4 +425,181 @@ export const initialCoupons: Coupon[] = [
     category: '식사',
     bgColor: 'from-orange-400 to-amber-500',
   },
+];
+
+// ── 마을 꾸미기: 장식 아이템 카탈로그 ──────────────────────
+export const initialDecorationItems: DecorationItem[] = [
+  { id: 'deco-house-basic', name: '작은 오두막', description: '아담하고 포근한 첫 번째 집이에요.', emoji: '🏠', category: 'HOUSE', slot: 'HOUSE', rarity: 'COMMON', requiredPoint: 0, requiredLevel: 1, enabled: true },
+  { id: 'deco-house-cottage', name: '아늑한 집', description: '나무로 지은 따뜻한 시골집이에요.', emoji: '🏡', category: 'HOUSE', slot: 'HOUSE', rarity: 'RARE', requiredPoint: 300, requiredLevel: 2, enabled: true },
+  { id: 'deco-house-tower', name: '멋진 타워하우스', description: '마을에서 가장 높고 멋진 집이에요.', emoji: '🏰', category: 'HOUSE', slot: 'HOUSE', rarity: 'EPIC', requiredPoint: 800, requiredLevel: 5, enabled: true },
+  { id: 'deco-desk', name: '공부 책상', description: '숙제를 척척 해낼 수 있는 책상이에요.', emoji: '🪑', category: 'FURNITURE', slot: 'DESK', rarity: 'COMMON', requiredPoint: 80, requiredLevel: 1, unlockMissionType: 'HOMEWORK', enabled: true },
+  { id: 'deco-board', name: '칠판', description: '오늘 배운 내용을 정리할 수 있어요.', emoji: '🖍️', category: 'FURNITURE', slot: 'DESK', rarity: 'COMMON', requiredPoint: 100, requiredLevel: 1, unlockMissionType: 'HOMEWORK', enabled: true },
+  { id: 'deco-calc', name: '계산기 세트', description: '어려운 계산도 척척 해결해줘요.', emoji: '🧮', category: 'STUDY_TOOL', slot: 'DESK', rarity: 'RARE', requiredPoint: 150, requiredLevel: 2, unlockMissionType: 'HOMEWORK', enabled: true },
+  { id: 'deco-bookshelf', name: '책장', description: '좋아하는 책을 가지런히 꽂아둬요.', emoji: '📚', category: 'FURNITURE', slot: 'BOOKSHELF', rarity: 'COMMON', requiredPoint: 90, requiredLevel: 1, unlockMissionType: 'READING', enabled: true },
+  { id: 'deco-reading-chair', name: '독서 의자', description: '편안하게 앉아 책을 읽을 수 있어요.', emoji: '🛋️', category: 'FURNITURE', slot: 'BOOKSHELF', rarity: 'RARE', requiredPoint: 130, requiredLevel: 2, unlockMissionType: 'READING', enabled: true },
+  { id: 'deco-wordcards', name: '단어 카드 책상', description: '새로운 단어를 익힐 수 있는 책상이에요.', emoji: '🔤', category: 'STUDY_TOOL', slot: 'DESK', rarity: 'COMMON', requiredPoint: 110, requiredLevel: 1, unlockMissionType: 'VOCABULARY', enabled: true },
+  { id: 'deco-review-desk', name: '복습 책상', description: '틀린 문제를 다시 풀어볼 수 있어요.', emoji: '📓', category: 'STUDY_TOOL', slot: 'DESK', rarity: 'RARE', requiredPoint: 120, requiredLevel: 2, unlockMissionType: 'REVIEW_NOTES', enabled: true },
+  { id: 'deco-bed-basic', name: '아늑한 침대', description: '하루를 마무리하고 푹 쉴 수 있는 침대예요.', emoji: '🛏️', category: 'FURNITURE', slot: 'BED', rarity: 'COMMON', requiredPoint: 70, requiredLevel: 1, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'deco-bed-cozy', name: '포근한 이층 침대', description: '폭신폭신, 더 넓고 포근한 침대예요.', emoji: '🛌', category: 'FURNITURE', slot: 'BED', rarity: 'RARE', requiredPoint: 180, requiredLevel: 2, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'deco-rug-round', name: '동그란 러그', description: '방바닥을 포근하게 채워주는 러그예요.', emoji: '🟤', category: 'FURNITURE', slot: 'RUG', rarity: 'COMMON', requiredPoint: 50, requiredLevel: 1, enabled: true },
+  { id: 'deco-rug-stripe', name: '줄무늬 러그', description: '알록달록한 줄무늬 러그예요.', emoji: '🟧', category: 'FURNITURE', slot: 'RUG', rarity: 'RARE', requiredPoint: 140, requiredLevel: 2, enabled: true },
+  { id: 'deco-window-basic', name: '동그란 창문', description: '햇살이 잘 들어오는 작은 창문이에요.', emoji: '🪟', category: 'FURNITURE', slot: 'WINDOW', rarity: 'COMMON', requiredPoint: 60, requiredLevel: 1, enabled: true },
+  { id: 'deco-window-curtain', name: '커튼 창문', description: '예쁜 커튼이 달린 창문이에요.', emoji: '🌇', category: 'FURNITURE', slot: 'WINDOW', rarity: 'RARE', requiredPoint: 150, requiredLevel: 3, enabled: true },
+  { id: 'deco-tree-small', name: '어린 나무', description: '마을 마당에 심은 작은 나무예요.', emoji: '🌳', category: 'TREE', slot: 'GARDEN', rarity: 'COMMON', requiredPoint: 50, requiredLevel: 1, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'deco-tree-big', name: '튼튼한 나무', description: '오랫동안 자라온 튼튼한 나무예요.', emoji: '🌲', category: 'TREE', slot: 'GARDEN', rarity: 'RARE', requiredPoint: 200, requiredLevel: 3, enabled: true },
+  { id: 'deco-flower-tulip', name: '튤립 화단', description: '알록달록한 튤립이 피어 있어요.', emoji: '🌷', category: 'FLOWER', slot: 'GARDEN', rarity: 'COMMON', requiredPoint: 50, requiredLevel: 1, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'deco-flower-sunflower', name: '해바라기 밭', description: '해를 보고 활짝 웃는 해바라기예요.', emoji: '🌻', category: 'FLOWER', slot: 'GARDEN', rarity: 'RARE', requiredPoint: 120, requiredLevel: 2, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'deco-path-stone', name: '돌길', description: '마을을 가로지르는 작은 돌길이에요.', emoji: '🪨', category: 'ROAD', slot: 'PATH', rarity: 'COMMON', requiredPoint: 60, requiredLevel: 1, enabled: true },
+  { id: 'deco-path-flower', name: '꽃길', description: '꽃잎이 흩날리는 예쁜 길이에요.', emoji: '🌸', category: 'ROAD', slot: 'PATH', rarity: 'EPIC', requiredPoint: 250, requiredLevel: 4, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'deco-fence-wood', name: '나무 울타리', description: '마당을 아늑하게 둘러싸 줘요.', emoji: '🚧', category: 'FENCE', slot: 'PATH', rarity: 'COMMON', requiredPoint: 70, requiredLevel: 1, enabled: true },
+  { id: 'deco-fence-flower', name: '꽃 울타리', description: '작은 꽃으로 장식된 울타리예요.', emoji: '🌼', category: 'FENCE', slot: 'PATH', rarity: 'RARE', requiredPoint: 160, requiredLevel: 3, enabled: true },
+  { id: 'deco-school', name: '학교 건물', description: '마을 친구들이 모이는 학교예요.', emoji: '🏫', category: 'SCHOOL', slot: 'SCHOOL', rarity: 'EPIC', requiredPoint: 350, requiredLevel: 3, unlockMissionType: 'ATTENDANCE', enabled: true },
+  { id: 'deco-library', name: '작은 도서관', description: '다양한 책을 빌릴 수 있는 도서관이에요.', emoji: '📖', category: 'SCHOOL', slot: 'SCHOOL', rarity: 'EPIC', requiredPoint: 400, requiredLevel: 3, unlockMissionType: 'READING', enabled: true },
+  { id: 'deco-langlab', name: '언어 연구소', description: '새로운 단어를 연구하는 곳이에요.', emoji: '🔬', category: 'SCHOOL', slot: 'SCHOOL', rarity: 'LEGENDARY', requiredPoint: 500, requiredLevel: 4, unlockMissionType: 'VOCABULARY', enabled: true },
+  { id: 'deco-gate', name: '교문', description: '학교로 들어가는 멋진 문이에요.', emoji: '🚪', category: 'SCHOOL', slot: 'SCHOOL', rarity: 'RARE', requiredPoint: 200, requiredLevel: 2, unlockMissionType: 'ATTENDANCE', enabled: true },
+  { id: 'deco-petbed', name: '포근한 펫 침대', description: '주민들이 편히 쉴 수 있는 침대예요.', emoji: '🛏️', category: 'PET', slot: 'YARD', rarity: 'COMMON', requiredPoint: 100, requiredLevel: 2, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'deco-fishtank', name: '작은 어항', description: '알록달록한 물고기가 헤엄쳐요.', emoji: '🐠', category: 'PET', slot: 'YARD', rarity: 'RARE', requiredPoint: 150, requiredLevel: 3, enabled: true },
+  { id: 'deco-theme-spring', name: '봄 테마', description: '마을 전체가 봄빛으로 물들어요.', emoji: '🌸', category: 'THEME', rarity: 'RARE', requiredPoint: 300, requiredLevel: 3, enabled: true },
+  { id: 'deco-theme-night', name: '밤하늘 테마', description: '별이 빛나는 밤의 마을이 돼요.', emoji: '🌙', category: 'THEME', rarity: 'EPIC', requiredPoint: 400, requiredLevel: 4, enabled: true },
+];
+
+// ── 마을 꾸미기: 동물 주민 카탈로그 ────────────────────────
+export const initialVillageResidents: VillageResident[] = [
+  { id: 'resident-rabbit', name: '토끼', emoji: '🐰', personality: '활발하고 발이 빠른', description: '아침 일찍부터 마을을 신나게 뛰어다녀요.', relatedMissionTypes: ['ATTENDANCE', 'LIFESTYLE'], requiredLevel: 1, unlockHint: '출석과 생활습관 미션을 잘 챙기면 만날 수 있어요.' },
+  { id: 'resident-dog', name: '강아지', emoji: '🐶', personality: '꾸준하고 친근한', description: '매일매일 변함없이 곁을 지켜줘요.', relatedMissionTypes: [], requiredLevel: 1, unlockHint: '미션을 연속으로 성공하면 만날 수 있어요.' },
+  { id: 'resident-squirrel', name: '다람쥐', emoji: '🐿️', personality: '차곡차곡 모으는 걸 좋아하는', description: '도토리를 모으듯 단어를 차곡차곡 모아요.', relatedMissionTypes: ['VOCABULARY', 'READING'], requiredLevel: 2, unlockHint: '단어 암기와 독서를 꾸준히 하면 만날 수 있어요.' },
+  { id: 'resident-cat', name: '고양이', emoji: '🐱', personality: '조용히 책 읽는 걸 좋아하는', description: '햇살 좋은 자리에서 책 읽기를 즐겨요.', relatedMissionTypes: ['READING'], requiredLevel: 2, unlockHint: '독서 미션을 꾸준히 하면 만날 수 있어요.' },
+  { id: 'resident-penguin', name: '펭귄', emoji: '🐧', personality: '차분하고 규칙적인', description: '매일 같은 시간에 마을을 산책해요.', relatedMissionTypes: ['ATTENDANCE'], requiredLevel: 2, unlockHint: '출석 미션을 꾸준히 하면 만날 수 있어요.' },
+  { id: 'resident-beaver', name: '비버', emoji: '🦫', personality: '성실하고 손재주가 좋은', description: '무엇이든 차근차근 만들고 정리해요.', relatedMissionTypes: ['HOMEWORK', 'REVIEW_NOTES'], requiredLevel: 3, unlockHint: '숙제와 오답정리를 꾸준히 하면 만날 수 있어요.' },
+  { id: 'resident-fox', name: '여우', emoji: '🦊', personality: '똑똑하고 문제 해결을 좋아하는', description: '어려운 문제도 척척 풀어내요.', relatedMissionTypes: ['HOMEWORK', 'REVIEW_NOTES'], requiredLevel: 4, unlockHint: '오답정리를 열심히 하면 만날 수 있어요.' },
+  { id: 'resident-bear', name: '곰', emoji: '🐻', personality: '든든하고 포근한', description: '마을이 잘 자라도록 든든하게 지켜줘요.', relatedMissionTypes: ['LIFESTYLE'], requiredLevel: 5, unlockHint: '마을이 충분히 성장하면 만날 수 있어요.' },
+];
+
+// ── 마을 꾸미기: 업적 카탈로그 ─────────────────────────────
+export const initialAchievements: Achievement[] = [
+  { id: 'ach-first-step', name: '첫 발걸음', description: '첫 미션을 성공했어요!', emoji: '🎉', conditionType: 'MISSION_COUNT', conditionValue: 1, rewardPoint: 50, rewardItemId: 'deco-desk' },
+  { id: 'ach-streak-3', name: '3일 연속 성공', description: '3일 연속으로 미션을 성공했어요!', emoji: '🔥', conditionType: 'STREAK', conditionValue: 3, rewardPoint: 30, rewardResidentId: 'resident-dog' },
+  { id: 'ach-streak-7', name: '일주일 개근', description: '7일 연속으로 미션을 성공했어요!', emoji: '🔥', conditionType: 'STREAK', conditionValue: 7, rewardPoint: 100, rewardItemId: 'deco-fence-wood' },
+  { id: 'ach-reading-5', name: '책벌레', description: '독서 미션을 5회 완료했어요!', emoji: '📖', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 5, conditionMissionType: 'READING', rewardPoint: 0, rewardItemId: 'deco-bookshelf', rewardResidentId: 'resident-cat' },
+  { id: 'ach-homework-5', name: '성실한 일꾼', description: '숙제 미션을 5회 완료했어요!', emoji: '✏️', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 5, conditionMissionType: 'HOMEWORK', rewardPoint: 0, rewardResidentId: 'resident-beaver' },
+  { id: 'ach-vocab-5', name: '단어 수집가', description: '단어암기 미션을 5회 완료했어요!', emoji: '🔤', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 5, conditionMissionType: 'VOCABULARY', rewardPoint: 0, rewardResidentId: 'resident-squirrel' },
+  { id: 'ach-attendance-5', name: '개근왕', description: '출석 미션을 5회 완료했어요!', emoji: '✅', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 5, conditionMissionType: 'ATTENDANCE', rewardPoint: 0, rewardResidentId: 'resident-penguin' },
+  { id: 'ach-lifestyle-5', name: '생활왕', description: '생활습관 미션을 5회 완료했어요!', emoji: '🌱', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 5, conditionMissionType: 'LIFESTYLE', rewardPoint: 0, rewardResidentId: 'resident-rabbit' },
+  { id: 'ach-review-5', name: '복습 마스터', description: '오답정리 미션을 5회 완료했어요!', emoji: '🦊', conditionType: 'MISSION_TYPE_COUNT', conditionValue: 5, conditionMissionType: 'REVIEW_NOTES', rewardPoint: 0, rewardResidentId: 'resident-fox' },
+  { id: 'ach-village-5', name: '마을 번영', description: '마을 레벨 5를 달성했어요!', emoji: '🏆', conditionType: 'VILLAGE_LEVEL', conditionValue: 5, rewardPoint: 0, rewardItemId: 'deco-school', rewardResidentId: 'resident-bear' },
+];
+
+// ── 마을 ────────────────────────────────────────────────
+export const initialVillages: Village[] = [
+  { id: 'village-child-1', ownerId: 'user-child-1', name: '철수네 마을', level: 1, exp: 90, theme: 'default', createdAt: ago(15).toString(), updatedAt: ago(0).toString() },
+  { id: 'village-child-2', ownerId: 'user-child-2', name: '영희네 마을', level: 2, exp: 5, theme: 'default', createdAt: ago(15).toString(), updatedAt: ago(0).toString() },
+  { id: 'village-child-3', ownerId: 'user-child-3', name: '민수네 마을', level: 1, exp: 15, theme: 'default', createdAt: ago(20).toString(), updatedAt: ago(0).toString() },
+  { id: 'village-child-4', ownerId: 'user-child-4', name: '지훈이네 마을', level: 1, exp: 0, theme: 'default', createdAt: ago(20).toString(), updatedAt: ago(0).toString() },
+];
+
+// ── 마을 배치 (슬롯 기반) ───────────────────────────────────
+export const initialVillagePlacements: VillagePlacement[] = [
+  { id: 'placement-1', villageId: 'village-child-1', zone: 'HOUSE_EXTERIOR', slot: 'HOUSE', itemId: 'deco-house-basic', placedAt: ago(15).toString() },
+  { id: 'placement-2', villageId: 'village-child-2', zone: 'HOUSE_EXTERIOR', slot: 'HOUSE', itemId: 'deco-house-basic', placedAt: ago(15).toString() },
+  { id: 'placement-3', villageId: 'village-child-2', zone: 'VILLAGE', slot: 'GARDEN', itemId: 'deco-tree-small', placedAt: ago(10).toString() },
+  { id: 'placement-4', villageId: 'village-child-2', zone: 'VILLAGE', slot: 'SCHOOL', itemId: 'deco-gate', placedAt: ago(8).toString() },
+  { id: 'placement-5', villageId: 'village-child-3', zone: 'HOUSE_EXTERIOR', slot: 'HOUSE', itemId: 'deco-house-basic', placedAt: ago(20).toString() },
+  { id: 'placement-6', villageId: 'village-child-4', zone: 'HOUSE_EXTERIOR', slot: 'HOUSE', itemId: 'deco-house-basic', placedAt: ago(20).toString() },
+];
+
+// ── 보유 인벤토리 ───────────────────────────────────────────
+export const initialInventoryItems: InventoryItem[] = [
+  { id: 'inv-1', userId: 'user-child-1', itemId: 'deco-house-basic', quantity: 1, acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'inv-2', userId: 'user-child-1', itemId: 'deco-bookshelf', quantity: 1, acquiredVia: 'MISSION_REWARD', acquiredAt: ago(3).toString() },
+  { id: 'inv-3', userId: 'user-child-1', itemId: 'deco-review-desk', quantity: 1, acquiredVia: 'MISSION_REWARD', acquiredAt: ago(1).toString() },
+  { id: 'inv-4', userId: 'user-child-1', itemId: 'deco-desk', quantity: 1, acquiredVia: 'ACHIEVEMENT', acquiredAt: ago(1).toString() },
+  { id: 'inv-5', userId: 'user-child-2', itemId: 'deco-house-basic', quantity: 1, acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'inv-6', userId: 'user-child-2', itemId: 'deco-desk', quantity: 1, acquiredVia: 'ACHIEVEMENT', acquiredAt: ago(5).toString() },
+  { id: 'inv-7', userId: 'user-child-2', itemId: 'deco-wordcards', quantity: 1, acquiredVia: 'MISSION_REWARD', acquiredAt: ago(4).toString() },
+  { id: 'inv-8', userId: 'user-child-2', itemId: 'deco-gate', quantity: 1, acquiredVia: 'MISSION_REWARD', acquiredAt: ago(2).toString() },
+  { id: 'inv-9', userId: 'user-child-2', itemId: 'deco-tree-small', quantity: 1, acquiredVia: 'MISSION_REWARD', acquiredAt: ago(2).toString() },
+  { id: 'inv-10', userId: 'user-child-3', itemId: 'deco-house-basic', quantity: 1, acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+  { id: 'inv-11', userId: 'user-child-3', itemId: 'deco-desk', quantity: 1, acquiredVia: 'ACHIEVEMENT', acquiredAt: ago(7).toString() },
+  { id: 'inv-12', userId: 'user-child-3', itemId: 'deco-path-stone', quantity: 1, acquiredVia: 'MISSION_REWARD', acquiredAt: ago(7).toString() },
+  { id: 'inv-13', userId: 'user-child-4', itemId: 'deco-house-basic', quantity: 1, acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+];
+
+// ── 보유 동물 주민 ──────────────────────────────────────────
+export const initialUserResidents: UserResident[] = [
+  { id: 'ur-1', userId: 'user-child-1', residentId: 'resident-dog', acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'ur-2', userId: 'user-child-2', residentId: 'resident-dog', acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'ur-3', userId: 'user-child-3', residentId: 'resident-dog', acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+  { id: 'ur-4', userId: 'user-child-4', residentId: 'resident-dog', acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+];
+
+// ── 달성한 업적 ──────────────────────────────────────────────
+export const initialUserAchievements: UserAchievement[] = [
+  { id: 'ua-1', userId: 'user-child-1', achievementId: 'ach-first-step', unlockedAt: ago(7).toString() },
+  { id: 'ua-2', userId: 'user-child-2', achievementId: 'ach-first-step', unlockedAt: ago(5).toString() },
+  { id: 'ua-3', userId: 'user-child-3', achievementId: 'ach-first-step', unlockedAt: ago(7).toString() },
+];
+
+// ── 코스튬(의상) 카탈로그 ───────────────────────────────────
+export const initialCharacterCosmetics: CharacterCosmetic[] = [
+  { id: 'cos-top-basic', name: '기본 티셔츠', slot: 'TOP', emoji: '👕', color: '#fb923c', rarity: 'COMMON', requiredPoint: 0, requiredLevel: 1, enabled: true },
+  { id: 'cos-bottom-basic', name: '기본 반바지', slot: 'BOTTOM', emoji: '🩳', color: '#3b82f6', rarity: 'COMMON', requiredPoint: 0, requiredLevel: 1, enabled: true },
+  { id: 'cos-shoes-basic', name: '기본 운동화', slot: 'SHOES', emoji: '👟', color: '#f8fafc', rarity: 'COMMON', requiredPoint: 0, requiredLevel: 1, enabled: true },
+  { id: 'cos-top-stripe', name: '줄무늬 티셔츠', slot: 'TOP', emoji: '👕', color: '#10b981', rarity: 'COMMON', requiredPoint: 80, requiredLevel: 1, enabled: true },
+  { id: 'cos-top-hoodie', name: '포근한 후드티', slot: 'TOP', emoji: '🧥', color: '#8b5cf6', rarity: 'RARE', requiredPoint: 150, requiredLevel: 2, enabled: true },
+  { id: 'cos-bottom-jeans', name: '청바지', slot: 'BOTTOM', emoji: '👖', color: '#1d4ed8', rarity: 'RARE', requiredPoint: 130, requiredLevel: 2, enabled: true },
+  { id: 'cos-shoes-sneaker', name: '컬러 스니커즈', slot: 'SHOES', emoji: '👟', color: '#ef4444', rarity: 'RARE', requiredPoint: 120, requiredLevel: 2, enabled: true },
+  { id: 'cos-hat-cap', name: '야구모자', slot: 'HAT', emoji: '🧢', color: '#f59e0b', rarity: 'COMMON', requiredPoint: 60, requiredLevel: 1, unlockMissionType: 'ATTENDANCE', enabled: true },
+  { id: 'cos-hat-beanie', name: '비니', slot: 'HAT', emoji: '🎩', color: '#6366f1', rarity: 'RARE', requiredPoint: 140, requiredLevel: 3, enabled: true },
+  { id: 'cos-glasses-round', name: '동그란 안경', slot: 'GLASSES', emoji: '👓', color: '#334155', rarity: 'COMMON', requiredPoint: 90, requiredLevel: 1, unlockMissionType: 'HOMEWORK', enabled: true },
+  { id: 'cos-glasses-star', name: '별모양 선글라스', slot: 'GLASSES', emoji: '🕶️', color: '#ec4899', rarity: 'EPIC', requiredPoint: 260, requiredLevel: 4, enabled: true },
+  { id: 'cos-socks-stripe', name: '줄무늬 양말', slot: 'SOCKS', emoji: '🧦', color: '#f97316', rarity: 'COMMON', requiredPoint: 40, requiredLevel: 1, enabled: true },
+  { id: 'cos-gloves-mitten', name: '벙어리장갑', slot: 'GLOVES', emoji: '🧤', color: '#14b8a6', rarity: 'RARE', requiredPoint: 110, requiredLevel: 2, unlockMissionType: 'LIFESTYLE', enabled: true },
+  { id: 'cos-bag-backpack', name: '책가방', slot: 'BAG', emoji: '🎒', color: '#84cc16', rarity: 'COMMON', requiredPoint: 100, requiredLevel: 1, unlockMissionType: 'VOCABULARY', enabled: true },
+  { id: 'cos-bag-explorer', name: '탐험가 가방', slot: 'BAG', emoji: '🎒', color: '#a855f7', rarity: 'EPIC', requiredPoint: 300, requiredLevel: 4, enabled: true },
+];
+
+// ── 캐릭터 프로필 ────────────────────────────────────────────
+export const initialCharacterProfiles: CharacterProfile[] = [
+  {
+    id: 'char-child-1', userId: 'user-child-1', name: '김철수', gender: 'A',
+    skinColor: '#ffd9b3', hairStyle: 'short', hairColor: '#3b2f2f', eyeShape: 'round',
+    equipped: { TOP: 'cos-top-basic', BOTTOM: 'cos-bottom-basic', SHOES: 'cos-shoes-basic', HAT: 'cos-hat-cap' },
+    createdAt: ago(15).toString(), updatedAt: ago(0).toString(),
+  },
+  {
+    id: 'char-child-2', userId: 'user-child-2', name: '박영희', gender: 'B',
+    skinColor: '#ffe0c2', hairStyle: 'ponytail', hairColor: '#5a3825', eyeShape: 'happy',
+    equipped: { TOP: 'cos-top-stripe', BOTTOM: 'cos-bottom-basic', SHOES: 'cos-shoes-basic' },
+    createdAt: ago(15).toString(), updatedAt: ago(0).toString(),
+  },
+  {
+    id: 'char-child-3', userId: 'user-child-3', name: '이민수', gender: 'A',
+    skinColor: '#f4c89a', hairStyle: 'curly', hairColor: '#1f2937', eyeShape: 'sleepy',
+    equipped: { TOP: 'cos-top-basic', BOTTOM: 'cos-bottom-basic', SHOES: 'cos-shoes-basic' },
+    createdAt: ago(20).toString(), updatedAt: ago(0).toString(),
+  },
+  {
+    id: 'char-child-4', userId: 'user-child-4', name: '최지훈', gender: 'B',
+    skinColor: '#ffd9b3', hairStyle: 'bowl', hairColor: '#7a4a2a', eyeShape: 'star',
+    equipped: { TOP: 'cos-top-basic', BOTTOM: 'cos-bottom-basic', SHOES: 'cos-shoes-basic' },
+    createdAt: ago(20).toString(), updatedAt: ago(0).toString(),
+  },
+];
+
+// ── 보유 코스튬 ──────────────────────────────────────────────
+export const initialUserCosmetics: UserCosmetic[] = [
+  { id: 'uc-1', userId: 'user-child-1', cosmeticId: 'cos-top-basic', acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'uc-2', userId: 'user-child-1', cosmeticId: 'cos-bottom-basic', acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'uc-3', userId: 'user-child-1', cosmeticId: 'cos-shoes-basic', acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'uc-4', userId: 'user-child-1', cosmeticId: 'cos-hat-cap', acquiredVia: 'MISSION_REWARD', acquiredAt: ago(2).toString() },
+  { id: 'uc-5', userId: 'user-child-2', cosmeticId: 'cos-top-basic', acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'uc-6', userId: 'user-child-2', cosmeticId: 'cos-bottom-basic', acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'uc-7', userId: 'user-child-2', cosmeticId: 'cos-shoes-basic', acquiredVia: 'STARTER', acquiredAt: ago(15).toString() },
+  { id: 'uc-8', userId: 'user-child-2', cosmeticId: 'cos-top-stripe', acquiredVia: 'PURCHASE', acquiredAt: ago(4).toString() },
+  { id: 'uc-9', userId: 'user-child-3', cosmeticId: 'cos-top-basic', acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+  { id: 'uc-10', userId: 'user-child-3', cosmeticId: 'cos-bottom-basic', acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+  { id: 'uc-11', userId: 'user-child-3', cosmeticId: 'cos-shoes-basic', acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+  { id: 'uc-12', userId: 'user-child-4', cosmeticId: 'cos-top-basic', acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+  { id: 'uc-13', userId: 'user-child-4', cosmeticId: 'cos-bottom-basic', acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
+  { id: 'uc-14', userId: 'user-child-4', cosmeticId: 'cos-shoes-basic', acquiredVia: 'STARTER', acquiredAt: ago(20).toString() },
 ];

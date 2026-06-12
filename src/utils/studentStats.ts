@@ -56,7 +56,7 @@ export function getStudentStatus(
   const concluded = mine.filter((m) =>
     m.status === 'SUCCESS' || m.status === 'REJECTED' || m.status === 'EXPIRED' || m.status === 'FAILED'
   );
-  if (concluded.length === 0) return 'NOT_STARTED';
+  if (concluded.length === 0) return 'CAUTION';
 
   const rate = Math.round((concluded.filter((m) => m.status === 'SUCCESS').length / concluded.length) * 100);
   if (rate < thresholds.counselingRate) return 'COUNSELING';
