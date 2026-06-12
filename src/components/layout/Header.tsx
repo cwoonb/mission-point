@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Star } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { formatPoint } from '../../utils/helpers';
 import { motion } from 'framer-motion';
@@ -41,10 +41,10 @@ export default function Header({
               key={currentUser.point}
               initial={{ scale: 1.15 }}
               animate={{ scale: 1 }}
-              className="flex items-center gap-0.5 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full"
+              className="glossy flex items-center gap-1 bg-gradient-to-b from-amber-300 to-orange-400 shadow-md px-2.5 py-1 rounded-full"
             >
-              <span className="text-amber-500 text-xs">⭐</span>
-              <span className="text-amber-700 font-bold text-xs whitespace-nowrap">
+              <Star size={12} className="text-white fill-white" />
+              <span className="text-white font-bold text-xs whitespace-nowrap">
                 {formatPoint(currentUser.point)}P
               </span>
             </motion.div>

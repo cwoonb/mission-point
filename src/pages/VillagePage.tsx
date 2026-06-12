@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Pencil, Store, Backpack, Palette } from 'lucide-react';
+import { Pencil, Store, Backpack, Palette, Star } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
@@ -106,7 +106,10 @@ export default function VillagePage() {
               <span className="font-black text-lg">{village.name}</span>
               <Pencil size={13} className="text-white/70" />
             </button>
-            <span className="text-sm font-bold bg-white/20 rounded-full px-3 py-1">⭐ {formatPoint(currentUser.point)}P</span>
+            <span className="glossy flex items-center gap-1 text-sm font-bold bg-white/20 rounded-full px-3 py-1">
+              <Star size={13} className="fill-amber-300 text-amber-300" />
+              {formatPoint(currentUser.point)}P
+            </span>
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-between text-xs font-semibold text-white/80 mb-1">

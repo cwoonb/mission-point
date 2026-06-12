@@ -8,11 +8,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md hover:shadow-lg',
+  primary: 'glossy bg-gradient-to-b from-purple-400 to-indigo-500 text-white shadow-md hover:shadow-lg',
   secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-  success: 'bg-gradient-to-r from-emerald-400 to-green-500 text-white shadow-md',
-  danger: 'bg-gradient-to-r from-rose-400 to-red-500 text-white shadow-md',
-  amber: 'bg-gradient-to-r from-amber-400 to-orange-400 text-white shadow-md',
+  success: 'glossy bg-gradient-to-b from-emerald-400 to-green-500 text-white shadow-md',
+  danger: 'glossy bg-gradient-to-b from-rose-400 to-red-500 text-white shadow-md',
+  amber: 'glossy bg-gradient-to-b from-amber-400 to-orange-400 text-white shadow-md',
   ghost: 'text-purple-600 hover:bg-purple-50',
 };
 
@@ -36,7 +36,7 @@ export default function Button({
     <button
       disabled={disabled || loading}
       className={clsx(
-        'font-bold active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2',
+        'font-bold active:scale-90 transition-all duration-100 ease-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2',
         variants[variant],
         sizes[size],
         fullWidth && 'w-full',

@@ -40,7 +40,7 @@ export default function BottomNav() {
             end={to === '/'}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 min-w-0',
+                'flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 min-w-0 active:scale-90',
                 isActive ? 'text-purple-600' : 'text-gray-400'
               )
             }
@@ -48,13 +48,20 @@ export default function BottomNav() {
             {({ isActive }) => (
               <>
                 <div className="relative">
-                  <Icon
-                    size={22}
-                    strokeWidth={isActive ? 2.5 : 1.8}
-                    className={isActive ? 'text-purple-600' : 'text-gray-400'}
-                  />
+                  <div
+                    className={clsx(
+                      'flex items-center justify-center w-9 h-9 rounded-2xl transition-all duration-200',
+                      isActive ? 'glossy bg-gradient-to-b from-purple-400 to-indigo-500 shadow-md' : ''
+                    )}
+                  >
+                    <Icon
+                      size={20}
+                      strokeWidth={isActive ? 2.5 : 1.8}
+                      className={isActive ? 'text-white' : 'text-gray-400'}
+                    />
+                  </div>
                   {badge != null && badge > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
                       {badge > 9 ? '9+' : badge}
                     </span>
                   )}
@@ -62,7 +69,6 @@ export default function BottomNav() {
                 <span className={clsx('text-[10px] font-semibold truncate', isActive ? 'text-purple-600' : 'text-gray-400')}>
                   {label}
                 </span>
-                {isActive && <span className="w-1 h-1 bg-purple-500 rounded-full" />}
               </>
             )}
           </NavLink>

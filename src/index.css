@@ -107,6 +107,20 @@
 }
 
 @layer utilities {
+  /* 글로시 하이라이트 — 둥근 그라데이션 버튼/배지 위쪽에 반투명 광택 띠를 얹어 입체감을 준다 */
+  .glossy {
+    position: relative;
+    overflow: hidden;
+  }
+  .glossy::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0) 65%);
+    pointer-events: none;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
