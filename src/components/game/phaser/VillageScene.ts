@@ -26,6 +26,11 @@ type Dir = 'down' | 'up' | 'side';
 
 const WATER_RECT = { x: 17 * TILE, y: 2 * TILE, w: 4 * TILE, h: 3 * TILE };
 
+/** 갈은 밭 영역 (타일 인덱스, 포함 범위) — 스타듀밸리풍 작물 줄 */
+const FIELD = { x0: 14, y0: 13, x1: 20, y1: 16 };
+const GRASS_VARIANTS = ['tile-grass', 'tile-grass-2', 'tile-grass-3'];
+const CROP_VARIANTS = ['crop-a', 'crop-b', 'crop-c'];
+
 const BUILDINGS: { key: string; x: number; y: number; navigate: 'shop' | 'inventory' | 'decorate' | 'house'; label: string; colliderW: number; colliderH: number }[] = [
   { key: 'building-house', x: 12 * TILE, y: 4 * TILE + 16, navigate: 'house', label: '우리 집', colliderW: 70, colliderH: 20 },
   { key: 'building-shop', x: 4 * TILE + 16, y: 8 * TILE + 24, navigate: 'shop', label: '상점', colliderW: 56, colliderH: 18 },
@@ -39,7 +44,7 @@ const TREES = [
   { x: 22 * TILE, y: 2 * TILE },
   { x: 2 * TILE, y: 16 * TILE },
   { x: 22 * TILE, y: 16 * TILE },
-  { x: 19.5 * TILE, y: 14.5 * TILE },
+  { x: 16 * TILE, y: 5 * TILE },
   { x: 3 * TILE, y: 9.5 * TILE },
 ];
 
@@ -119,8 +124,20 @@ export default class VillageScene extends Phaser.Scene {
         const py = ty * TILE;
         const inWater = px >= WATER_RECT.x && px < WATER_RECT.x + WATER_RECT.w && py >= WATER_RECT.y && py < WATER_RECT.y + WATER_RECT.h;
         if (inWater) continue;
+        const inField = tx >= FIELD.x0 && tx <= FIELD.x1 && ty >= FIELD.y0 && ty <= FIELD.y1;
         const isPath = ((ty === 8 || ty === 9) && tx >= 2 && tx <= 21) || ((tx === 11 || tx === 12) && ty >= 2 && ty <= 15);
-        this.add.image(px + TILE / 2, py + TILE / 2, isPath ? 'tile-path' : 'tile-grass').setDepth(0);
+        let key: string;
+        if (inField) key = 'tile-soil';
+        else if (isPath) key = 'tile-path';
+        else key = GRASS_VARIANTS[(tx * 7 + ty * 13) % 3];
+        this.add.image(px + TILE / 2, py + TILE / 2, key).setDepth(0);
+      }
+    }
+    // 밭 위 작물 줄 — 다양한 성장 단계로 변화감
+    for (let ty = FIELD.y0; ty <= FIELD.y1; ty++) {
+      for (let tx = FIELD.x0; tx <= FIELD.x1; tx++) {
+        const crop = CROP_VARIANTS[(tx + ty * 2) % 3];
+        this.add.image(tx * TILE + TILE / 2, ty * TILE + TILE - 6, crop).setOrigin(0.5, 0.8).setDepth(1);
       }
     }
     this.water = this.add.tileSprite(WATER_RECT.x, WATER_RECT.y, WATER_RECT.w, WATER_RECT.h, 'tile-water').setOrigin(0, 0).setDepth(0.5);

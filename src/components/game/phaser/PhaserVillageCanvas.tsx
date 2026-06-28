@@ -52,7 +52,8 @@ const PhaserVillageCanvas = forwardRef<PhaserVillageCanvasHandle, PhaserVillageC
       width: 360,
       height,
       parent: containerRef.current,
-      backgroundColor: '#bfe6c4',
+      backgroundColor: '#7DBE5A',
+      render: { pixelArt: true, roundPixels: true },
       physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
       scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
       scene,
@@ -81,7 +82,7 @@ const PhaserVillageCanvas = forwardRef<PhaserVillageCanvasHandle, PhaserVillageC
 
   return (
     <div className="relative rounded-3xl overflow-hidden shadow-inner bg-emerald-100" style={{ height }}>
-      <div ref={containerRef} className="absolute inset-0" />
+      <div ref={containerRef} className="absolute inset-0 [&>canvas]:![image-rendering:pixelated]" />
       <VirtualJoystick onMove={handleJoystick} />
     </div>
   );

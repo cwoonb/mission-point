@@ -10,7 +10,7 @@ import SuccessAnimation from '../components/animations/SuccessAnimation';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { usePointStore } from '../store/pointStore';
-import { useVillageStore } from '../store/villageStore';
+import { usePetStore } from '../store/petStore';
 import { formatDate, formatDateTime, formatPoint, submissionTypeLabel } from '../utils/helpers';
 
 export default function MissionDetailPage() {
@@ -18,9 +18,7 @@ export default function MissionDetailPage() {
   const navigate = useNavigate();
   const { currentUser, viewMode, getUser, updateUserPoint } = useAuthStore();
   const { getMission, getLatestSubmission, getReviewLogs, approveMission, rejectMission, deleteMission } = useMissionStore();
-  const { missions } = useMissionStore();
   const { addTransaction } = usePointStore();
-  const { grantMissionReward } = useVillageStore();
 
   const [rejectModal, setRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -78,25 +76,10 @@ export default function MissionDetailPage() {
       );
     }
 
-    const summary = grantMissionReward(mission.assigneeId, mission, missions);
-    const extraLines: string[] = [`경험치 +${summary.expGained} EXP`];
-    if (summary.leveledUp) {
-      extraLines.push(`🎉 마을 레벨 업! Lv.${summary.oldLevel} → Lv.${summary.newLevel}`);
-    }
-    if (summary.itemGained) {
-      extraLines.push(`🎁 ${summary.itemGained.emoji} ${summary.itemGained.name} 획득!`);
-    }
-    if (summary.cosmeticGained) {
-      extraLines.push(`👕 ${summary.cosmeticGained.emoji} ${summary.cosmeticGained.name} 의상 획득!`);
-    }
-    summary.achievementsUnlocked.forEach((a) => {
-      extraLines.push(`🏆 업적 달성: ${a.achievement.name}`);
-      if (a.item) extraLines.push(`🎁 ${a.item.emoji} ${a.item.name} 획득!`);
-      if (a.resident) extraLines.push(`🐾 ${a.resident.emoji} ${a.resident.name} 주민 합류!`);
-    });
+    usePetStore.getState().onMissionApproved(mission.assigneeId);
 
     setSuccessAssigneeName(assigneeUser?.name ?? '실천자');
-    setSuccessExtra(extraLines.join('\n'));
+    setSuccessExtra('🐾 마이펫이 무럭무럭 자랐어요!');
     setShowSuccess(true);
   };
 
