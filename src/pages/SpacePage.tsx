@@ -45,7 +45,9 @@ export default function SpacePage() {
   const dismissOnboard = () => { localStorage.setItem('mp-home-onboarded', '1'); setOnboard(false); };
 
   useEffect(() => {
-    if (currentUser) loadPets(currentUser.id).finally(() => setReady(true));
+    if (!currentUser) return;
+    useHomeStore.getState().loadPlacements(currentUser.id);
+    loadPets(currentUser.id).finally(() => setReady(true));
   }, [currentUser?.id, loadPets]);
 
   const activePet = currentUser ? getActivePet(currentUser.id) : undefined;
