@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Phaser from 'phaser';
+import { Plus, Minus, LocateFixed } from 'lucide-react';
 import HomeScene, { type HomeSceneData, type PlacementView, type EmoteType, type PoseType, type TimeOfDay, type Weather } from './HomeScene';
 import VirtualJoystick from '../VirtualJoystick';
 
@@ -45,6 +46,7 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
   const dataRef = useRef(data);
   dataRef.current = data;
   const [tod, setTod] = useState<TimeOfDay>(data.timeOfDay);
+  const [freeLook, setFreeLook] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -59,6 +61,7 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
     bridge.on('select', (id: string | null) => cbs.current.onSelect?.(id));
     bridge.on('pet-tap', () => cbs.current.onPetTap?.());
     bridge.on('house-tap', () => cbs.current.onHouseTap?.());
+    bridge.on('freelook', (on: boolean) => setFreeLook(on));
 
     const game = new Phaser.Game({
       type: Phaser.AUTO,
@@ -91,6 +94,9 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
   }), []);
 
   const handleJoystick = (dx: number, dy: number) => sceneRef.current?.setJoystick(dx / 2.2, dy / 2.2);
+  const zoomIn = () => sceneRef.current?.zoomBy(1.2);
+  const zoomOut = () => sceneRef.current?.zoomBy(1 / 1.2);
+  const recenter = () => sceneRef.current?.recenter();
 
   return (
     <div className="relative rounded-3xl overflow-hidden shadow-inner bg-emerald-100" style={{ height }}>
@@ -99,6 +105,24 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
         className="absolute inset-0 pointer-events-none transition-colors duration-700"
         style={{ background: TINT[tod], mixBlendMode: 'multiply' }}
       />
+
+      {/* 카메라 줌 컨트롤 */}
+      <div className="absolute top-2.5 right-2.5 flex flex-col gap-1.5">
+        <button onClick={zoomIn} aria-label="확대" className="w-9 h-9 rounded-xl bg-white/85 backdrop-blur shadow-md flex items-center justify-center text-gray-700 active:scale-90 transition-transform">
+          <Plus size={18} />
+        </button>
+        <button onClick={zoomOut} aria-label="축소" className="w-9 h-9 rounded-xl bg-white/85 backdrop-blur shadow-md flex items-center justify-center text-gray-700 active:scale-90 transition-transform">
+          <Minus size={18} />
+        </button>
+      </div>
+
+      {/* 자유 시점 시 내 위치로 */}
+      {freeLook && (
+        <button onClick={recenter} className="absolute bottom-3 right-3 px-3 h-9 rounded-xl bg-emerald-500/90 backdrop-blur shadow-md flex items-center gap-1.5 text-white text-xs font-bold active:scale-90 transition-transform">
+          <LocateFixed size={15} /> 내 위치
+        </button>
+      )}
+
       {!editMode && <VirtualJoystick onMove={handleJoystick} />}
     </div>
   );

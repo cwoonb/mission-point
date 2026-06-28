@@ -70,6 +70,15 @@ export default class HomeScene extends Phaser.Scene {
   /** 씬 부팅(create) 완료 여부 — React effect가 부팅 전 호출 시 크래시 방지 */
   private booted = false;
 
+  // 카메라 줌/팬
+  private follow = true;
+  private downScreen?: { x: number; y: number };
+  private downWorld?: { x: number; y: number };
+  private panScroll = { x: 0, y: 0 };
+  private dragged = false;
+  private pinchStart = 0;
+  private pinchZoom0 = 1;
+
   constructor() {
     super('Home');
   }
@@ -317,6 +326,9 @@ export default class HomeScene extends Phaser.Scene {
   }
 
   private setupInput() {
+    const cam = this.cameras.main;
+    this.input.addPointer(1); // 핀치 줌용 2번째 포인터
+
     const ground = this.add.rectangle(MAP_W / 2, MAP_H / 2, MAP_W, MAP_H, 0, 0).setDepth(-1).setInteractive();
     ground.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.editMode && this.placeGhost && this.placeItemId) {
@@ -327,12 +339,45 @@ export default class HomeScene extends Phaser.Scene {
         return;
       }
       if (this.editMode) { this.selectedId = undefined; this.selectRing?.clear(); this.bridge.emit('select', null); return; }
-      this.posing = false; this.seatTarget = null;
-      this.moveTarget = { x: Phaser.Math.Clamp(pointer.worldX, TILE, MAP_W - TILE), y: Phaser.Math.Clamp(pointer.worldY, TILE, MAP_H - TILE) };
+      // 플레이 모드: 탭(이동) vs 드래그(팬) 구분을 위해 시작점만 기록
+      this.downScreen = { x: pointer.x, y: pointer.y };
+      this.downWorld = { x: pointer.worldX, y: pointer.worldY };
+      this.panScroll = { x: cam.scrollX, y: cam.scrollY };
+      this.dragged = false;
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-      if (this.placeGhost) this.placeGhost.setPosition(pointer.worldX, pointer.worldY);
+      if (this.placeGhost) { this.placeGhost.setPosition(pointer.worldX, pointer.worldY); return; }
+      if (this.editMode) return;
+      // 핀치 줌
+      const p1 = this.input.pointer1, p2 = this.input.pointer2;
+      if (p1.isDown && p2.isDown) {
+        const dist = Phaser.Math.Distance.Between(p1.x, p1.y, p2.x, p2.y);
+        if (this.pinchStart === 0) { this.pinchStart = dist; this.pinchZoom0 = cam.zoom; }
+        else if (dist > 0) this.setZoom(this.pinchZoom0 * (dist / this.pinchStart));
+        this.dragged = true;
+        return;
+      }
+      // 한 손가락 드래그 → 팬
+      if (this.downScreen && pointer.isDown) {
+        const dx = pointer.x - this.downScreen.x, dy = pointer.y - this.downScreen.y;
+        if (this.dragged || Math.hypot(dx, dy) > 10) {
+          this.dragged = true;
+          this.setFollow(false);
+          cam.setScroll(this.panScroll.x - dx / cam.zoom, this.panScroll.y - dy / cam.zoom);
+        }
+      }
+    });
+
+    this.input.on('pointerup', () => {
+      this.pinchStart = 0;
+      if (this.editMode) { this.downScreen = undefined; return; }
+      if (this.downScreen && !this.dragged && this.downWorld) {
+        // 탭 → 이동
+        this.posing = false; this.seatTarget = null;
+        this.moveTarget = { x: Phaser.Math.Clamp(this.downWorld.x, TILE, MAP_W - TILE), y: Phaser.Math.Clamp(this.downWorld.y, TILE, MAP_H - TILE) };
+      }
+      this.downScreen = undefined;
     });
 
     // 드래그로 배치 이동
@@ -355,6 +400,32 @@ export default class HomeScene extends Phaser.Scene {
     cam.setZoom(1.25);
     cam.startFollow(this.player, true, 0.1, 0.1);
     cam.setDeadzone(60, 80);
+  }
+
+  // ── 카메라 줌/팬 API (React에서 호출) ───────────────
+  private setFollow(on: boolean) {
+    if (on === this.follow) return;
+    this.follow = on;
+    const cam = this.cameras.main;
+    if (on) cam.startFollow(this.player, true, 0.1, 0.1);
+    else cam.stopFollow();
+    this.bridge.emit('freelook', !on);
+  }
+
+  setZoom(z: number) {
+    if (!this.booted) return;
+    this.cameras.main.setZoom(Phaser.Math.Clamp(z, 0.85, 2.6));
+  }
+
+  zoomBy(factor: number) {
+    if (!this.booted) return;
+    this.setZoom(this.cameras.main.zoom * factor);
+  }
+
+  recenter() {
+    if (!this.booted) return;
+    this.setFollow(true);
+    this.moveTarget = null;
   }
 
   // ── 낮/밤 · 날씨 ────────────────────────────────────

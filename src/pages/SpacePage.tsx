@@ -40,6 +40,9 @@ export default function SpacePage() {
   const [time, setTime] = useState<TimeOfDay>(computeTimeOfDay());
   const [weather, setWeather] = useState<Weather>('clear');
   const [toast, setToast] = useState('');
+  const [onboard, setOnboard] = useState(() => typeof localStorage !== 'undefined' && !localStorage.getItem('mp-home-onboarded'));
+
+  const dismissOnboard = () => { localStorage.setItem('mp-home-onboarded', '1'); setOnboard(false); };
 
   useEffect(() => {
     if (currentUser) loadPets(currentUser.id).finally(() => setReady(true));
@@ -256,6 +259,28 @@ export default function SpacePage() {
               </div>
             );
           })}
+        </div>
+      </Modal>
+
+      {/* 첫 방문 온보딩 */}
+      <Modal isOpen={onboard} onClose={dismissOnboard} title="🏡 내 공간에 오신 걸 환영해요!">
+        <div className="space-y-2.5">
+          {[
+            { e: '🕹️', t: '조이스틱으로 캐릭터를 자유롭게 움직여요' },
+            { e: '🙆', t: '포즈·감정 버튼으로 인사·앉기·하트를 표현해요' },
+            { e: '🐾', t: '펫이 따라다니거나 산책해요 — 탭하면 좋아해요' },
+            { e: '🎨', t: '꾸미기 모드에서 상점 구매 후 자유롭게 배치·이동·회전·삭제' },
+            { e: '🔍', t: '＋/－로 확대·축소, 화면을 드래그하면 둘러볼 수 있어요' },
+            { e: '🌙', t: '낮·저녁·밤과 날씨도 바꿔보세요' },
+          ].map((row) => (
+            <div key={row.t} className="flex items-center gap-3 bg-gray-50 rounded-2xl px-3 py-2.5">
+              <span className="text-xl flex-shrink-0">{row.e}</span>
+              <p className="text-sm text-gray-700">{row.t}</p>
+            </div>
+          ))}
+          <Button fullWidth variant="success" size="lg" className="rounded-2xl mt-1" onClick={dismissOnboard}>
+            시작하기
+          </Button>
         </div>
       </Modal>
 
