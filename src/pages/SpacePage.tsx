@@ -144,7 +144,7 @@ export default function SpacePage() {
             height={480}
           />
         ) : (
-          <div className="rounded-3xl bg-emerald-100 flex items-center justify-center" style={{ height: 480 }}>
+          <div className="rounded-3xl bg-emerald-100 flex items-center justify-center w-full" style={{ aspectRatio: '3 / 4' }}>
             <p className="text-emerald-500 font-bold animate-pulse">공간을 불러오는 중...</p>
           </div>
         )}

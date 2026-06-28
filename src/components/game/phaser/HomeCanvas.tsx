@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Phaser from 'phaser';
-import { Plus, Minus, LocateFixed } from 'lucide-react';
-import HomeScene, { type HomeSceneData, type PlacementView, type EmoteType, type PoseType, type TimeOfDay, type Weather } from './HomeScene';
+import { Plus, Minus, Maximize2 } from 'lucide-react';
+import HomeScene, { MAP_W, MAP_H, type HomeSceneData, type PlacementView, type EmoteType, type PoseType, type TimeOfDay, type Weather } from './HomeScene';
 import VirtualJoystick from '../VirtualJoystick';
 
 /** 낮/저녁/밤 화면 틴트 (CSS 오버레이 — Phaser 전체화면 Shape보다 안정적) */
@@ -65,12 +65,13 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
 
     const game = new Phaser.Game({
       type: Phaser.AUTO,
-      width: 360,
-      height,
+      width: MAP_W,
+      height: MAP_H,
       parent: containerRef.current,
       backgroundColor: '#7DBE5A',
       render: { pixelArt: true, roundPixels: true },
       physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: false } },
+      // 내부 해상도를 맵 크기로 → 기본 줌(전체 맞춤)에서 마당 전체가 보임. FIT으로 컨테이너에 반응형 스케일
       scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
       scene,
     });
@@ -99,7 +100,7 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
   const recenter = () => sceneRef.current?.recenter();
 
   return (
-    <div className="relative rounded-3xl overflow-hidden shadow-inner bg-emerald-100" style={{ height }}>
+    <div className="relative rounded-3xl overflow-hidden shadow-inner bg-emerald-100 w-full" style={{ aspectRatio: `${MAP_W} / ${MAP_H}` }}>
       <div ref={containerRef} className="absolute inset-0 [&>canvas]:![image-rendering:pixelated]" />
       <div
         className="absolute inset-0 pointer-events-none transition-colors duration-700"
@@ -116,10 +117,10 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
         </button>
       </div>
 
-      {/* 자유 시점 시 내 위치로 */}
+      {/* 확대/팬 중일 때 전체 보기로 복귀 */}
       {freeLook && (
         <button onClick={recenter} className="absolute bottom-3 right-3 px-3 h-9 rounded-xl bg-emerald-500/90 backdrop-blur shadow-md flex items-center gap-1.5 text-white text-xs font-bold active:scale-90 transition-transform">
-          <LocateFixed size={15} /> 내 위치
+          <Maximize2 size={15} /> 전체 보기
         </button>
       )}
 

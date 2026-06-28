@@ -3,8 +3,9 @@ import { generateHomeTextures, generatePetTextures } from './homeTextures';
 import { DECOR_BY_ID } from '../../../config/decor';
 
 export const TILE = 32;
-export const MAP_COLS = 18;
-export const MAP_ROWS = 14;
+// 세로형 마당(폰 화면 비율 3:4에 맞춤) — 기본 줌에서 전체가 보이도록
+export const MAP_COLS = 12;
+export const MAP_ROWS = 16;
 export const MAP_W = MAP_COLS * TILE;
 export const MAP_H = MAP_ROWS * TILE;
 
@@ -71,7 +72,8 @@ export default class HomeScene extends Phaser.Scene {
   private booted = false;
 
   // 카메라 줌/팬
-  private follow = true;
+  private follow = false;
+  private fitZoom = 1;
   private downScreen?: { x: number; y: number };
   private downWorld?: { x: number; y: number };
   private panScroll = { x: 0, y: 0 };
@@ -118,7 +120,7 @@ export default class HomeScene extends Phaser.Scene {
     const variants = ['home-grass', 'home-grass-2', 'home-grass-3'];
     for (let ty = 0; ty < MAP_ROWS; ty++) {
       for (let tx = 0; tx < MAP_COLS; tx++) {
-        const isPath = tx === 8 || tx === 9; // 집 앞 세로 길
+        const isPath = tx === 5 || tx === 6; // 집 앞 세로 길
         const key = isPath ? 'home-path' : variants[(tx * 5 + ty * 7) % 3];
         this.add.image(tx * TILE + TILE / 2, ty * TILE + TILE / 2, key).setDepth(0);
       }
@@ -136,23 +138,23 @@ export default class HomeScene extends Phaser.Scene {
     house.setInteractive({ useHandCursor: true });
     house.on('pointerdown', () => { if (!this.editMode) this.bridge.emit('house-tap'); });
 
-    // 기본 정원(고정 장식) — 빈 마당이 아니라 아기자기한 첫인상
-    place('decor-tree', 2.2, 3, 0.95, 1);
-    place('decor-tree', MAP_COLS - 2.2, 3, 0.95, 1);
-    place('decor-flowerbed', 6, 4.2, 0.9, 1);
-    place('decor-flowerbed', MAP_COLS - 6, 4.2, 0.9, 1);
-    place('decor-sunflower', 5, 3.2, 0.95, 1);
-    place('decor-sunflower', MAP_COLS - 5, 3.2, 0.95, 1);
-    place('decor-bush', 1.6, 6.5, 0.95, 1);
-    place('decor-bush', MAP_COLS - 1.6, 6.5, 0.95, 1);
-    place('decor-bush', 1.6, 9.5, 0.95, 1);
-    place('decor-bush', MAP_COLS - 1.6, 9.5, 0.95, 1);
+    // 기본 정원(고정 장식) — 빈 마당이 아니라 아기자기한 첫인상 (12×16 기준)
+    place('decor-tree', 2, 4, 0.95, 1);
+    place('decor-tree', MAP_COLS - 2, 4, 0.95, 1);
+    place('decor-flowerbed', 3.4, 5.6, 0.9, 1);
+    place('decor-flowerbed', MAP_COLS - 3.4, 5.6, 0.9, 1);
+    place('decor-sunflower', 2, 6.4, 0.95, 1);
+    place('decor-sunflower', MAP_COLS - 2, 6.4, 0.95, 1);
+    [8, 11, 13.6].forEach((ty) => {
+      place('decor-bush', 1.3, ty, 0.95, 1);
+      place('decor-bush', MAP_COLS - 1.3, ty, 0.95, 1);
+    });
 
     // 외곽 울타리 — 좌/우/하단으로 마당을 감싸 '내 plot' 느낌
     for (let tx = 0; tx < MAP_COLS; tx++) place('decor-fence', tx + 0.5, MAP_ROWS - 0.15, 1, 0.95);
-    for (let ty = 5; ty < MAP_ROWS - 1; ty += 1.4) {
-      place('decor-fence', 0.5, ty, 1, 0.75);
-      place('decor-fence', MAP_COLS - 0.5, ty, 1, 0.75);
+    for (let ty = 5.2; ty < MAP_ROWS - 1; ty += 1.5) {
+      place('decor-fence', 0.5, ty, 1, 0.7);
+      place('decor-fence', MAP_COLS - 0.5, ty, 1, 0.7);
     }
   }
 
@@ -177,9 +179,9 @@ export default class HomeScene extends Phaser.Scene {
   }
 
   private createPlayer() {
-    this.player = this.physics.add.sprite(MAP_W / 2, 8 * TILE, 'pc-down-a');
+    this.player = this.physics.add.sprite(MAP_W / 2, 9 * TILE, 'pc-down-a');
     this.player.setOrigin(0.5, 0.9);
-    this.player.setDepth(this.depthFor(8 * TILE));
+    this.player.setDepth(this.depthFor(9 * TILE));
     this.player.body!.setSize(14, 10).setOffset(9, 32);
     this.player.setCollideWorldBounds(true);
   }
@@ -187,9 +189,9 @@ export default class HomeScene extends Phaser.Scene {
   private createPet() {
     if (!this.sceneData.pet) return;
     const sp = this.sceneData.pet.species;
-    this.pet = this.physics.add.sprite(MAP_W / 2 + 30, 8 * TILE + 10, `pet-${sp}-sit`);
+    this.pet = this.physics.add.sprite(MAP_W / 2 + 28, 9 * TILE + 12, `pet-${sp}-sit`);
     this.pet.setOrigin(0.5, 0.9);
-    this.pet.setDepth(this.depthFor(8 * TILE + 10));
+    this.pet.setDepth(this.depthFor(9 * TILE + 12));
     this.pet.setInteractive({ useHandCursor: true });
     this.pet.on('pointerdown', () => {
       if (this.editMode) return;
@@ -362,6 +364,7 @@ export default class HomeScene extends Phaser.Scene {
       if (this.downScreen && pointer.isDown) {
         const dx = pointer.x - this.downScreen.x, dy = pointer.y - this.downScreen.y;
         if (this.dragged || Math.hypot(dx, dy) > 10) {
+          if (!this.dragged) this.bridge.emit('freelook', true);
           this.dragged = true;
           this.setFollow(false);
           cam.setScroll(this.panScroll.x - dx / cam.zoom, this.panScroll.y - dy / cam.zoom);
@@ -397,9 +400,20 @@ export default class HomeScene extends Phaser.Scene {
   private setupCamera() {
     const cam = this.cameras.main;
     cam.setBounds(0, 0, MAP_W, MAP_H);
-    cam.setZoom(1.25);
-    cam.startFollow(this.player, true, 0.1, 0.1);
-    cam.setDeadzone(60, 80);
+    this.fitToMap();
+    // 반응형: 캔버스 리사이즈 시 전체 뷰면 다시 맞춤
+    this.scale.on('resize', () => { if (!this.follow) this.fitToMap(); });
+  }
+
+  /** 마당 전체가 화면에 들어오도록 카메라를 맞춘다 (기본 뷰) */
+  private fitToMap() {
+    const cam = this.cameras.main;
+    this.follow = false;
+    cam.stopFollow();
+    this.fitZoom = Math.min(cam.width / MAP_W, cam.height / MAP_H);
+    cam.setZoom(this.fitZoom);
+    cam.centerOn(MAP_W / 2, MAP_H / 2);
+    this.bridge.emit('freelook', false);
   }
 
   // ── 카메라 줌/팬 API (React에서 호출) ───────────────
@@ -407,14 +421,21 @@ export default class HomeScene extends Phaser.Scene {
     if (on === this.follow) return;
     this.follow = on;
     const cam = this.cameras.main;
-    if (on) cam.startFollow(this.player, true, 0.1, 0.1);
+    if (on) cam.startFollow(this.player, true, 0.12, 0.12);
     else cam.stopFollow();
-    this.bridge.emit('freelook', !on);
   }
 
   setZoom(z: number) {
     if (!this.booted) return;
-    this.cameras.main.setZoom(Phaser.Math.Clamp(z, 0.85, 2.6));
+    const cam = this.cameras.main;
+    const clamped = Phaser.Math.Clamp(z, this.fitZoom, 2.6);
+    if (clamped > this.fitZoom + 0.03) {
+      cam.setZoom(clamped);
+      this.setFollow(true); // 확대하면 캐릭터를 따라감
+      this.bridge.emit('freelook', true); // '전체 보기' 버튼 노출
+    } else {
+      this.fitToMap(); // 전체 뷰로 복귀
+    }
   }
 
   zoomBy(factor: number) {
@@ -422,9 +443,10 @@ export default class HomeScene extends Phaser.Scene {
     this.setZoom(this.cameras.main.zoom * factor);
   }
 
+  /** 전체 보기(맵 전체)로 복귀 */
   recenter() {
     if (!this.booted) return;
-    this.setFollow(true);
+    this.fitToMap();
     this.moveTarget = null;
   }
 
