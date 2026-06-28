@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AnimatePresence } from 'framer-motion';
@@ -29,7 +29,9 @@ import StudentDetailPage from './pages/StudentDetailPage';
 import ParentReportPage from './pages/ParentReportPage';
 import RankingPage from './pages/RankingPage';
 import PetPage from './pages/PetPage';
-import SpacePage from './pages/SpacePage';
+
+// 개인 공간은 Phaser(무거움)를 쓰므로 lazy 로드 → 첫 로딩 번들에서 분리
+const SpacePage = lazy(() => import('./pages/SpacePage'));
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -50,7 +52,14 @@ function AuthenticatedRoutes() {
         <Route path="students/:id/report" element={<ParentReportPage />} />
         <Route path="ranking" element={<RankingPage />} />
         <Route path="pet" element={<PetPage />} />
-        <Route path="village" element={<SpacePage />} />
+        <Route
+          path="village"
+          element={
+            <Suspense fallback={<div className="page-container flex items-center justify-center"><p className="text-emerald-500 font-bold animate-pulse">내 공간 불러오는 중...</p></div>}>
+              <SpacePage />
+            </Suspense>
+          }
+        />
         <Route path="points" element={<PointHistoryPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="profile/status-settings" element={<StatusSettingsPage />} />
