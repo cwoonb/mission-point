@@ -1,7 +1,14 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import HomeScene, { type HomeSceneData, type PlacementView, type EmoteType, type PoseType, type TimeOfDay, type Weather } from './HomeScene';
 import VirtualJoystick from '../VirtualJoystick';
+
+/** 낮/저녁/밤 화면 틴트 (CSS 오버레이 — Phaser 전체화면 Shape보다 안정적) */
+const TINT: Record<TimeOfDay, string> = {
+  day: 'transparent',
+  evening: 'rgba(255, 138, 76, 0.26)',
+  night: 'rgba(16, 24, 60, 0.50)',
+};
 
 export interface HomeCanvasHandle {
   setPlacements: (list: PlacementView[]) => void;
@@ -37,6 +44,7 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
   cbs.current = { onReady, onPlace, onMove, onSelect, onPetTap, onHouseTap };
   const dataRef = useRef(data);
   dataRef.current = data;
+  const [tod, setTod] = useState<TimeOfDay>(data.timeOfDay);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -78,7 +86,7 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
     clearSelection: () => sceneRef.current?.clearSelection(),
     setPose: (pose) => sceneRef.current?.setPose(pose),
     playEmote: (type) => sceneRef.current?.playEmote(type),
-    applyTimeOfDay: (t) => sceneRef.current?.applyTimeOfDay(t),
+    applyTimeOfDay: (t) => { setTod(t); sceneRef.current?.applyTimeOfDay(t); },
     setWeather: (w) => sceneRef.current?.setWeather(w),
   }), []);
 
@@ -87,6 +95,10 @@ const HomeCanvas = forwardRef<HomeCanvasHandle, Props>(function HomeCanvas(
   return (
     <div className="relative rounded-3xl overflow-hidden shadow-inner bg-emerald-100" style={{ height }}>
       <div ref={containerRef} className="absolute inset-0 [&>canvas]:![image-rendering:pixelated]" />
+      <div
+        className="absolute inset-0 pointer-events-none transition-colors duration-700"
+        style={{ background: TINT[tod], mixBlendMode: 'multiply' }}
+      />
       {!editMode && <VirtualJoystick onMove={handleJoystick} />}
     </div>
   );

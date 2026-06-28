@@ -67,6 +67,9 @@ export default function SpacePage() {
 
   // 배치 변경 → 씬 반영
   useEffect(() => { canvasRef.current?.setPlacements(myPlacements); }, [myPlacements]);
+  // 시간/날씨 → 씬 동기화(생성 타이밍과 무관하게 항상 일치)
+  useEffect(() => { if (ready) canvasRef.current?.applyTimeOfDay(time); }, [time, ready]);
+  useEffect(() => { if (ready) canvasRef.current?.setWeather(weather); }, [weather, ready]);
 
   if (!currentUser) return null;
 

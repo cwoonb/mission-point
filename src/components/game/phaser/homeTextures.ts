@@ -232,6 +232,8 @@ export function generateHomeParticles(scene: Phaser.Scene) {
   tex(scene, 'p-sparkle', 10, 10, (g) => { px(g, 4, 0, 2, 10, '#FFF6D6'); px(g, 0, 4, 10, 2, '#FFF6D6'); px(g, 3, 3, 4, 4, '#FFFFFF'); });
   tex(scene, 'p-heart', 12, 12, (g) => { px(g, 2, 3, 3, 3, '#FF6F91'); px(g, 7, 3, 3, 3, '#FF6F91'); px(g, 1, 5, 10, 2, '#FF6F91'); px(g, 3, 7, 6, 2, '#FF6F91'); px(g, 5, 9, 2, 1, '#FF6F91'); });
   tex(scene, 'p-rain', 3, 10, (g) => px(g, 0, 0, 2, 10, '#AFd2EA', 0.7));
+  tex(scene, 'p-petal', 6, 6, (g) => { px(g, 1, 0, 4, 3, '#FBC7DC'); px(g, 0, 2, 6, 3, '#F2A6C4'); px(g, 2, 1, 2, 2, '#FFE3EE', 0.8); });
+  tex(scene, 'p-firefly', 6, 6, (g) => { px(g, 1, 1, 4, 4, '#FFF1A8'); px(g, 2, 2, 2, 2, '#FFFFFF'); });
 }
 
 // ── 꾸미기 아이템 텍스처 ────────────────────────────────────

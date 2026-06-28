@@ -60,11 +60,15 @@ export default class HomeScene extends Phaser.Scene {
   private placementSprites = new Map<string, Phaser.GameObjects.Image>();
   private nightOverlay!: Phaser.GameObjects.Rectangle;
   private rain?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private petals?: Phaser.GameObjects.Particles.ParticleEmitter;
+  private fireflies?: Phaser.GameObjects.Particles.ParticleEmitter;
 
   // 펫 AI
   private petState: 'rest' | 'wander' | 'follow' | 'play' = 'rest';
   private petTarget: { x: number; y: number } | null = null;
   private petTimer = 0;
+  /** 씬 부팅(create) 완료 여부 — React effect가 부팅 전 호출 시 크래시 방지 */
+  private booted = false;
 
   constructor() {
     super('Home');
@@ -76,6 +80,7 @@ export default class HomeScene extends Phaser.Scene {
   }
 
   create() {
+    this.booted = true;
     generateHomeTextures(this);
     if (this.sceneData.pet) generatePetTextures(this, this.sceneData.pet.species);
 
@@ -93,6 +98,7 @@ export default class HomeScene extends Phaser.Scene {
 
     this.setupCamera();
     this.setupInput();
+    this.startAmbient();
 
     this.selectRing = this.add.graphics().setDepth(40);
     this.bridge.emit('ready');
@@ -111,13 +117,33 @@ export default class HomeScene extends Phaser.Scene {
   }
 
   private drawHouseAndFence() {
+    const place = (texKey: string, tx: number, ty: number, originY = 0.95, scale = 1) => {
+      const wy = ty * TILE;
+      this.add.image(tx * TILE, wy, texKey).setOrigin(0.5, originY).setDepth(this.depthFor(wy)).setScale(scale);
+    };
+
     // 집 (상단 중앙)
     const house = this.add.image(MAP_W / 2, 2 * TILE + 8, 'home-house').setOrigin(0.5, 0.5).setDepth(this.depthFor(2 * TILE + 8 + 42));
     house.setInteractive({ useHandCursor: true });
     house.on('pointerdown', () => { if (!this.editMode) this.bridge.emit('house-tap'); });
-    // 외곽 울타리 (장식)
-    for (let tx = 0; tx < MAP_COLS; tx++) {
-      this.add.image(tx * TILE + TILE / 2, MAP_H - 6, 'decor-fence').setOrigin(0.5, 1).setDepth(this.depthFor(MAP_H - 6)).setScale(0.9);
+
+    // 기본 정원(고정 장식) — 빈 마당이 아니라 아기자기한 첫인상
+    place('decor-tree', 2.2, 3, 0.95, 1);
+    place('decor-tree', MAP_COLS - 2.2, 3, 0.95, 1);
+    place('decor-flowerbed', 6, 4.2, 0.9, 1);
+    place('decor-flowerbed', MAP_COLS - 6, 4.2, 0.9, 1);
+    place('decor-sunflower', 5, 3.2, 0.95, 1);
+    place('decor-sunflower', MAP_COLS - 5, 3.2, 0.95, 1);
+    place('decor-bush', 1.6, 6.5, 0.95, 1);
+    place('decor-bush', MAP_COLS - 1.6, 6.5, 0.95, 1);
+    place('decor-bush', 1.6, 9.5, 0.95, 1);
+    place('decor-bush', MAP_COLS - 1.6, 9.5, 0.95, 1);
+
+    // 외곽 울타리 — 좌/우/하단으로 마당을 감싸 '내 plot' 느낌
+    for (let tx = 0; tx < MAP_COLS; tx++) place('decor-fence', tx + 0.5, MAP_ROWS - 0.15, 1, 0.95);
+    for (let ty = 5; ty < MAP_ROWS - 1; ty += 1.4) {
+      place('decor-fence', 0.5, ty, 1, 0.75);
+      place('decor-fence', MAP_COLS - 0.5, ty, 1, 0.75);
     }
   }
 
@@ -168,6 +194,7 @@ export default class HomeScene extends Phaser.Scene {
   // ── 배치 렌더 ───────────────────────────────────────
   setPlacements(list: PlacementView[]) {
     this.sceneData.placements = list;
+    if (!this.booted) return;
     this.renderPlacements(list);
   }
 
@@ -325,25 +352,46 @@ export default class HomeScene extends Phaser.Scene {
   private setupCamera() {
     const cam = this.cameras.main;
     cam.setBounds(0, 0, MAP_W, MAP_H);
-    cam.setZoom(1.7);
-    cam.startFollow(this.player, true, 0.12, 0.12);
+    cam.setZoom(1.25);
+    cam.startFollow(this.player, true, 0.1, 0.1);
+    cam.setDeadzone(60, 80);
   }
 
   // ── 낮/밤 · 날씨 ────────────────────────────────────
   applyTimeOfDay(t: TimeOfDay) {
     this.sceneData.timeOfDay = t;
-    const map: Record<TimeOfDay, { color: number; alpha: number }> = {
-      day: { color: 0x1a2348, alpha: 0 },
-      evening: { color: 0xff8c42, alpha: 0.22 },
-      night: { color: 0x1a2348, alpha: 0.42 },
-    };
-    const target = map[t];
-    if (!this.nightOverlay) return;
-    this.nightOverlay.setFillStyle(target.color);
-    this.tweens.add({ targets: this.nightOverlay, fillAlpha: target.alpha, duration: 600 });
+    // 화면 틴트는 HomeCanvas의 CSS 오버레이가 담당. 씬에서는 반딧불만 토글.
+    if (!this.booted) return;
+    this.updateFireflies(t);
+  }
+
+  private startAmbient() {
+    // 꽃잎 흩날림 — 아늑한 분위기
+    this.petals = this.add.particles(0, 0, 'p-petal', {
+      x: { min: 0, max: MAP_W }, y: -6, lifespan: 7000,
+      speedY: { min: 10, max: 22 }, speedX: { min: -10, max: 10 },
+      scale: { min: 0.6, max: 1 }, alpha: { start: 0.85, end: 0.4 },
+      rotate: { min: 0, max: 360 }, frequency: 650, quantity: 1,
+    }).setDepth(46).setScrollFactor(1);
+    this.updateFireflies(this.sceneData.timeOfDay);
+  }
+
+  private updateFireflies(t: TimeOfDay) {
+    if (t === 'night') {
+      if (!this.fireflies) {
+        this.fireflies = this.add.particles(0, 0, 'p-firefly', {
+          x: { min: 0, max: MAP_W }, y: { min: 2 * TILE, max: MAP_H }, lifespan: 2400,
+          scale: { min: 0.6, max: 1.1 }, alpha: { start: 0.9, end: 0 },
+          speed: { min: 4, max: 14 }, frequency: 300, quantity: 1,
+        }).setDepth(51).setScrollFactor(1);
+      }
+    } else {
+      this.fireflies?.destroy(); this.fireflies = undefined;
+    }
   }
 
   setWeather(w: Weather) {
+    if (!this.booted) return;
     if (w === 'rain') {
       if (this.rain) return;
       this.rain = this.add.particles(0, 0, 'p-rain', {
