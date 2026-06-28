@@ -6,28 +6,13 @@ import Header from '../components/layout/Header';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import CoinAnimation from '../components/animations/CoinAnimation';
-import GameScene from '../components/game/GameScene';
-import GameObject from '../components/game/GameObject';
-import VirtualJoystick from '../components/game/VirtualJoystick';
-import PlayerCharacter from '../components/game/PlayerCharacter';
-import { Clouds, SunBadge } from '../components/game/assets/SkyDecor';
-import GroundField from '../components/game/assets/GroundField';
-import PathRibbon from '../components/game/assets/PathRibbon';
-import TreeObject from '../components/game/assets/TreeObject';
-import FlowerObject from '../components/game/assets/FlowerObject';
-import FenceObject from '../components/game/assets/FenceObject';
-import HouseRenderer, { houseTierFromItemId } from '../components/game/house/HouseRenderer';
-import ResidentNPC from '../components/game/ResidentNPC';
-import MissionBoard from '../components/game/MissionBoard';
-import { usePlayerMovement } from '../hooks/usePlayerMovement';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { usePointStore } from '../store/pointStore';
-import { useVillageStore } from '../store/villageStore';
-import { useDecorationStore } from '../store/decorationStore';
-import { useCharacterStore } from '../store/characterStore';
-import { formatPoint, formatDateTime } from '../utils/helpers';
-import { levelThreshold } from '../utils/villageRewards';
+import { usePetStore } from '../store/petStore';
+import { PetSprite } from '../components/pet/PetSprite';
+import { SPECIES_LABEL, nextEvolutionInfo } from '../config/pets';
+import { formatPoint } from '../utils/helpers';
 import {
   getStudentStatus,
   getWeeklyRate,
@@ -63,21 +48,14 @@ export default function HomePage() {
   const { currentUser, viewMode, updateUserPoint, users } = useAuthStore();
   const { missions } = useMissionStore();
   const { recordAdWatch, addTransaction, getTodayAdCount } = usePointStore();
-  const { getVillage, ensureVillage, getPlacements } = useVillageStore();
-  const { getItem, getUserResidents } = useDecorationStore();
-  const { getProfile, ensureProfile, cosmetics } = useCharacterStore();
+  const { pets, loadPets } = usePetStore();
 
   const [adModal, setAdModal] = useState(false);
   const [adCountdown, setAdCountdown] = useState(AD_TOTAL_SECONDS);
   const [adDone, setAdDone] = useState(false);
   const [coinTrigger, setCoinTrigger] = useState(false);
   const [rewardMsg, setRewardMsg] = useState('');
-  const [villageTransition, setVillageTransition] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { pos: charPos, facing, walking, move, moveTo } = usePlayerMovement(
-    { x: 50, y: 80 },
-    { xMin: 8, xMax: 92, yMin: 55, yMax: 94 }
-  );
 
   const todayAdCount = currentUser ? getTodayAdCount(currentUser.id) : 0;
   const canWatchAd = todayAdCount < MAX_ADS;
@@ -153,10 +131,9 @@ export default function HomePage() {
 
   useEffect(() => {
     if (currentUser && viewMode === 'PERFORMER') {
-      ensureVillage(currentUser.id, currentUser.name);
-      ensureProfile(currentUser.id, currentUser.name);
+      loadPets(currentUser.id);
     }
-  }, [currentUser?.id, viewMode, ensureVillage, ensureProfile]);
+  }, [currentUser?.id, viewMode, loadPets]);
 
   const handleAdReward = () => {
     if (!currentUser || !adDone) return;
@@ -176,25 +153,10 @@ export default function HomePage() {
 
   // ── 실천자 뷰: 내 집 앞 ───────────────────────────────
   if (!isFacilitator) {
-    const village = getVillage(currentUser.id);
-    const placements = village ? getPlacements(currentUser.id) : [];
-    const placementBySlot = new Map(placements.map((p) => [p.slot, p]));
-    const houseItem = placementBySlot.has('HOUSE') ? getItem(placementBySlot.get('HOUSE')!.itemId) : undefined;
-    const gardenItem = placementBySlot.has('GARDEN') ? getItem(placementBySlot.get('GARDEN')!.itemId) : undefined;
-    const yardItem = placementBySlot.has('YARD') ? getItem(placementBySlot.get('YARD')!.itemId) : undefined;
-    const residents = getUserResidents(currentUser.id);
-    const mainResident = residents[0];
-    const villageLevel = village?.level ?? 1;
-    const villageName = village?.name ?? `${currentUser.name}의 마을`;
-    const expNeeded = levelThreshold(villageLevel);
-    const expProgress = village ? Math.min(100, Math.round((village.exp / expNeeded) * 100)) : 0;
-
-    const handleEnterVillage = () => {
-      setVillageTransition(true);
-      setTimeout(() => navigate('/village'), 650);
-    };
-
-    const profile = getProfile(currentUser.id);
+    const myPets = pets.filter((p) => p.ownerId === currentUser.id);
+    const activePet = myPets.find((p) => p.isActive && p.hatched) ?? myPets.find((p) => p.hatched);
+    const evo = activePet ? nextEvolutionInfo(activePet.rarity, activePet.stageIndex, activePet.totalExp) : null;
+    const activePetProgress = activePet ? (evo ? Math.min(100, Math.round((evo.current / evo.required) * 100)) : 100) : 0;
 
     const missionsByType: Record<string, typeof activeMissions> = {};
     activeMissions.forEach((m) => {
@@ -202,7 +164,7 @@ export default function HomePage() {
       if (!missionsByType[type]) missionsByType[type] = [];
       missionsByType[type].push(m);
     });
-    const missionBoardEntries = Object.entries(missionsByType).slice(0, BOARD_POSITIONS.length);
+    const missionGroups = Object.entries(missionsByType);
 
     return (
       <div className="page-container">
@@ -210,11 +172,11 @@ export default function HomePage() {
         <CoinAnimation trigger={coinTrigger} onComplete={() => setCoinTrigger(false)} />
 
         <div className="content-area px-4 py-5 space-y-4">
-          {/* 마을 정보 */}
+          {/* 포인트 */}
           <div className="flex items-center justify-between px-1">
             <div>
-              <p className="text-gray-500 text-xs font-bold">{villageName}</p>
-              <p className="font-black text-gray-700 text-sm">Lv.{villageLevel} · ⭐ {formatPoint(currentUser.point)}P</p>
+              <p className="text-gray-500 text-xs font-bold">{currentUser.name}님, 안녕하세요 👋</p>
+              <p className="font-black text-gray-700 text-sm">⭐ {formatPoint(currentUser.point)}P</p>
             </div>
             <button
               onClick={() => navigate('/points')}
@@ -223,95 +185,75 @@ export default function HomePage() {
               내역 보기 <ChevronRight size={12} />
             </button>
           </div>
-          <div className="h-1.5 bg-white rounded-full overflow-hidden -mt-2 shadow-sm">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${expProgress}%` }}
-              transition={{ duration: 0.6 }}
-              className="h-full bg-emerald-400 rounded-full"
-            />
-          </div>
 
-          {/* 우리 집 앞마당 — 메인 게임 씬 */}
-          <GameScene height={460} onBackgroundTap={moveTo}>
-            <GroundField heightPct={64} />
-            <PathRibbon d="M50 100 C50 88 48 70 50 50 C51 38 50 30 50 22" width={13} />
-            <Clouds />
-            <SunBadge />
-
-            <GameObject x={7} y={50} bob>
-              <TreeObject variant="round" size={56} />
-            </GameObject>
-            <GameObject x={93} y={52} bob>
-              <TreeObject variant="pine" size={50} />
-            </GameObject>
-            <GameObject x={4} y={76}>
-              <FenceObject size={44} />
-            </GameObject>
-            <GameObject x={96} y={76}>
-              <FenceObject size={44} />
-            </GameObject>
-            {gardenItem && <GameObject x={16} y={80} emoji={gardenItem.emoji} size={30} bob />}
-            {yardItem && <GameObject x={84} y={80} emoji={yardItem.emoji} size={30} bob />}
-            <GameObject x={28} y={94}>
-              <FlowerObject color="pink" size={26} />
-            </GameObject>
-            <GameObject x={72} y={94}>
-              <FlowerObject color="yellow" size={26} />
-            </GameObject>
-
-            <div className="absolute left-1/2 -translate-x-1/2" style={{ top: '14%' }}>
-              <HouseRenderer
-                tier={houseTierFromItemId(houseItem?.id)}
-                size={150}
-                onClick={() => navigate('/village/house')}
-                label="우리 집"
-              />
-            </div>
-
-            {missionBoardEntries.length === 0 ? (
-              <GameObject x={50} y={84} emoji="🌟" size={32} label="오늘 할 일 끝!" bob />
-            ) : (
-              missionBoardEntries.map(([type, list], i) => (
-                <MissionBoard
-                  key={type}
-                  x={BOARD_POSITIONS[i].x}
-                  y={BOARD_POSITIONS[i].y}
-                  emoji={missionTypeEmoji[type] ?? '🪧'}
-                  label={missionTypeLabel[type] ?? '기타'}
-                  count={list.length}
-                  accentColor={MISSION_TYPE_ACCENT[type] ?? '#60A5FA'}
-                  onClick={() => navigate(list.length === 1 ? `/missions/${list[0].id}` : '/missions')}
-                />
-              ))
-            )}
-
-            {mainResident && <ResidentNPC x={50} y={62} resident={mainResident} size={30} />}
-
-            {profile ? (
-              <GameObject x={charPos.x} y={charPos.y}>
-                <PlayerCharacter profile={profile} cosmetics={cosmetics} size={64} facing={facing} walking={walking} />
-              </GameObject>
-            ) : (
-              <GameObject x={charPos.x} y={charPos.y} emoji="🧑" size={40} />
-            )}
-
-            <VirtualJoystick onMove={move} />
-          </GameScene>
-
-          {/* 마을 들어가기 */}
+          {/* 마이 펫 위젯 */}
           <motion.button
-            whileTap={{ scale: 0.96 }}
-            onClick={handleEnterVillage}
-            className="w-full bg-gradient-to-r from-emerald-400 to-teal-500 text-white font-black text-sm py-3.5 rounded-2xl shadow-lg flex items-center justify-center gap-1.5"
+            whileTap={{ scale: 0.97 }}
+            onClick={() => navigate('/pet')}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full bg-gradient-to-br from-emerald-400 via-teal-400 to-sky-400 rounded-3xl p-4 shadow-md flex items-center gap-4"
           >
-            🏘️ 마을 들어가기
+            <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+              {activePet ? (
+                <PetSprite species={activePet.species} rarity={activePet.rarity} stageIndex={activePet.stageIndex} hatched={activePet.hatched} className="w-16 h-16" />
+              ) : (
+                <span className="text-4xl">🥚</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0 text-left text-white">
+              {activePet ? (
+                <>
+                  <p className="font-black text-lg truncate">{activePet.name || SPECIES_LABEL[activePet.species]}</p>
+                  <div className="h-2 bg-white/30 rounded-full overflow-hidden mt-1 mb-1">
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${activePetProgress}%` }} transition={{ duration: 0.6 }} className="h-full bg-white rounded-full" />
+                  </div>
+                  <p className="text-[11px] text-white/80">{evo ? `다음 진화까지 ${evo.required - evo.current} EXP` : '최종 진화 완료! ✨'}</p>
+                </>
+              ) : (
+                <>
+                  <p className="font-black text-lg">알을 부화시켜 보세요!</p>
+                  <p className="text-[11px] text-white/80">마이 펫에서 새 친구를 만나보세요 🐾</p>
+                </>
+              )}
+            </div>
+            <ChevronRight size={18} className="text-white/70 flex-shrink-0" />
           </motion.button>
+
+          {/* 진행 중인 미션 */}
+          <div>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <p className="text-xs font-bold text-gray-500">진행 중인 미션</p>
+              <button onClick={() => navigate('/missions')} className="text-emerald-500 text-xs font-semibold flex items-center gap-0.5">
+                전체 <ChevronRight size={12} />
+              </button>
+            </div>
+            {missionGroups.length === 0 ? (
+              <div className="bg-white rounded-2xl shadow-sm py-8 text-center">
+                <p className="text-3xl mb-1">🌟</p>
+                <p className="text-sm font-bold text-gray-600">오늘 할 일을 모두 끝냈어요!</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {missionGroups.map(([type, list]) => (
+                  <button key={type} onClick={() => navigate(list.length === 1 ? `/missions/${list[0].id}` : '/missions')}
+                    className="w-full bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3 active:scale-95 transition-transform">
+                    <span className="text-2xl">{missionTypeEmoji[type] ?? '🪧'}</span>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="text-sm font-bold text-gray-800 truncate">{missionTypeLabel[type] ?? '기타'}</p>
+                      <p className="text-[11px] text-gray-400">{list.length}개 진행 중</p>
+                    </div>
+                    <ChevronRight size={16} className="text-gray-300" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {successMissions.length > 0 && (
             <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2.5 flex items-center gap-2">
               <span className="text-lg">✨</span>
-              <p className="text-xs text-emerald-600 font-semibold">완료한 미션 {successMissions.length}개 · 마을이 자라고 있어요!</p>
+              <p className="text-xs text-emerald-600 font-semibold">완료한 미션 {successMissions.length}개 · 잘하고 있어요!</p>
             </div>
           )}
 
@@ -330,36 +272,6 @@ export default function HomePage() {
             </button>
           </motion.div>
         </div>
-
-        {/* 마을 들어가기 전환 애니메이션 */}
-        <AnimatePresence>
-          {villageTransition && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] bg-gradient-to-b from-sky-300 via-sky-200 to-emerald-300 flex items-end overflow-hidden max-w-md mx-auto"
-            >
-              <div className="absolute bottom-0 left-0 right-0 h-20 bg-emerald-400" />
-              <motion.div
-                initial={{ x: '-20vw' }}
-                animate={{ x: '120vw' }}
-                transition={{ duration: 0.65, ease: 'easeInOut' }}
-                className="text-6xl mb-6 relative z-10"
-              >
-                🚶
-              </motion.div>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.15 }}
-                className="absolute top-1/3 left-0 right-0 text-center text-white font-black text-lg"
-              >
-                마을로 이동 중...
-              </motion.p>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <AnimatePresence>
           {rewardMsg && (

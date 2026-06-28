@@ -23,133 +23,9 @@ export type PointTransactionType =
   | 'COUPON_EXCHANGE'
   | 'DECORATION_PURCHASE'
   | 'ADMIN_GRANT'
-  | 'ADMIN_DEDUCT';
-
-// ── 마을 꾸미기 / 동물 주민 시스템 ──────────────────────────
-export type DecorationCategory =
-  | 'HOUSE'
-  | 'FURNITURE'
-  | 'TREE'
-  | 'FLOWER'
-  | 'ROAD'
-  | 'FENCE'
-  | 'SCHOOL'
-  | 'STUDY_TOOL'
-  | 'PET'
-  | 'COSTUME'
-  | 'THEME';
-
-export type VillageSlotType =
-  | 'HOUSE'
-  | 'INTERIOR'
-  | 'YARD'
-  | 'GARDEN'
-  | 'PATH'
-  | 'SCHOOL'
-  | 'RESIDENT'
-  | 'BED'
-  | 'DESK'
-  | 'BOOKSHELF'
-  | 'RUG'
-  | 'WINDOW'
-  | 'PLANT';
-
-/** 마을 배치가 어느 화면(구역)에 속하는지 구분 */
-export type VillageZone = 'HOUSE_INTERIOR' | 'HOUSE_EXTERIOR' | 'VILLAGE';
-
-export type ItemRarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
-
-export type AcquireSource = 'PURCHASE' | 'MISSION_REWARD' | 'ACHIEVEMENT' | 'STREAK' | 'LEVEL_UP' | 'STARTER';
-
-export type AchievementConditionType =
-  | 'MISSION_COUNT'
-  | 'MISSION_TYPE_COUNT'
-  | 'STREAK'
-  | 'VILLAGE_LEVEL';
-
-export interface DecorationItem {
-  id: string;
-  name: string;
-  description: string;
-  emoji: string;
-  category: DecorationCategory;
-  slot?: VillageSlotType;
-  rarity: ItemRarity;
-  requiredPoint: number;
-  requiredLevel: number;
-  unlockMissionType?: MissionType;
-  enabled: boolean;
-}
-
-export interface InventoryItem {
-  id: string;
-  userId: string;
-  itemId: string;
-  quantity: number;
-  acquiredVia: AcquireSource;
-  acquiredAt: string;
-}
-
-export interface Village {
-  id: string;
-  ownerId: string;
-  name: string;
-  level: number;
-  exp: number;
-  theme: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface VillagePlacement {
-  id: string;
-  villageId: string;
-  zone: VillageZone;
-  slot: VillageSlotType;
-  itemId: string;
-  placedAt: string;
-}
-
-export interface VillageResident {
-  id: string;
-  name: string;
-  emoji: string;
-  personality: string;
-  description: string;
-  dialogue: string[];
-  rarity: ItemRarity;
-  relatedMissionTypes: MissionType[];
-  requiredLevel: number;
-  unlockHint: string;
-}
-
-export interface UserResident {
-  id: string;
-  userId: string;
-  residentId: string;
-  acquiredVia: AcquireSource;
-  acquiredAt: string;
-}
-
-export interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  emoji: string;
-  conditionType: AchievementConditionType;
-  conditionValue: number;
-  conditionMissionType?: MissionType;
-  rewardPoint: number;
-  rewardItemId?: string;
-  rewardResidentId?: string;
-}
-
-export interface UserAchievement {
-  id: string;
-  userId: string;
-  achievementId: string;
-  unlockedAt: string;
-}
+  | 'ADMIN_DEDUCT'
+  | 'PET_FEED'
+  | 'PET_EGG';
 
 export type SubmissionType = 'IMAGE' | 'TEXT' | 'BOTH';
 export type ReviewAction = 'APPROVED' | 'REJECTED';
@@ -269,44 +145,50 @@ export interface AdRewardLog {
   createdAt: string;
 }
 
-// ── 사람 캐릭터 시스템 ──────────────────────────────────────
-export type CosmeticSlot = 'HAT' | 'GLASSES' | 'TOP' | 'BOTTOM' | 'SHOES' | 'SOCKS' | 'GLOVES' | 'BAG';
-export type CharacterGender = 'A' | 'B';
-export type HairStyle = 'short' | 'long' | 'ponytail' | 'curly' | 'bowl';
-export type EyeShape = 'round' | 'happy' | 'sleepy' | 'star';
+// ── 다마고치식 펫 육성 시스템 (희귀도 / 진화) ─────────────────
+export type PetRarity = 'common' | 'rare' | 'magic' | 'legendary';
 
-export interface CharacterProfile {
+export type PetSpecies =
+  | 'dog'
+  | 'cat'
+  | 'rabbit'
+  | 'chick'
+  | 'dino'
+  | 'fox'
+  | 'slime'
+  | 'unicorn'
+  | 'dragon'
+  | 'phoenix';
+
+export type EggType = 'basic' | 'premium';
+
+export interface Pet {
   id: string;
-  userId: string;
+  /** 실천자(performer) userId */
+  ownerId: string;
+  species: PetSpecies;
+  rarity: PetRarity;
   name: string;
-  gender: CharacterGender;
-  skinColor: string;
-  hairStyle: HairStyle;
-  hairColor: string;
-  eyeShape: EyeShape;
-  /** 슬롯별 장착중인 코스튬 id (TOP/BOTTOM/SHOES는 기본값 보유) */
-  equipped: Partial<Record<CosmeticSlot, string>>;
+  /** 부화 이후 성장 단계 (1부터 시작, 희귀도별 최대 단계까지) */
+  stageIndex: number;
+  /** 누적 경험치 (진화 판정에 사용) */
+  exp: number;
+  /** 전체 누적 경험치 (도감/통계용) */
+  totalExp: number;
+  /** 0~100, 천천히 감소하지만 바닥 이하로는 떨어지지 않음 */
+  happiness: number;
+  /** 알에서 부화했는지 여부 (Pet은 부화 후에만 생성됨) */
+  hatched: boolean;
+  /** 실천자의 현재 메인(대표) 펫인지 여부 */
+  isActive: boolean;
+  lastInteractedAt: string;
   createdAt: string;
-  updatedAt: string;
 }
 
-export interface CharacterCosmetic {
+export interface Egg {
   id: string;
-  name: string;
-  slot: CosmeticSlot;
-  emoji: string;
-  color: string;
-  rarity: ItemRarity;
-  requiredPoint: number;
-  requiredLevel: number;
-  unlockMissionType?: MissionType;
-  enabled: boolean;
-}
-
-export interface UserCosmetic {
-  id: string;
-  userId: string;
-  cosmeticId: string;
-  acquiredVia: AcquireSource;
-  acquiredAt: string;
+  /** 실천자(performer) userId */
+  ownerId: string;
+  type: EggType;
+  createdAt: string;
 }

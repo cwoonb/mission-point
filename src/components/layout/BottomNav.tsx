@@ -23,7 +23,7 @@ export default function BottomNav() {
       : [
           { to: '/ranking', icon: Trophy, label: '랭킹' },
         ]),
-    { to: '/village', icon: TreePine, label: '마을' },
+    { to: '/village', icon: TreePine, label: '내 공간' },
     { to: '/profile', icon: User, label: '내 정보' },
   ];
 

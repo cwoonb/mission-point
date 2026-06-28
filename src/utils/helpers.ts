@@ -56,6 +56,8 @@ export const txLabel: Record<PointTransactionType, string> = {
   DECORATION_PURCHASE: '마을 꾸미기 🏡',
   ADMIN_GRANT: '관리자 지급',
   ADMIN_DEDUCT: '관리자 차감',
+  PET_FEED: '펫 밥 주기 🍖',
+  PET_EGG: '새 알 받기 🥚',
 };
 
 export const txColor: Record<PointTransactionType, string> = {
@@ -66,6 +68,8 @@ export const txColor: Record<PointTransactionType, string> = {
   DECORATION_PURCHASE: 'text-emerald-600',
   ADMIN_GRANT: 'text-blue-600',
   ADMIN_DEDUCT: 'text-red-500',
+  PET_FEED: 'text-red-500',
+  PET_EGG: 'text-red-500',
 };
 
 export const txSign = (amount: number) => (amount >= 0 ? `+${formatPoint(amount)}P` : `${formatPoint(amount)}P`);
