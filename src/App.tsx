@@ -29,6 +29,7 @@ import StudentDetailPage from './pages/StudentDetailPage';
 import ParentReportPage from './pages/ParentReportPage';
 import RankingPage from './pages/RankingPage';
 import PetPage from './pages/PetPage';
+import SpacePage from './pages/SpacePage';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -49,6 +50,7 @@ function AuthenticatedRoutes() {
         <Route path="students/:id/report" element={<ParentReportPage />} />
         <Route path="ranking" element={<RankingPage />} />
         <Route path="pet" element={<PetPage />} />
+        <Route path="village" element={<SpacePage />} />
         <Route path="points" element={<PointHistoryPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="profile/status-settings" element={<StatusSettingsPage />} />
