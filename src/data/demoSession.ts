@@ -38,8 +38,11 @@ export function startDemoScenario(id: DemoScenarioId) {
 export function startDemoSession(userId: string, force = false) {
   const auth = useAuthStore.getState();
   const missions = useMissionStore.getState();
+  const selectedScenarioId = getSelectedDemoScenarioId();
   const existingUser = auth.users.find((user) => user.id === userId);
-  if (!force && auth.isDemoMode && missions.demoMode && missions.missions.length > 0 && existingUser) {
+  const matchesSelectedScenario = userId.startsWith(`demo-${selectedScenarioId}-`)
+    && missions.missions.every((mission) => mission.id.startsWith(`demo-${selectedScenarioId}-`));
+  if (!force && matchesSelectedScenario && auth.isDemoMode && missions.demoMode && missions.missions.length > 0 && existingUser) {
     useAuthStore.setState({
       currentUser: existingUser,
       viewMode: existingUser.role === 'CHILD' ? 'PERFORMER' : 'FACILITATOR',
@@ -47,7 +50,7 @@ export function startDemoSession(userId: string, force = false) {
     });
     return true;
   }
-  startDemoScenario(getSelectedDemoScenarioId());
+  startDemoScenario(selectedScenarioId);
   return true;
 }
 
