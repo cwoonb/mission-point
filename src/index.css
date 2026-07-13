@@ -4,6 +4,13 @@
 
 :root {
   --navy: #14233b; --navy-deep: #0d192b; --navy-soft: #e9edf2;
+  --color-primary: #14233b; --color-primary-deep: #0d192b; --color-primary-soft: #e9edf2;
+  --color-background: #f8f5f0; --color-background-alt: #f2eee8; --color-surface: #fffdfc; --color-surface-muted: #f1ede7;
+  --color-text-primary: #27313f; --color-text-strong: #14233b; --color-text-secondary: #737b86; --color-text-tertiary: #9a9fa7;
+  --color-border: rgba(20,35,59,.09); --color-border-strong: rgba(20,35,59,.16);
+  --color-accent: #b58a4a; --color-accent-dark: #98713a; --color-accent-soft: #f4ebdd;
+  --color-success: #52775e; --color-success-bg: #eaf2ec; --color-pending: #a66d32; --color-pending-bg: #f8efe3;
+  --color-progress: #536d8b; --color-progress-bg: #eaf0f6; --color-danger: #a65f59; --color-danger-bg: #f7ecea;
   --ivory: #f8f5f0; --ivory-alt: #f3efe9; --surface: #fffdfc; --surface-muted: #f1ede7;
   --text: #27313f; --text-muted: #687282; --text-faint: #9299a3; --line: #e7e1d9;
   --gold: #b58a4a; --success: #4f8a68; --warning: #b7793c; --danger: #b35f5a; --info: #5d718f;
@@ -24,7 +31,7 @@
 }
 
 @layer components {
-  .page-container { @apply relative mx-auto flex w-full max-w-[480px] flex-col; min-height: 100dvh; background: var(--ivory); overflow-x: hidden; box-shadow: 0 0 0 1px rgba(20,35,59,.04), 0 18px 56px rgba(20,35,59,.08); }
+  .page-container { @apply relative mx-auto flex w-full max-w-[430px] flex-col; min-height: 100dvh; background: var(--ivory); overflow-x: hidden; box-shadow: 0 0 0 1px rgba(20,35,59,.04), 0 18px 56px rgba(20,35,59,.08); }
   .content-area { @apply flex-1 overflow-y-auto; padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: 0 4px 14px rgba(20,35,59,.035); }
   .btn-primary, .btn-success { @apply min-h-11 px-5 py-3 font-bold text-white; border-radius: 10px; background: var(--navy); transition: background .15s ease, transform .15s ease; }

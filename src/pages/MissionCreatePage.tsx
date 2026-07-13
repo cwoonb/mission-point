@@ -1,435 +1,105 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Users, FileText, Tag, Target, RefreshCw, Share2, BookMarked, Trash2, X } from 'lucide-react';
+import { BookOpen, Check, Users } from 'lucide-react';
 import Header from '../components/layout/Header';
-import Button from '../components/ui/Button';
+import Modal from '../components/ui/Modal';
+import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
 import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
-import { useTemplateStore, getTemplateEmoji } from '../store/templateStore';
-import type { SubmissionType, MissionType, MissionGoal, RepeatType, ParentShareType } from '../types';
-import { missionTypeLabel } from '../utils/studentStats';
+import { useTemplateStore } from '../store/templateStore';
+import type { MissionType, ParentShareType, RepeatType, SubmissionType } from '../types';
 
-const SUBMISSION_TYPES: Array<{ key: SubmissionType; label: string; emoji: string; desc: string }> = [
-  { key: 'IMAGE', label: '이미지', emoji: '사진', desc: '사진으로 제출' },
-  { key: 'TEXT', label: '텍스트', emoji: '글', desc: '글로 제출' },
-  { key: 'BOTH', label: '둘 다', emoji: '혼합', desc: '이미지 + 텍스트' },
-];
-
-const MISSION_TYPES: Array<{ key: MissionType; label: string; emoji: string }> = [
-  { key: 'HOMEWORK', label: '숙제', emoji: '과제' },
-  { key: 'VOCABULARY', label: '단어암기', emoji: '단어' },
-  { key: 'READING', label: '독서', emoji: '독서' },
-  { key: 'ATTENDANCE', label: '출석', emoji: '출석' },
-  { key: 'REVIEW_NOTES', label: '오답정리', emoji: '오답' },
-  { key: 'LIFESTYLE', label: '생활습관', emoji: '생활' },
-  { key: 'OTHER', label: '기타', emoji: '기타' },
-];
-
-const MISSION_GOALS: Array<{ key: MissionGoal; label: string }> = [
-  { key: 'SINCERITY', label: '성실도 향상' },
-  { key: 'STUDY_HABIT', label: '학습 습관 형성' },
-  { key: 'SUBMISSION_MGMT', label: '과제 제출 관리' },
-  { key: 'PARENT_REPORT', label: '보호자 공유용 기록' },
-];
-
-const REPEAT_TYPES: Array<{ key: RepeatType; label: string; desc: string }> = [
-  { key: 'ONCE', label: '1회성', desc: '한 번만' },
-  { key: 'DAILY', label: '매일', desc: '매일 반복' },
-  { key: 'WEEKLY', label: '매주', desc: '주 1회' },
-  { key: 'WEEKDAYS', label: '평일', desc: '월~금' },
-];
-
-const PARENT_SHARES: Array<{ key: ParentShareType; label: string; emoji: string }> = [
-  { key: 'NONE', label: '공유 안 함', emoji: '안 함' },
-  { key: 'ON_COMPLETE', label: '완료 시 공유', emoji: '완료' },
-  { key: 'WEEKLY_REPORT', label: '주간 리포트 포함', emoji: '리포트' },
-];
-
-
-const today = () => new Date().toISOString().split('T')[0];
-const nextWeek = () => {
-  const d = new Date();
-  d.setDate(d.getDate() + 7);
-  return d.toISOString().split('T')[0];
-};
+const dateInputValue = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const today = () => dateInputValue(new Date());
+const nextWeek = () => { const date = new Date(); date.setDate(date.getDate() + 7); return dateInputValue(date); };
+const TYPES: Array<[MissionType, string]> = [['HOMEWORK', '숙제'], ['VOCABULARY', '단어'], ['READING', '독서'], ['REVIEW_NOTES', '오답 정리'], ['ATTENDANCE', '출석'], ['LIFESTYLE', '생활 습관'], ['OTHER', '기타']];
+const SUBMISSIONS: Array<[SubmissionType, string]> = [['IMAGE', '파일 제출'], ['TEXT', '글 제출'], ['BOTH', '파일 + 글']];
+const REPEATS: Array<[RepeatType, string]> = [['ONCE', '한 번'], ['DAILY', '매일'], ['WEEKDAYS', '평일'], ['WEEKLY', '매주']];
+const inputClass = 'mt-2 min-h-12 w-full rounded-[10px] border border-[#D8D0C5] bg-[#FFFDFC] px-3 text-sm text-[#27313F] outline-none focus:border-[#14233B]';
 
 export default function MissionCreatePage() {
   const navigate = useNavigate();
   const { currentUser, users } = useAuthStore();
-  const { createMission } = useMissionStore();
-  const { getMyGroups } = useGroupStore();
-  const { templates, saveTemplate, deleteTemplate, incrementUsage } = useTemplateStore();
-
+  const groups = useGroupStore((state) => state.groups.filter((group) => !currentUser || group.facilitatorId === currentUser.id));
+  const createMission = useMissionStore((state) => state.createMission);
+  const { templates, incrementUsage } = useTemplateStore();
+  const students = users.filter((user) => user.role === 'CHILD' && (!currentUser?.socialProvider || user.facilitatorId === currentUser.id));
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [targetMode, setTargetMode] = useState<'individual' | 'group'>('individual');
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [targetMode, setTargetMode] = useState<'group' | 'student'>('group');
   const [groupId, setGroupId] = useState('');
-  const [submissionType, setSubmissionType] = useState<SubmissionType>('BOTH');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [missionType, setMissionType] = useState<MissionType>('HOMEWORK');
-  const [missionGoal, setMissionGoal] = useState<MissionGoal>('STUDY_HABIT');
+  const [submissionType, setSubmissionType] = useState<SubmissionType>('BOTH');
   const [repeatType, setRepeatType] = useState<RepeatType>('ONCE');
   const [parentShare, setParentShare] = useState<ParentShareType>('NONE');
   const [startDate, setStartDate] = useState(today());
   const [endDate, setEndDate] = useState(nextWeek());
-  const [loading, setLoading] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [savedFeedback, setSavedFeedback] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  const children = currentUser?.socialProvider
-    ? users.filter((u) => u.role === 'CHILD' && u.facilitatorId === currentUser.id)
-    : users.filter((u) => u.role === 'CHILD');
+  const targetIds = targetMode === 'group' ? students.filter((student) => student.groupId === groupId).map((student) => student.id) : selectedIds;
+  const valid = !!currentUser && !!title.trim() && !!description.trim() && targetIds.length > 0 && !!startDate && !!endDate && startDate <= endDate;
 
-  const myGroups = currentUser ? getMyGroups(currentUser.id) : [];
-  const groupMembers = groupId ? children.filter((u) => u.groupId === groupId) : [];
-
-  const toggleStudent = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const save = async () => {
+    if (!valid || !currentUser || saving) { setError('제목, 설명, 대상, 기간을 모두 확인해 주세요.'); return; }
+    setSaving(true); setError('');
+    const base = { title: title.trim(), description: description.trim(), rewardPoint: 0, creatorId: currentUser.id, submissionType, startDate: new Date(`${startDate}T00:00:00`).toISOString(), endDate: new Date(`${endDate}T23:59:59`).toISOString(), missionType, missionGoal: 'STUDY_HABIT' as const, repeatType, parentShare };
+    await Promise.all(targetIds.map((assigneeId) => createMission({ ...base, assigneeId })));
+    navigate('/missions', { replace: true });
   };
 
-  const toggleAll = () => {
-    setSelectedIds(selectedIds.size === children.length ? new Set() : new Set(children.map((c) => c.id)));
+  const applyTemplate = (id: string) => {
+    const template = templates.find((item) => item.id === id); if (!template) return;
+    setTitle(template.title); setDescription(template.description); setSubmissionType(template.submissionType); setMissionType(template.missionType ?? 'OTHER'); setRepeatType(template.repeatType ?? 'ONCE'); setParentShare(template.parentShare ?? 'NONE'); incrementUsage(id); setTemplateOpen(false);
   };
 
-  const targetIds = targetMode === 'individual'
-    ? Array.from(selectedIds)
-    : groupMembers.map((m) => m.id);
-
-  const handleSubmit = () => {
-    if (!currentUser || !title.trim() || !description.trim()) return;
-    setLoading(true);
-
-    setTimeout(() => {
-      const base = {
-        title: title.trim(), description: description.trim(), rewardPoint: 0,
-        creatorId: currentUser.id, submissionType,
-        startDate: new Date(startDate).toISOString(), endDate: new Date(endDate).toISOString(),
-        missionType, missionGoal, repeatType, parentShare,
-      };
-      targetIds.forEach((id) => createMission({ ...base, assigneeId: id }));
-      navigate('/missions', { replace: true });
-    }, 400);
-  };
-
-  const isValid =
-    title.trim() && description.trim() && startDate && endDate &&
-    targetIds.length > 0;
-
-  const applyTemplate = (tId: string) => {
-    const t = templates.find((t) => t.id === tId);
-    if (!t) return;
-    setTitle(t.title);
-    setDescription(t.description);
-    setSubmissionType(t.submissionType);
-    if (t.missionType) setMissionType(t.missionType);
-    if (t.missionGoal) setMissionGoal(t.missionGoal);
-    if (t.repeatType) setRepeatType(t.repeatType);
-    if (t.parentShare) setParentShare(t.parentShare);
-    incrementUsage(tId);
-    setShowTemplates(false);
-  };
-
-  const handleSaveTemplate = () => {
-    if (!title.trim()) return;
-    saveTemplate({ name: title.trim(), title: title.trim(), description, submissionType, missionType, missionGoal, repeatType, parentShare });
-    setSavedFeedback(true);
-    setTimeout(() => setSavedFeedback(false), 2000);
-  };
+  const toggleStudent = (id: string) => setSelectedIds((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
 
   return (
-    <div className="page-container">
-      <Header title="새 미션 만들기" showBack showPoints={false} />
+    <div className="page-container bg-[#F8F5F0]">
+      <Header title="새 미션 만들기" showBack showPoints={false} rightElement={<button type="button" onClick={save} disabled={!valid || saving} className="min-h-11 px-2 text-sm font-bold text-[#14233B] disabled:text-[#A7ABB2]">{saving ? '저장 중' : '저장'}</button>}/>
+      <main className="content-area space-y-6 px-4 py-5">
+        <button type="button" onClick={() => setTemplateOpen(true)} className="flex min-h-12 w-full items-center gap-3 rounded-[10px] border border-[#D8D0C5] bg-[#FFFDFC] px-3 text-left"><BookOpen size={17} className="text-[#B58A4A]"/><span className="flex-1 text-sm font-semibold text-[#14233B]">템플릿에서 불러오기</span><span className="text-xs text-[#8B929C]">{templates.length}개</span></button>
 
-      <div className="content-area px-4 py-5 space-y-4">
+        <section>
+          <label htmlFor="mission-title" className="text-xs font-bold text-[#53606F]">미션 제목</label>
+          <input id="mission-title" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={50} placeholder="미션 제목을 입력하세요" className={inputClass}/>
+        </section>
+        <section>
+          <label htmlFor="mission-description" className="text-xs font-bold text-[#53606F]">설명</label>
+          <textarea id="mission-description" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={300} rows={4} placeholder="학생이 해야 할 내용을 구체적으로 적어주세요." className={`${inputClass} resize-none py-3`}/>
+        </section>
 
-        {/* 템플릿 배너 */}
-        <motion.button initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-          onClick={() => setShowTemplates(true)}
-          className="w-full flex items-center gap-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl px-4 py-3 active:scale-[0.98] transition-transform">
-          <BookMarked size={18} className="text-purple-500 flex-shrink-0" />
-          <div className="text-left flex-1">
-            <p className="text-sm font-bold text-purple-700">템플릿에서 불러오기</p>
-            <p className="text-xs text-purple-500">{templates.length}개 저장됨 · 탭해서 빠르게 시작</p>
-          </div>
-          <span className="text-purple-400 text-xs">→</span>
-        </motion.button>
+        <section>
+          <h2 className="text-xs font-bold text-[#53606F]">대상</h2>
+          <div className="mt-2 grid grid-cols-2 rounded-[10px] bg-[#EDE9E3] p-1">{([['group', '반 선택'], ['student', '학생 선택']] as const).map(([key, label]) => <button type="button" key={key} onClick={() => setTargetMode(key)} className={`min-h-10 rounded-[8px] text-xs font-bold ${targetMode === key ? 'bg-[#FFFDFC] text-[#14233B] shadow-sm' : 'text-[#7D8490]'}`}>{label}</button>)}</div>
+          {targetMode === 'group' ? <select value={groupId} onChange={(event) => setGroupId(event.target.value)} className={inputClass}><option value="">반을 선택하세요</option>{groups.map((group) => <option key={group.id} value={group.id}>{group.name} · {students.filter((student) => student.groupId === group.id).length}명</option>)}</select> : <div className="mt-2 max-h-64 divide-y divide-[#ECE7E0] overflow-y-auto rounded-[10px] border border-[#D8D0C5] bg-[#FFFDFC]">{students.map((student) => { const checked = selectedIds.includes(student.id); return <button type="button" key={student.id} onClick={() => toggleStudent(student.id)} className="flex min-h-12 w-full items-center gap-3 px-3 text-left"><span className={`flex h-5 w-5 items-center justify-center rounded border ${checked ? 'border-[#14233B] bg-[#14233B] text-white' : 'border-[#C8C1B8]'}`}>{checked && <Check size={13}/>}</span><span className="flex-1 text-sm font-semibold text-[#27313F]">{student.name}</span><span className="text-[10px] text-[#8B929C]">{groups.find((group) => group.id === student.groupId)?.name ?? '미배정'}</span></button>; })}{students.length === 0 && <EmptyState title="등록된 학생이 없습니다."/>}</div>}
+          {targetIds.length > 0 && <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-[#4F8A68]"><Users size={14}/>{targetIds.length}명에게 배정됩니다.</p>}
+        </section>
 
-        {/* 기본 정보 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-sm p-5 space-y-4">
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1.5 block">미션 제목 <span className="text-red-400">*</span></label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-              placeholder="예: 수학 숙제 완료하기" className="input-field" maxLength={50} />
-            <p className="text-xs text-gray-400 text-right mt-1">{title.length}/50</p>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1.5 block">📋 미션 설명 <span className="text-red-400">*</span></label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)}
-              placeholder="미션에 대한 자세한 설명을 입력하세요..."
-              rows={3} className="input-field resize-none" maxLength={200} />
-            <p className="text-xs text-gray-400 text-right">{description.length}/200</p>
-          </div>
-        </motion.div>
+        <section>
+          <label htmlFor="mission-type" className="text-xs font-bold text-[#53606F]">과목 및 유형</label>
+          <select id="mission-type" value={missionType} onChange={(event) => setMissionType(event.target.value as MissionType)} className={inputClass}>{TYPES.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select>
+        </section>
 
-        {/* 미션 유형 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }} className="bg-white rounded-3xl shadow-sm p-5">
-          <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <Tag size={13} /> 미션 유형
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {MISSION_TYPES.map((t) => (
-              <button key={t.key} onClick={() => setMissionType(t.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${missionType === t.key ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                <span>{t.emoji}</span>{t.label}
-              </button>
-            ))}
-          </div>
-        </motion.div>
+        <section>
+          <h2 className="text-xs font-bold text-[#53606F]">기간 설정</h2>
+          <div className="mt-2 grid grid-cols-2 gap-2"><label className="text-[10px] text-[#8B929C]">시작일<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className={`${inputClass} mt-1`}/></label><label className="text-[10px] text-[#8B929C]">종료일<input type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} className={`${inputClass} mt-1`}/></label></div>
+        </section>
 
-        {/* 관리 목표 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-white rounded-3xl shadow-sm p-5">
-          <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <Target size={13} /> 관리 목표
-          </label>
-          <div className="space-y-2">
-            {MISSION_GOALS.map((g) => (
-              <button key={g.key} onClick={() => setMissionGoal(g.key)}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${missionGoal === g.key ? 'bg-indigo-600 text-white' : 'bg-gray-50 text-gray-600'}`}>
-                {g.label}
-              </button>
-            ))}
-          </div>
-        </motion.div>
+        <section><label htmlFor="submission-type" className="text-xs font-bold text-[#53606F]">제출 형식</label><select id="submission-type" value={submissionType} onChange={(event) => setSubmissionType(event.target.value as SubmissionType)} className={inputClass}>{SUBMISSIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></section>
+        <section><label htmlFor="repeat-type" className="text-xs font-bold text-[#53606F]">반복</label><select id="repeat-type" value={repeatType} onChange={(event) => setRepeatType(event.target.value as RepeatType)} className={inputClass}>{REPEATS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></section>
+        <label className="flex min-h-12 items-center justify-between rounded-[10px] border border-[#D8D0C5] bg-[#FFFDFC] px-3"><span><strong className="block text-sm text-[#27313F]">완료 후 리포트에 포함</strong><span className="text-[10px] text-[#8B929C]">보호자 활동 리포트에서 확인할 수 있습니다.</span></span><input type="checkbox" checked={parentShare !== 'NONE'} onChange={(event) => setParentShare(event.target.checked ? 'ON_COMPLETE' : 'NONE')} className="h-5 w-5 accent-[#14233B]"/></label>
+        {error && <p role="alert" className="rounded-[10px] bg-[#F8EAE8] px-3 py-2 text-xs font-bold text-[#A14E49]">{error}</p>}
+        <button type="button" onClick={save} disabled={!valid || saving} className="min-h-12 w-full rounded-[10px] bg-[#14233B] text-sm font-bold text-white disabled:bg-[#A7ABB2]">{saving ? '저장 중...' : targetIds.length > 0 ? `${targetIds.length}명에게 미션 저장` : '미션 저장'}</button>
+      </main>
 
-        {/* 대상 선택 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.07 }} className="bg-white rounded-3xl shadow-sm p-5">
-          <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <Users size={13} /> 미션 대상 <span className="text-red-400">*</span>
-          </label>
-
-          {children.length === 0 ? (
-            <div className="text-center py-5">
-              <p className="text-3xl mb-2">👤</p>
-              <p className="text-gray-600 text-sm font-semibold mb-1">아직 실천자가 없어요</p>
-              <p className="text-gray-400 text-xs mb-4">실천자를 먼저 초대해야 미션을 만들 수 있어요</p>
-              <button onClick={() => navigate('/performers')} className="px-5 py-2.5 bg-purple-600 text-white font-bold text-sm rounded-2xl">
-                실천자 초대하러 가기 →
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="flex gap-2 mb-4">
-                {(['individual', 'group'] as const).map((mode) => (
-                  <button key={mode} onClick={() => { setTargetMode(mode); setSelectedIds(new Set()); setGroupId(''); }}
-                    className={`flex-1 py-2.5 rounded-2xl font-bold text-sm transition-all ${targetMode === mode ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                    {mode === 'individual' ? '👤 직접 선택' : '👥 반 전체'}
-                  </button>
-                ))}
-              </div>
-
-              {targetMode === 'individual' ? (
-                <div className="space-y-2">
-                  {/* 전체 선택 */}
-                  <button onClick={toggleAll}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 border border-gray-200">
-                    <span className="text-xs font-bold text-gray-500">전체 선택</span>
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${selectedIds.size === children.length && children.length > 0 ? 'bg-purple-600 border-purple-600' : 'border-gray-300'}`}>
-                      {selectedIds.size === children.length && children.length > 0 && (
-                        <svg viewBox="0 0 10 8" className="w-3 h-3 fill-white"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      )}
-                    </div>
-                  </button>
-
-                  {/* 실천자 목록 */}
-                  {children.map((child) => {
-                    const checked = selectedIds.has(child.id);
-                    return (
-                      <button key={child.id} onClick={() => toggleStudent(child.id)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${checked ? 'border-purple-400 bg-purple-50' : 'border-gray-100 bg-gray-50'}`}>
-                        <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all ${checked ? 'bg-purple-600 border-purple-600' : 'border-gray-300'}`}>
-                          {checked && (
-                            <svg viewBox="0 0 10 8" className="w-3 h-3 fill-white"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                          )}
-                        </div>
-                        <span className="text-2xl">{child.avatar}</span>
-                        <div className="text-left flex-1">
-                          <p className={`text-sm font-bold ${checked ? 'text-purple-700' : 'text-gray-700'}`}>{child.name}</p>
-                          <p className="text-xs text-gray-400">{child.groupId ? (myGroups.find(g => g.id === child.groupId)?.name ?? '반 없음') : '반 없음'}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : myGroups.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-4">아직 반이 없어요. 실천자 탭에서 반을 먼저 만들어주세요.</p>
-              ) : (
-                <div className="space-y-2">
-                  {myGroups.map((group) => {
-                    const members = children.filter((u) => u.groupId === group.id);
-                    return (
-                      <button key={group.id} onClick={() => setGroupId(group.id)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${groupId === group.id ? 'border-purple-400 bg-purple-50' : 'border-gray-100 bg-gray-50'}`}>
-                        <span className="text-2xl">{group.emoji}</span>
-                        <div className="text-left flex-1">
-                          <p className={`text-sm font-bold ${groupId === group.id ? 'text-purple-700' : 'text-gray-700'}`}>{group.name}</p>
-                          <p className="text-xs text-gray-400">{members.length}명 · 미션 {members.length}개 생성됨</p>
-                          {groupId === group.id && members.length > 0 && (
-                            <p className="text-xs text-purple-500 mt-0.5">{members.map(m => m.name).join(' · ')}</p>
-                          )}
-                        </div>
-                        {groupId === group.id && <span className="text-purple-500 text-lg">✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* 선택 요약 */}
-              {targetIds.length > 0 && (
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                  className="mt-3 bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-purple-700">{targetIds.length}명 선택됨</p>
-                    <p className="text-[11px] text-purple-500 mt-0.5">
-                      {targetIds.map(id => children.find(c => c.id === id)?.name).filter(Boolean).join(' · ')}
-                    </p>
-                  </div>
-                  <span className="text-xs font-black text-purple-600 bg-purple-100 px-2 py-1 rounded-lg">
-                    미션 {targetIds.length}개 생성
-                  </span>
-                </motion.div>
-              )}
-            </>
-          )}
-        </motion.div>
-
-        {/* 반복 설정 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }} className="bg-white rounded-3xl shadow-sm p-5">
-          <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <RefreshCw size={13} /> 반복 여부
-          </label>
-          <div className="grid grid-cols-4 gap-2">
-            {REPEAT_TYPES.map((r) => (
-              <button key={r.key} onClick={() => setRepeatType(r.key)}
-                className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 transition-all ${repeatType === r.key ? 'border-purple-400 bg-purple-50' : 'border-gray-100 bg-gray-50'}`}>
-                <p className={`text-xs font-bold ${repeatType === r.key ? 'text-purple-700' : 'text-gray-600'}`}>{r.label}</p>
-                <p className="text-[10px] text-gray-400">{r.desc}</p>
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* 제출 방식 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.13 }} className="bg-white rounded-3xl shadow-sm p-5">
-          <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <FileText size={13} /> 제출 방식
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {SUBMISSION_TYPES.map((t) => (
-              <button key={t.key} onClick={() => setSubmissionType(t.key)}
-                className={`flex flex-col items-center gap-1 p-3 rounded-2xl border-2 transition-all ${submissionType === t.key ? 'border-purple-400 bg-purple-50' : 'border-gray-100 bg-gray-50'}`}>
-                <span className="text-xl">{t.emoji}</span>
-                <p className={`text-xs font-bold ${submissionType === t.key ? 'text-purple-700' : 'text-gray-600'}`}>{t.label}</p>
-                <p className="text-[10px] text-gray-400">{t.desc}</p>
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* 보호자 공유 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-white rounded-3xl shadow-sm p-5">
-          <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <Share2 size={13} /> 보호자 공유
-          </label>
-          <div className="space-y-2">
-            {PARENT_SHARES.map((s) => (
-              <button key={s.key} onClick={() => setParentShare(s.key)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border-2 transition-all ${parentShare === s.key ? 'border-purple-400 bg-purple-50' : 'border-gray-100 bg-gray-50'}`}>
-                <span className="text-lg">{s.emoji}</span>
-                <p className={`text-sm font-semibold ${parentShare === s.key ? 'text-purple-700' : 'text-gray-600'}`}>{s.label}</p>
-                {parentShare === s.key && <span className="ml-auto text-purple-500 text-sm">✓</span>}
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* 날짜 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }} className="bg-white rounded-3xl shadow-sm p-5 space-y-3">
-          <label className="text-xs font-bold text-gray-500 flex items-center gap-1">
-            <Calendar size={13} /> 미션 기간
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-gray-400 mb-1">시작일</p>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="input-field text-sm" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-1">종료일</p>
-              <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} className="input-field text-sm" />
-            </div>
-          </div>
-        </motion.div>
-
-        {/* 현재 폼 템플릿 저장 */}
-        {title.trim() && (
-          <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            onClick={handleSaveTemplate}
-            className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold border-2 transition-all active:scale-95 ${savedFeedback ? 'border-emerald-400 bg-emerald-50 text-emerald-600' : 'border-dashed border-gray-300 text-gray-400'}`}>
-            <BookMarked size={15} />
-            {savedFeedback ? '템플릿으로 저장됐습니다.' : '현재 폼을 템플릿으로 저장'}
-          </motion.button>
-        )}
-
-        <Button fullWidth size="lg" onClick={handleSubmit} disabled={!isValid} loading={loading} className="rounded-3xl">
-          🚀 {targetIds.length > 1 ? `${targetIds.length}명에게 미션 배정하기` : '미션 생성하기'}
-        </Button>
-      </div>
-
-      {/* 템플릿 시트 */}
-      <AnimatePresence>
-        {showTemplates && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowTemplates(false)}>
-            <div className="absolute inset-0 bg-black/40" />
-            <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-              className="relative w-full max-w-md bg-white rounded-t-3xl overflow-hidden"
-              onClick={(e) => e.stopPropagation()}>
-              <div className="flex justify-center pt-3 pb-1"><div className="w-10 h-1 bg-gray-200 rounded-full" /></div>
-              <div className="px-5 pb-8 space-y-3" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                <div className="flex items-center justify-between py-2">
-                  <h3 className="font-black text-gray-800">📋 미션 템플릿</h3>
-                  <button onClick={() => setShowTemplates(false)} className="p-2 rounded-full bg-gray-100"><X size={16} className="text-gray-500" /></button>
-                </div>
-                {templates.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">
-                    <p className="text-3xl mb-2">📭</p>
-                    <p className="text-sm">저장된 템플릿이 없어요</p>
-                  </div>
-                ) : templates.map((t) => (
-                  <div key={t.id} className="flex items-center gap-3 bg-gray-50 rounded-2xl p-3">
-                    <span className="text-2xl flex-shrink-0">{getTemplateEmoji(t)}</span>
-                    <button onClick={() => applyTemplate(t.id)} className="flex-1 text-left">
-                      <p className="text-sm font-bold text-gray-800">{t.name}</p>
-                      <p className="text-[11px] text-gray-400">
-                        {missionTypeLabel[t.missionType ?? 'OTHER']} · {t.usageCount}회 사용
-                      </p>
-                    </button>
-                    <button onClick={() => deleteTemplate(t.id)} className="p-1.5 text-gray-300 hover:text-red-400 flex-shrink-0">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <Modal isOpen={templateOpen} onClose={() => setTemplateOpen(false)} title="템플릿 선택">
+        <div className="space-y-2">{templates.map((template) => <button type="button" key={template.id} onClick={() => applyTemplate(template.id)} className="w-full rounded-[10px] border border-[#E7E1D9] p-3 text-left"><strong className="block text-sm text-[#14233B]">{template.name}</strong><span className="mt-1 block line-clamp-2 text-xs leading-5 text-[#687282]">{template.description}</span></button>)}{templates.length === 0 && <EmptyState title="저장된 템플릿이 없습니다."/>}</div>
+      </Modal>
     </div>
   );
 }

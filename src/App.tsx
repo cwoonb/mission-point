@@ -23,6 +23,8 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const StatusSettingsPage = lazy(() => import('./pages/StatusSettingsPage'));
 const StudentDetailPage = lazy(() => import('./pages/StudentDetailPage'));
 const ParentReportPage = lazy(() => import('./pages/ParentReportPage'));
+const ReportSharePage = lazy(() => import('./pages/ReportSharePage'));
+const SubmissionReviewPage = lazy(() => import('./pages/SubmissionReviewPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const MissionClassPage = lazy(() => import('./pages/MissionClassPage'));
 const HomeworkDetailPage = lazy(() => import('./pages/HomeworkDetailPage'));
@@ -38,6 +40,7 @@ function AuthenticatedRoutes() {
         <Route path="missions/create" element={<MissionCreatePage />} />
         <Route path="missions/class/:classId" element={<MissionClassPage />} />
         <Route path="missions/homework/:homeworkId" element={<HomeworkDetailPage />} />
+        <Route path="missions/:id/review" element={<SubmissionReviewPage />} />
         <Route path="missions/:id/edit" element={<MissionEditPage />} />
         <Route path="missions/:id" element={<MissionDetailPage />} />
         <Route path="missions/:id/submit" element={<MissionSubmitPage />} />
@@ -48,6 +51,7 @@ function AuthenticatedRoutes() {
         <Route path="students/:id" element={<StudentDetailPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="students/:id/report" element={<ParentReportPage />} />
+        <Route path="students/:id/report/share" element={<ReportSharePage />} />
         <Route path="ranking" element={<Navigate to="/" replace />} />
         <Route path="analytics" element={<Navigate to="/students?view=analysis" replace />} />
         <Route path="analysis" element={<Navigate to="/students?view=analysis" replace />} />
