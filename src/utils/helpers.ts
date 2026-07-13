@@ -1,6 +1,4 @@
-import type { MissionStatus, PointTransactionType, UserRole } from '../types';
-
-export const formatPoint = (p: number) => p.toLocaleString('ko-KR');
+import type { MissionStatus, UserRole } from '../types';
 
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('ko-KR', {
@@ -47,34 +45,6 @@ export const roleLabel: Record<UserRole, string> = {
   TEACHER: '리더',
   CHILD: '실천자',
 };
-
-export const txLabel: Record<PointTransactionType, string> = {
-  MISSION_REWARD: '미션 보상 🎯',
-  MISSION_DEDUCT: '미션 포인트 지급',
-  AD_REWARD: '광고 시청 📺',
-  COUPON_EXCHANGE: '보상 획득 🎁 (legacy)',
-  DECORATION_PURCHASE: '마을 꾸미기 🏡',
-  ADMIN_GRANT: '관리자 지급',
-  ADMIN_DEDUCT: '관리자 차감',
-  PET_FEED: '펫 밥 주기 🍖',
-  PET_EGG: '새 알 받기 🥚',
-  AVATAR_PURCHASE: '아바타 아이템',
-};
-
-export const txColor: Record<PointTransactionType, string> = {
-  MISSION_REWARD: 'text-green-600',
-  MISSION_DEDUCT: 'text-red-500',
-  AD_REWARD: 'text-purple-600',
-  COUPON_EXCHANGE: 'text-orange-600',
-  DECORATION_PURCHASE: 'text-emerald-600',
-  ADMIN_GRANT: 'text-blue-600',
-  ADMIN_DEDUCT: 'text-red-500',
-  PET_FEED: 'text-red-500',
-  PET_EGG: 'text-red-500',
-  AVATAR_PURCHASE: 'text-violet-600',
-};
-
-export const txSign = (amount: number) => (amount >= 0 ? `+${formatPoint(amount)}P` : `${formatPoint(amount)}P`);
 
 export const submissionTypeLabel = {
   IMAGE: '이미지',

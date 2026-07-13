@@ -1,408 +1,118 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, TrendingUp, AlertTriangle, CheckCircle2, Flame, BarChart3, FileText, MessageSquarePlus, Trash2, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import {
+  CalendarClock,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardCheck,
+  FileText,
+  MessageSquarePlus,
+  RefreshCcw,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import Header from '../components/layout/Header';
 import { useAuthStore } from '../store/authStore';
+import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
-import { formatDate } from '../utils/helpers';
-import {
-  getCompletionRate, getWeeklyRate, getStreak, getUnsubmittedCount,
-  getStudentStatus, statusConfig, missionTypeLabel, getWeekRateByOffset, defaultStatusThresholds,
-} from '../utils/studentStats';
-import type { MissionType } from '../types';
+import type { Mission, MissionStatus } from '../types';
+import { formatDate, formatDateTime } from '../utils/helpers';
 
-function RateBar({ value, color = 'bg-purple-500' }: { value: number; color?: string }) {
-  return (
-    <div className="w-full bg-gray-100 rounded-full h-2">
-      <motion.div initial={{ width: 0 }} animate={{ width: `${value}%` }} transition={{ duration: 0.8, ease: 'easeOut' }}
-        className={`h-2 rounded-full ${color}`} />
-    </div>
-  );
+const STATUS: Record<MissionStatus, { label: string; tone: string }> = {
+  PENDING: { label: '시작 전', tone: 'bg-slate-100 text-slate-600' },
+  IN_PROGRESS: { label: '진행 중', tone: 'bg-blue-50 text-blue-700' },
+  REVIEWING: { label: '승인 대기', tone: 'bg-amber-50 text-amber-700' },
+  SUCCESS: { label: '완료', tone: 'bg-emerald-50 text-emerald-700' },
+  REJECTED: { label: '수정 필요', tone: 'bg-rose-50 text-rose-700' },
+  FAILED: { label: '미제출', tone: 'bg-rose-50 text-rose-700' },
+  EXPIRED: { label: '미제출', tone: 'bg-rose-50 text-rose-700' },
+};
+
+function missionActivityTime(mission: Mission, submittedAt?: string) {
+  return new Date(submittedAt ?? mission.createdAt).getTime();
 }
 
 export default function StudentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { users, currentUser, teacherNotes, addTeacherNote, deleteTeacherNote } = useAuthStore();
-  const { missions, approveMission, rejectMission } = useMissionStore();
+  const groups = useGroupStore((state) => state.groups);
+  const { missions, submissions, reviewLogs, approveMission, rejectMission, getLatestSubmission } = useMissionStore();
   const [noteInput, setNoteInput] = useState('');
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
 
-  const student = users.find((u) => u.id === id);
-  if (!student) return (
-    <div className="page-container">
-      <Header title="실천자 정보" showBack />
-      <div className="content-area flex items-center justify-center">
-        <p className="text-gray-400">실천자를 찾을 수 없어요.</p>
-      </div>
-    </div>
-  );
+  const student = users.find((user) => user.id === id);
+  if (!student) return <div className="page-container"><Header title="학생 정보" showBack /><main className="content-area flex items-center justify-center px-6 text-center text-sm font-bold text-slate-400">학생을 찾을 수 없습니다.</main></div>;
 
-  const myMissions = missions.filter((m) => m.assigneeId === student.id);
-  const successMissions = myMissions.filter((m) => m.status === 'SUCCESS');
-  const activeMissions = myMissions.filter((m) => m.status === 'IN_PROGRESS' || m.status === 'REVIEWING');
-  const overallRate = getCompletionRate(missions, student.id);
-  const weekRate = getWeeklyRate(missions, student.id);
-  const streak = getStreak(missions, student.id);
-  const unsubmitted = getUnsubmittedCount(missions, student.id);
-  const thresholds = currentUser?.statusThresholds ?? defaultStatusThresholds;
-  const status = getStudentStatus(missions, student.id, thresholds);
-  const sc = statusConfig[status];
-
-  // 미션 유형별 통계
-  const typeStats: Record<string, { total: number; success: number }> = {};
-  myMissions.forEach((m) => {
-    const t = m.missionType ?? 'OTHER';
-    if (!typeStats[t]) typeStats[t] = { total: 0, success: 0 };
-    typeStats[t].total++;
-    if (m.status === 'SUCCESS') typeStats[t].success++;
-  });
-
-  const typeSorted = Object.entries(typeStats)
-    .map(([type, s]) => ({ type: type as MissionType, rate: s.total ? Math.round((s.success / s.total) * 100) : 0, ...s }))
-    .sort((a, b) => b.rate - a.rate);
-
-  const bestType = typeSorted[0];
-  const worstType = typeSorted[typeSorted.length - 1];
-
-  // 4주 추이
-  const weekTrend = [3, 2, 1, 0].map((offset) => ({
-    label: offset === 0 ? '이번 주' : offset === 1 ? '저번 주' : `${offset}주 전`,
-    rate: getWeekRateByOffset(missions, student.id, offset),
-  }));
-
-  // 검토 대기 미션
-  const reviewingMissions = myMissions.filter((m) => m.status === 'REVIEWING');
-
-  // 상담 메모
+  const period = params.get('period') ?? '30';
+  const cutoff = period === 'all' ? null : (() => { const date = new Date(); date.setDate(date.getDate() - Number(period || 30) + 1); date.setHours(0, 0, 0, 0); return date; })();
+  const allMissions = missions.filter((mission) => mission.assigneeId === student.id && (!currentUser || mission.creatorId === currentUser.id));
+  const periodMissions = allMissions.filter((mission) => !cutoff || new Date(mission.createdAt) >= cutoff || new Date(mission.endDate) >= cutoff);
+  const groupName = groups.find((group) => group.id === student.groupId)?.name ?? '반 미지정';
+  const pending = periodMissions.filter((mission) => mission.status === 'REVIEWING');
+  const active = periodMissions.filter((mission) => ['PENDING', 'IN_PROGRESS', 'REJECTED'].includes(mission.status));
+  const completed = periodMissions.filter((mission) => mission.status === 'SUCCESS');
+  const missing = periodMissions.filter((mission) => ['FAILED', 'EXPIRED'].includes(mission.status));
   const myNotes = teacherNotes[student.id] ?? [];
 
-  const activitySummary = generateActivitySummary(student.name, myMissions.length, weekRate, overallRate, unsubmitted, bestType?.type, worstType?.type, streak);
+  const recent = useMemo(() => periodMissions.map((mission) => {
+    const submission = [...submissions].filter((item) => item.missionId === mission.id).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+    const review = [...reviewLogs].filter((item) => item.missionId === mission.id).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    return { mission, submission, review, time: Math.max(missionActivityTime(mission, submission?.submittedAt), review ? new Date(review.createdAt).getTime() : 0) };
+  }).sort((a, b) => b.time - a.time).slice(0, 6), [periodMissions, submissions, reviewLogs]);
 
-  return (
-    <div className="page-container">
-      <Header title="실천자 성장 리포트" showBack showPoints={false} />
+  const saveNote = () => {
+    if (!noteInput.trim()) return;
+    addTeacherNote(student.id, noteInput);
+    setNoteInput('');
+  };
 
-      <div className="content-area px-4 py-5 space-y-4">
+  return <div className="page-container bg-slate-50">
+    <Header title="학생 상세" showBack showPoints={false} />
+    <main className="content-area space-y-4 px-4 py-4">
+      <section className="rounded-3xl bg-gradient-to-br from-slate-800 to-slate-950 p-5 text-white shadow-lg">
+        <div className="flex items-center gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 text-4xl">{student.profileImage ? <img src={student.profileImage} alt={`${student.name} 프로필`} className="h-full w-full object-cover" /> : student.avatar}</div>
+          <div className="min-w-0 flex-1"><h1 className="truncate text-xl font-black">{student.name}</h1><p className="mt-1 text-xs font-bold text-white/60">{groupName} · 최근 {period === 'all' ? '전체' : `${period}일`} 활동</p><p className="mt-1 text-[11px] text-white/45">등록 {formatDate(student.createdAt)}</p></div>
+          <button onClick={() => navigate(`/students/${student.id}/report`)} className="min-h-11 shrink-0 rounded-xl bg-white px-3 text-xs font-black text-emerald-700">리포트</button>
+        </div>
+        <div className="mt-4 grid grid-cols-4 gap-1.5 text-center">
+          {[[active.length, '진행'], [pending.length, '승인 대기'], [missing.length, '미제출'], [completed.length, '완료']].map(([value, label]) => <div key={label as string} className="rounded-xl bg-white/10 px-1 py-2"><strong className="block text-base">{value}</strong><span className="text-[9px] font-bold text-white/60">{label}</span></div>)}
+        </div>
+      </section>
 
-        {/* 실천자 프로필 카드 */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl overflow-hidden flex items-center justify-center text-4xl flex-shrink-0">
-              {student.profileImage ? <img src={student.profileImage} alt="" className="w-full h-full object-cover" /> : student.avatar}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h2 className="font-black text-xl">{student.name}</h2>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${sc.bg} ${sc.color}`}>{sc.label}</span>
-              </div>
-              <p className="text-white/60 text-xs">가입: {formatDate(student.createdAt)}</p>
-            </div>
-          </div>
+      {pending.length > 0 && <section className="rounded-3xl border border-amber-100 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center gap-2"><ClipboardCheck size={17} className="text-amber-600"/><h2 className="font-black text-slate-800">승인 대기 제출물</h2><span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">{pending.length}</span></div>
+        <div className="space-y-3">{pending.map((mission) => { const submission = getLatestSubmission(mission.id); return <article key={mission.id} className="rounded-2xl bg-amber-50/70 p-3">
+          <div className="flex items-start justify-between gap-2"><div><h3 className="text-sm font-black text-slate-800">{mission.title}</h3><p className="mt-1 text-[11px] font-bold text-slate-400">{submission ? `${formatDateTime(submission.submittedAt)} · ${submission.attemptNumber}회차 제출` : '제출 기록 확인 필요'}</p></div><button onClick={() => navigate(`/missions/${mission.id}`)} className="min-h-10 rounded-xl px-2 text-xs font-black text-purple-600">상세</button></div>
+          {submission?.message && <p className="mt-2 rounded-xl bg-white px-3 py-2 text-xs leading-relaxed text-slate-600">{submission.message}</p>}
+          <div className="mt-3 grid grid-cols-2 gap-2"><button onClick={() => currentUser && approveMission(mission.id, currentUser.id)} className="min-h-11 rounded-xl bg-emerald-600 text-xs font-black text-white">승인</button><button onClick={() => currentUser && rejectMission(mission.id, currentUser.id, rejectReason[mission.id]?.trim() || '내용을 보완해 다시 제출해 주세요.')} className="min-h-11 rounded-xl bg-rose-100 text-xs font-black text-rose-700">반려</button></div>
+          <input value={rejectReason[mission.id] ?? ''} onChange={(event) => setRejectReason((prev) => ({ ...prev, [mission.id]: event.target.value }))} placeholder="반려 시 전달할 안내 (선택)" className="mt-2 min-h-11 w-full rounded-xl border border-amber-100 bg-white px-3 text-xs outline-none focus:border-purple-300"/>
+        </article>; })}</div>
+      </section>}
 
-          {/* 핵심 지표 */}
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { label: '완료', value: successMissions.length, unit: '개' },
-              { label: '전체수행률', value: `${overallRate}`, unit: '%' },
-              { label: '연속수행', value: streak, unit: '일' },
-              { label: '미제출', value: unsubmitted, unit: '건', warn: unsubmitted > 0 },
-            ].map((s) => (
-              <div key={s.label} className={`bg-white/10 rounded-2xl p-2.5 text-center ${s.warn ? 'bg-red-500/20' : ''}`}>
-                <p className={`font-black text-lg ${s.warn ? 'text-red-300' : ''}`}>{s.value}<span className="text-xs font-normal">{s.unit}</span></p>
-                <p className="text-white/60 text-[10px] mt-0.5">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+      <section className="rounded-3xl bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2"><CalendarClock size={17} className="text-purple-600"/><h2 className="font-black text-slate-800">최근 활동</h2></div><button onClick={() => navigate(`/students?period=${period}`)} className="min-h-10 text-xs font-black text-purple-600">학생 목록</button></div>
+        {recent.length === 0 ? <p className="rounded-2xl bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-400">선택 기간에 활동 기록이 없습니다.</p> : <div className="space-y-2">{recent.map(({ mission, submission, review }) => <button key={mission.id} onClick={() => navigate(`/missions/${mission.id}`)} className="flex min-h-16 w-full items-center gap-3 rounded-2xl bg-slate-50 p-3 text-left">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${STATUS[mission.status].tone}`}>{mission.status === 'SUCCESS' ? <CheckCircle2 size={18}/> : mission.status === 'REJECTED' ? <RefreshCcw size={18}/> : <FileText size={18}/>}</span>
+          <span className="min-w-0 flex-1"><strong className="block truncate text-sm text-slate-800">{mission.title}</strong><span className="mt-0.5 block truncate text-[11px] font-bold text-slate-400">{review?.reason || submission?.message || mission.description || '활동 기록'}</span></span>
+          <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-black ${STATUS[mission.status].tone}`}>{STATUS[mission.status].label}</span>
+        </button>)}</div>}
+      </section>
 
-        {/* 수행률 현황 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
-          className="bg-white rounded-3xl shadow-sm p-5 space-y-4">
-          <p className="text-sm font-black text-gray-700 flex items-center gap-2"><BarChart3 size={16} className="text-purple-500" /> 수행률 현황</p>
-          {myMissions.length === 0 ? <div className="rounded-2xl bg-slate-50 px-4 py-5 text-center"><p className="text-sm font-bold text-slate-600">선택한 기간에 배정된 미션이 없습니다.</p><p className="mt-1 text-xs text-slate-400">학생이 수행하지 않은 것이 아니라 현재 배정된 미션이 없는 상태입니다.</p></div> : <><div className="space-y-3">
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-500">이번 주 수행률</span>
-                <span className={`text-xs font-bold ${weekRate >= 70 ? 'text-emerald-600' : 'text-amber-600'}`}>{weekRate}%</span>
-              </div>
-              <RateBar value={weekRate} color={weekRate >= 70 ? 'bg-emerald-500' : 'bg-amber-500'} />
-            </div>
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="text-xs text-gray-500">전체 수행률</span>
-                <span className="text-xs font-bold text-purple-600">{overallRate}%</span>
-              </div>
-              <RateBar value={overallRate} />
-            </div>
-          </div>
+      <section className="rounded-3xl bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center gap-2"><MessageSquarePlus size={17} className="text-purple-600"/><h2 className="font-black text-slate-800">상담 메모</h2></div>
+        <div className="flex gap-2"><input value={noteInput} onChange={(event) => setNoteInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && saveNote()} placeholder="상담 내용이나 특이사항 입력" maxLength={200} className="min-h-11 min-w-0 flex-1 rounded-xl bg-slate-50 px-3 text-sm outline-none focus:ring-2 focus:ring-purple-200"/><button onClick={saveNote} disabled={!noteInput.trim()} className="min-h-11 rounded-xl bg-purple-600 px-4 text-xs font-black text-white disabled:opacity-40">저장</button></div>
+        <div className="mt-3 space-y-2">{myNotes.length === 0 ? <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-xs font-bold text-slate-400">아직 상담 메모가 없습니다.</p> : myNotes.map((note) => <div key={note.id} className="flex items-start gap-2 rounded-xl bg-purple-50 p-3"><p className="flex-1 text-sm leading-relaxed text-slate-700">{note.text}</p><div className="shrink-0 text-right"><p className="text-[9px] font-bold text-slate-400">{formatDate(note.createdAt)}</p><button onClick={() => deleteTeacherNote(student.id, note.id)} aria-label="메모 삭제" className="mt-1 min-h-8 min-w-8 text-slate-300"><Trash2 size={13} className="ml-auto"/></button></div></div>)}</div>
+      </section>
 
-          {/* 미션 상태 요약 */}
-          <div className="grid grid-cols-3 gap-2 pt-2">
-            {[
-              { label: '진행 중', value: activeMissions.length, color: 'text-blue-500', bg: 'bg-blue-50' },
-              { label: '완료', value: successMissions.length, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { label: '미제출', value: unsubmitted, color: unsubmitted > 0 ? 'text-red-600' : 'text-gray-400', bg: unsubmitted > 0 ? 'bg-red-50' : 'bg-gray-50' },
-            ].map((s) => (
-              <div key={s.label} className={`${s.bg} rounded-xl p-2.5 text-center`}>
-                <p className={`font-black text-xl ${s.color}`}>{s.value}</p>
-                <p className="text-xs text-gray-500">{s.label}</p>
-              </div>
-            ))}
-          </div></>}
-        </motion.div>
+      <section className="rounded-3xl border border-indigo-100 bg-indigo-50 p-4">
+        <h2 className="font-black text-indigo-900">관리 메모</h2>
+        <p className="mt-2 text-sm leading-relaxed text-indigo-800">{missing.length > 0 ? `${missing.length}건의 미제출 미션부터 확인해 주세요.` : pending.length > 0 ? `${pending.length}건의 제출물이 검토를 기다리고 있습니다.` : active.length > 0 ? `${active.length}건의 진행 중 미션을 이어가고 있습니다.` : completed.length > 0 ? `최근 ${completed.length}건의 미션을 완료했습니다.` : '선택 기간에 배정된 미션이 없습니다.'}</p>
+      </section>
 
-        {/* 미션 유형별 수행률 */}
-        {typeSorted.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}
-            className="bg-white rounded-3xl shadow-sm p-5">
-            <p className="text-sm font-black text-gray-700 mb-4 flex items-center gap-2">
-              <TrendingUp size={16} className="text-indigo-500" /> 미션 유형별 수행률
-            </p>
-            <div className="space-y-3">
-              {typeSorted.map((t) => (
-                <div key={t.type}>
-                  <div className="flex justify-between mb-1">
-                    <span className="text-xs text-gray-600 font-semibold">{missionTypeLabel[t.type] ?? t.type}</span>
-                    <span className="text-xs text-gray-500">{t.success}/{t.total} · {t.rate}%</span>
-                  </div>
-                  <RateBar value={t.rate} color={t.rate >= 70 ? 'bg-emerald-500' : t.rate >= 40 ? 'bg-amber-500' : 'bg-red-400'} />
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              {bestType && (
-                <div className="bg-emerald-50 rounded-2xl p-3">
-                  <p className="text-[10px] text-emerald-600 font-bold mb-0.5">가장 잘하는 유형</p>
-                  <p className="text-sm font-black text-emerald-700">✨ {missionTypeLabel[bestType.type] ?? bestType.type}</p>
-                  <p className="text-xs text-emerald-600">{bestType.rate}% 수행률</p>
-                </div>
-              )}
-              {worstType && worstType.type !== bestType?.type && (
-                <div className="bg-red-50 rounded-2xl p-3">
-                  <p className="text-[10px] text-red-600 font-bold mb-0.5">집중 관리 필요</p>
-                  <p className="text-sm font-black text-red-700">⚠️ {missionTypeLabel[worstType.type] ?? worstType.type}</p>
-                  <p className="text-xs text-red-600">{worstType.rate}% 수행률</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* 4주 수행 추이 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 }}
-          className="bg-white rounded-3xl shadow-sm p-5">
-          <p className="text-sm font-black text-gray-700 mb-4 flex items-center gap-2">
-            <Flame size={16} className="text-orange-500" /> 최근 4주 수행 추이
-          </p>
-          <div className="flex items-end gap-2 h-24">
-            {weekTrend.map(({ label, rate }, i) => {
-              const hasData = rate >= 0;
-              const barH = hasData ? Math.max(rate, 4) : 4;
-              const color = !hasData ? 'bg-gray-100' : rate >= 70 ? 'bg-emerald-500' : rate >= 40 ? 'bg-amber-400' : 'bg-red-400';
-              return (
-                <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                  {hasData && (
-                    <span className={`text-[10px] font-black ${rate >= 70 ? 'text-emerald-600' : rate >= 40 ? 'text-amber-600' : 'text-red-500'}`}>
-                      {rate}%
-                    </span>
-                  )}
-                  <div className="w-full flex items-end" style={{ height: '72px' }}>
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${(barH / 100) * 72}px` }}
-                      transition={{ duration: 0.6, delay: i * 0.08 }}
-                      className={`w-full rounded-t-xl ${color} ${i === 3 ? 'ring-2 ring-offset-1 ring-purple-300' : ''}`}
-                    />
-                  </div>
-                  <span className={`text-[10px] text-center leading-tight ${i === 3 ? 'font-black text-purple-600' : 'text-gray-400'}`}>
-                    {label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          {weekTrend.every((w) => w.rate < 0) && (
-            <p className="text-xs text-gray-400 text-center mt-2">아직 미션 데이터가 없어요</p>
-          )}
-        </motion.div>
-
-        {/* 검토 대기 미션 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
-            className="bg-white rounded-3xl shadow-sm p-5">
-            <p className="text-sm font-black text-gray-700 mb-3 flex items-center gap-2">
-              <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-              검토 대기 {reviewingMissions.length}건
-            </p>
-            {reviewingMissions.length === 0 ? (
-              <p className="rounded-2xl bg-gray-50 px-4 py-5 text-center text-xs text-gray-400">현재 검토 대기 제출물이 없습니다.</p>
-            ) : <div className="space-y-3">
-              {reviewingMissions.map((m) => (
-                <div key={m.id} className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-gray-800">{m.title}</p>
-                      <p className="text-[11px] text-gray-400">{missionTypeLabel[m.missionType ?? 'OTHER']}</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => { if (currentUser) approveMission(m.id, currentUser.id); }}
-                      className="flex-1 flex items-center justify-center gap-1 py-2 bg-emerald-500 text-white rounded-xl text-xs font-bold active:scale-95 transition-transform">
-                      <ThumbsUp size={12} /> 승인
-                    </button>
-                    <div className="flex-1 space-y-1">
-                      <input
-                        value={rejectReason[m.id] ?? ''}
-                        onChange={(e) => setRejectReason((prev) => ({ ...prev, [m.id]: e.target.value }))}
-                        placeholder="반려 사유 (선택)"
-                        className="w-full text-[11px] bg-white border border-gray-200 rounded-xl px-2 py-1.5 outline-none"
-                      />
-                      <button
-                        onClick={() => { if (currentUser) { rejectMission(m.id, currentUser.id, rejectReason[m.id] ?? '사유 없음'); setRejectReason((prev) => ({ ...prev, [m.id]: '' })); } }}
-                        className="w-full flex items-center justify-center gap-1 py-1.5 bg-red-100 text-red-600 rounded-xl text-xs font-bold active:scale-95 transition-transform">
-                        <ThumbsDown size={11} /> 반려
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>}
-          </motion.div>
-
-        {/* 상담 메모 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-          className="bg-white rounded-3xl shadow-sm p-5">
-          <p className="text-sm font-black text-gray-700 mb-3 flex items-center gap-2">
-            <MessageSquarePlus size={16} className="text-purple-500" /> 상담 메모
-            {myNotes.length > 0 && <span className="text-xs text-purple-500 font-semibold">{myNotes.length}개</span>}
-          </p>
-          <div className="flex gap-2 mb-3">
-            <input
-              value={noteInput}
-              onChange={(e) => setNoteInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && noteInput.trim()) { addTeacherNote(student.id, noteInput); setNoteInput(''); } }}
-              placeholder="상담 내용, 특이사항 메모..."
-              className="flex-1 bg-gray-50 rounded-xl px-3 py-2.5 text-sm outline-none border border-gray-100 focus:border-purple-300"
-              maxLength={200}
-            />
-            <button
-              onClick={() => { if (noteInput.trim()) { addTeacherNote(student.id, noteInput); setNoteInput(''); } }}
-              disabled={!noteInput.trim()}
-              className="px-4 py-2.5 bg-purple-600 text-white rounded-xl font-bold text-sm disabled:opacity-40 active:scale-95 transition-transform">
-              저장
-            </button>
-          </div>
-          <AnimatePresence>
-            {myNotes.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-3">아직 메모가 없어요. 상담 내용을 기록해보세요.</p>
-            ) : (
-              <div className="space-y-2">
-                {myNotes.map((note) => (
-                  <motion.div key={note.id} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                    className="flex items-start gap-2 bg-purple-50 rounded-xl p-3">
-                    <p className="flex-1 text-sm text-gray-700 leading-relaxed">{note.text}</p>
-                    <div className="flex-shrink-0 text-right">
-                      <p className="text-[10px] text-gray-400">{formatDate(note.createdAt)}</p>
-                      <button onClick={() => deleteTeacherNote(student.id, note.id)} className="text-gray-300 hover:text-red-400 mt-1">
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* 실제 미션 데이터 기준 활동 요약 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
-          className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-3xl p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <span className="text-white text-sm">🤖</span>
-            </div>
-            <div>
-              <p className="text-sm font-black text-indigo-800">활동 요약</p>
-              <p className="text-[10px] text-indigo-500">선택 기간의 미션 수행 기록 기준</p>
-            </div>
-          </div>
-          <p className="text-sm text-indigo-700 leading-relaxed">{activitySummary}</p>
-        </motion.div>
-
-        {/* 최근 미션 */}
-        {/* 최근 미션 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <p className="text-xs font-bold text-gray-500 mb-2 px-1">최근 미션</p>
-          <div className="space-y-2">
-            {myMissions.slice(-5).reverse().map((m) => (
-              <div key={m.id} className="bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  m.status === 'SUCCESS' ? 'bg-emerald-100' :
-                  m.status === 'REVIEWING' ? 'bg-amber-100' :
-                  m.status === 'REJECTED' ? 'bg-red-100' : 'bg-gray-100'}`}>
-                  {m.status === 'SUCCESS' ? <CheckCircle2 size={14} className="text-emerald-600" />
-                    : m.status === 'REVIEWING' ? <span className="text-xs">⏳</span>
-                    : m.status === 'REJECTED' ? <AlertTriangle size={14} className="text-red-500" />
-                    : <span className="text-xs">📝</span>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-800 truncate">{m.title}</p>
-                  {m.missionType && <p className="text-[11px] text-gray-400">{missionTypeLabel[m.missionType] ?? m.missionType}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* 보호자 리포트 버튼 */}
-        <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }}
-          onClick={() => navigate(`/students/${id}/report`)}
-          className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all">
-          <FileText size={18} />
-          보호자 리포트 생성하기
-          <ChevronRight size={16} />
-        </motion.button>
-      </div>
-    </div>
-  );
-}
-
-function generateActivitySummary(
-  name: string, missionCount: number, weekRate: number, overallRate: number, unsubmitted: number,
-  bestType?: string, worstType?: string, streak?: number
-): string {
-  const parts: string[] = [];
-
-  if (missionCount === 0) return '이번 기간에는 배정된 미션이 없습니다. 최근 활동 기록을 아래에서 확인할 수 있습니다.';
-
-  if (weekRate >= 80) {
-    parts.push(`${name} 실천자는 이번 주 수행률이 ${weekRate}%로 매우 우수합니다.`);
-  } else if (weekRate >= 60) {
-    parts.push(`${name} 실천자는 이번 주 수행률이 ${weekRate}%로 양호한 편입니다.`);
-  } else {
-    parts.push(`${name} 실천자는 이번 주 수행률이 ${weekRate}%로, 관리가 필요한 상태입니다.`);
-  }
-
-  if (bestType && bestType !== worstType) {
-    const bestLabel = missionTypeLabel[bestType] ?? bestType;
-    parts.push(`특히 ${bestLabel} 미션에서 높은 수행률을 보이고 있습니다.`);
-  }
-
-  if (worstType && worstType !== bestType) {
-    const worstLabel = missionTypeLabel[worstType] ?? worstType;
-    parts.push(`${worstLabel} 미션은 상대적으로 지연되는 경향이 있어 별도 독려가 필요합니다.`);
-  }
-
-  if (streak && streak >= 3) {
-    parts.push(`최근 ${streak}일 연속으로 미션을 수행하여 좋은 습관이 형성되고 있습니다.`);
-  }
-
-  if (unsubmitted >= 2) {
-    parts.push(`현재 ${unsubmitted}건의 미제출 미션이 있어 조기 상담을 권장합니다.`);
-  }
-
-  return parts.join(' ');
+      <button onClick={() => navigate(`/students/${student.id}/report`)} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-sm font-black text-white shadow-md"><FileText size={18}/>학부모 활동 리포트 보기<ChevronRight size={17}/></button>
+    </main>
+  </div>;
 }

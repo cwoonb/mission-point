@@ -133,7 +133,7 @@ function AppContent() {
 export default function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? 'placeholder-client-id'}>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center text-sm font-bold text-purple-600">화면을 불러오는 중...</div>}>
           <AppContent />
         </Suspense>

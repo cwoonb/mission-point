@@ -32,7 +32,7 @@ function FacilitatorHome() {
   const attentionStudents = snapshot.students
     .filter((student) => ['COUNSELING', 'UNSUBMITTED'].includes(student.status))
     .sort((a, b) => b.missed - a.missed);
-  const weakestClass = [...snapshot.classes].filter((row) => row.studentCount > 0).sort((a, b) => a.weeklyRate - b.weeklyRate)[0];
+  const attentionClass = [...snapshot.classes].filter((row) => row.missed > 0).sort((a, b) => b.missed - a.missed)[0];
 
   return (
     <div className="page-container bg-slate-50">
@@ -53,10 +53,10 @@ function FacilitatorHome() {
               </div>
             ))}
           </div>
-          {weakestClass && assignedCount > 0 && (
-            <button onClick={() => navigate('/students?view=analysis')} className="mt-3 flex w-full items-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-left">
+          {attentionClass && assignedCount > 0 && (
+            <button onClick={() => navigate(`/students?class=${attentionClass.id}&status=missing&sort=missing`)} className="mt-3 flex min-h-11 w-full items-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-left">
               <AlertTriangle size={14} className="text-red-300" />
-              <span className="flex-1 text-[11px] font-bold text-white/80">{weakestClass.name} 수행률 {weakestClass.weeklyRate}% · 우선 확인 필요</span>
+              <span className="flex-1 text-[11px] font-bold text-white/80">{attentionClass.name} 미제출 {attentionClass.missed}건 · 학생 확인</span>
               <ChevronRight size={14} className="text-white/40" />
             </button>
           )}
@@ -125,7 +125,7 @@ function FacilitatorHome() {
                 <span className="text-2xl">{row.user.avatar}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black text-slate-800">{row.user.name} · {row.className}</span>
-                  <span className="text-[11px] font-bold text-slate-400">수행률 {row.weeklyRate}% · 미제출 {row.missed}건</span>
+                  <span className="text-[11px] font-bold text-slate-400">미제출 {row.missed}건 · 최근 활동 확인</span>
                 </span>
                 <span className={`rounded-full px-2 py-1 text-[9px] font-black ${config.bg} ${config.color}`}>{config.label}</span>
                 <ChevronRight size={14} className="text-slate-300" />

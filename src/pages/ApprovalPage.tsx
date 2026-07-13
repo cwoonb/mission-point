@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, MessageSquare, Eye, TrendingUp, AlertCircle, Calendar, X } from 'lucide-react';
+import { CheckCircle2, XCircle, MessageSquare, Eye, Calendar, X } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -10,7 +10,6 @@ import { StatusBadge } from '../components/ui/Badge';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
-import { getWeeklyRate, getUnsubmittedCount, getCompletionRate, statusConfig, getStudentStatus, defaultStatusThresholds } from '../utils/studentStats';
 import { missionTypeLabel } from '../utils/studentStats';
 import type { Mission } from '../types';
 
@@ -32,7 +31,7 @@ const COMMENT_TEMPLATES = [
 
 export default function ApprovalPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
-  const { currentUser, getUser, users } = useAuthStore();
+  const { currentUser, getUser, users, addTeacherNote } = useAuthStore();
   const { missions, getLatestSubmission, approveMission, rejectMission } = useMissionStore();
 
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
@@ -51,7 +50,6 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
 
   if (!currentUser) return null;
 
-  const thresholds = currentUser.statusThresholds ?? defaultStatusThresholds;
   const pendingMissions = missions.filter(
     (m) => m.status === 'REVIEWING' && m.creatorId === currentUser.id
   );
@@ -86,24 +84,18 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
   };
 
   const openParentShare = (mission: Mission) => {
-    const student = getUser(mission.assigneeId);
-    const weekRate = student ? getWeeklyRate(missions, student.id) : 0;
-    const unsubmitted = student ? getUnsubmittedCount(missions, student.id) : 0;
+    const submission = getLatestSubmission(mission.id);
     setParentShareMission(mission);
-    setParentShareMsg(
-      weekRate >= 70
-        ? `꾸준히 미션을 수행하고 있어 매우 기특합니다. 앞으로도 이 페이스를 유지해봐요!`
-        : unsubmitted > 0
-        ? `미제출 미션이 ${unsubmitted}건 있습니다. 가정에서도 함께 확인해 주시면 감사하겠습니다.`
-        : `이번 미션을 잘 완료했습니다. 지속적인 관심 부탁드립니다.`
-    );
+    setParentShareMsg(submission?.attemptNumber && submission.attemptNumber > 1
+      ? '내용을 보완해 다시 제출했습니다. 가정에서도 노력한 과정을 함께 칭찬해 주세요.'
+      : '제출한 활동을 확인했습니다. 가정에서도 활동 내용을 함께 이야기해 주세요.');
     setParentShareModal(true);
   };
 
   const handleShareToParent = async () => {
     if (!parentShareMission || !currentUser) return;
     const student = getUser(parentShareMission.assigneeId);
-    const text = `[미션 알림] ${student?.name ?? ''} 실천자\n\n미션: ${parentShareMission.title}\n\n리더 의견:\n${parentShareMsg}\n\n— ${currentUser.name} 리더`;
+    const text = `[활동 알림] ${student?.name ?? ''} 학생\n\n미션: ${parentShareMission.title}\n\n선생님 의견:\n${parentShareMsg}\n\n— ${currentUser.name} 선생님`;
     if (typeof navigator.share === 'function') {
       try { await navigator.share({ title: `${student?.name} 미션 알림`, text }); } catch {}
     } else {
@@ -144,11 +136,6 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
             {pendingMissions.map((mission, i) => {
               const submission = getLatestSubmission(mission.id);
               const assignee = getUser(mission.assigneeId);
-              const weekRate = assignee ? getWeeklyRate(missions, assignee.id) : 0;
-              const unsubmitted = assignee ? getUnsubmittedCount(missions, assignee.id) : 0;
-              const overallRate = assignee ? getCompletionRate(missions, assignee.id) : 0;
-              const status = assignee ? getStudentStatus(missions, assignee.id, thresholds) : 'CAUTION';
-              const sc = statusConfig[status];
 
               return (
                 <motion.div key={mission.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -156,7 +143,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
 
                   {/* 실천자 정보 헤더 */}
                   <div className="bg-slate-50 px-4 py-3 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-3">
                       <button onClick={() => navigate(`/students/${mission.assigneeId}`)}
                         className="flex items-center gap-2">
                         <div className="w-9 h-9 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl overflow-hidden flex items-center justify-center text-lg">
@@ -165,31 +152,15 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                             : assignee?.avatar}
                         </div>
                         <div className="text-left">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-black text-gray-800">{assignee?.name}</span>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${sc.bg} ${sc.color}`}>{sc.label}</span>
-                          </div>
-                          <p className="text-[11px] text-gray-400">실천자 리포트 보기 →</p>
+                          <span className="text-sm font-black text-gray-800">{assignee?.name}</span>
+                          <p className="text-[11px] text-gray-400">학생 활동 보기 →</p>
                         </div>
                       </button>
-                      <div className="text-right">
-                        <p className="text-[11px] text-gray-400">이번주 수행률</p>
-                        <p className={`text-sm font-black ${weekRate >= 70 ? 'text-emerald-600' : 'text-amber-600'}`}>{weekRate}%</p>
-                      </div>
+                      <span className="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">승인 대기</span>
                     </div>
 
-                    {/* 실천자 간단 통계 */}
-                    <div className="flex items-center gap-3 mt-2">
-                      <div className="flex items-center gap-1">
-                        <TrendingUp size={11} className="text-indigo-400" />
-                        <span className="text-[11px] text-gray-500">전체 수행률 {overallRate}%</span>
-                      </div>
-                      {unsubmitted > 0 && (
-                        <div className="flex items-center gap-1">
-                          <AlertCircle size={11} className="text-red-400" />
-                          <span className="text-[11px] text-red-500">미제출 {unsubmitted}건</span>
-                        </div>
-                      )}
+                    <div className="mt-2 flex items-center gap-2">
+                      {submission && <span className="text-[11px] font-bold text-slate-500">{formatDateTime(submission.submittedAt)} · {submission.attemptNumber}회차 제출</span>}
                       {mission.missionType && (
                         <span className="text-[11px] bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-md font-semibold">
                           {missionTypeLabel[mission.missionType] ?? mission.missionType}
@@ -427,8 +398,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
       <Modal isOpen={parentShareModal} onClose={() => setParentShareModal(false)} title="📤 보호자 공유">
         {parentShareMission && (() => {
           const student = getUser(parentShareMission.assigneeId);
-          const weekRate = student ? getWeeklyRate(missions, student.id) : 0;
-          const unsubmitted = student ? getUnsubmittedCount(missions, student.id) : 0;
+          const submission = getLatestSubmission(parentShareMission.id);
           return (
             <div className="space-y-4">
               {/* 실천자 요약 */}
@@ -439,11 +409,8 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                     : student?.avatar}
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-gray-800 text-sm">{student?.name} 실천자</p>
-                  <div className="flex items-center gap-3 mt-0.5">
-                    <span className="text-[11px] text-gray-400">이번 주 {weekRate}%</span>
-                    {unsubmitted > 0 && <span className="text-[11px] text-red-500">미제출 {unsubmitted}건</span>}
-                  </div>
+                  <p className="font-bold text-gray-800 text-sm">{student?.name} 학생</p>
+                  <p className="mt-0.5 text-[11px] text-gray-400">{submission ? `${formatDateTime(submission.submittedAt)} · ${submission.attemptNumber}회차 제출` : '제출 기록 확인 필요'}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] text-gray-400">미션</p>
@@ -453,7 +420,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
 
               {/* 리더 의견 */}
               <div>
-                <p className="text-xs font-bold text-gray-500 mb-2">리더 의견 <span className="text-red-400">*</span></p>
+                <p className="text-xs font-bold text-gray-500 mb-2">선생님 의견 <span className="text-red-400">*</span></p>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {[
                     '잘 따라오고 있어요 👍',
@@ -482,7 +449,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
               <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3">
                 <p className="text-[10px] font-bold text-emerald-600 mb-1.5">📋 전송 미리보기</p>
                 <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">
-                  {`[미션 알림] ${student?.name ?? ''} 실천자\n\n미션: ${parentShareMission.title}\n\n리더 의견:\n${parentShareMsg || '(의견을 입력해주세요)'}\n\n— ${currentUser?.name} 리더`}
+                  {`[활동 알림] ${student?.name ?? ''} 학생\n\n미션: ${parentShareMission.title}\n\n선생님 의견:\n${parentShareMsg || '(의견을 입력해주세요)'}\n\n— ${currentUser?.name} 선생님`}
                 </p>
               </div>
 
@@ -510,7 +477,12 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
           </div>
           <textarea value={comment} onChange={(e) => setComment(e.target.value)}
             placeholder="직접 입력하세요..." rows={3} className="input-field" />
-          <Button fullWidth onClick={() => { setCommentModal(false); setComment(''); }} disabled={!comment.trim()}>
+          <Button fullWidth onClick={() => {
+            if (selectedMission && comment.trim()) addTeacherNote(selectedMission.assigneeId, `${selectedMission.title}: ${comment.trim()}`);
+            setCommentModal(false);
+            setSelectedMission(null);
+            setComment('');
+          }} disabled={!comment.trim()}>
             코멘트 저장
           </Button>
         </div>

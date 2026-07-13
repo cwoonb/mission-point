@@ -25,7 +25,7 @@ export default function StudentsPage() {
   const currentUser = useAuthStore((state) => state.currentUser);
   const users = useAuthStore((state) => state.users);
   const groups = useGroupStore((state) => state.groups);
-  const missions = useMissionStore((state) => state.missions);
+  const { missions, submissions, reviewLogs } = useMissionStore();
   if (!currentUser) return null;
 
   const period = (params.get('period') as Period) || '30';
@@ -36,19 +36,26 @@ export default function StudentsPage() {
   const selectedRange = range(period, params.get('start'), params.get('end'));
   const myGroups = groups.filter((group) => group.facilitatorId === currentUser.id);
   const groupIds = new Set(myGroups.map((group) => group.id));
-  const feedbackMissionIds = new Set(useMissionStore.getState().reviewLogs.map((log) => log.missionId));
+  const feedbackMissionIds = new Set(reviewLogs.map((log) => log.missionId));
 
   const update = (key: string, value?: string) => { const next = new URLSearchParams(params); value ? next.set(key, value) : next.delete(key); setParams(next); };
   const rows = users.filter((user) => user.role === 'CHILD' && user.groupId && groupIds.has(user.groupId)).map((user) => {
     const all = missions.filter((mission) => mission.creatorId === currentUser.id && mission.assigneeId === user.id);
     const periodMissions = all.filter((mission) => overlapsPeriod(mission, selectedRange.start, selectedRange.end));
     const stats = calculateClassStats(periodMissions);
-    const last = [...all].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    const missionIds = new Set(all.map((mission) => mission.id));
+    const activityDates = [
+      ...all.map((mission) => mission.createdAt),
+      ...submissions.filter((submission) => missionIds.has(submission.missionId)).map((submission) => submission.submittedAt),
+      ...reviewLogs.filter((log) => missionIds.has(log.missionId)).map((log) => log.createdAt),
+    ];
+    const lastActivityAt = activityDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+    const last = lastActivityAt ? { createdAt: lastActivityAt } : undefined;
     return { user, missions: periodMissions, stats, last, feedback: periodMissions.some((mission) => feedbackMissionIds.has(mission.id)), className: myGroups.find((group) => group.id === user.groupId)?.name ?? '미배정' };
   }).filter((row) => {
     const classMatch = classId === 'all' || row.user.groupId === classId;
     const queryMatch = row.user.name.toLowerCase().includes(query.trim().toLowerCase());
-    const statusMatch = status === 'all' || (status === 'active' && row.stats.inProgress > 0) || (status === 'missing' && row.stats.missing > 0) || (status === 'pending' && row.stats.pending > 0) || (status === 'feedback' && row.feedback) || (status === 'recent' && !!row.last);
+    const statusMatch = status === 'all' || (status === 'active' && row.stats.inProgress > 0) || (status === 'missing' && row.stats.missing > 0) || (status === 'pending' && row.stats.pending > 0) || (status === 'feedback' && row.feedback) || (status === 'recent' && row.missions.length > 0);
     return classMatch && queryMatch && statusMatch;
   }).sort((a, b) => sort === 'name' ? a.user.name.localeCompare(b.user.name) : sort === 'active' ? b.stats.inProgress - a.stats.inProgress : sort === 'missing' ? b.stats.missing - a.stats.missing : sort === 'pending' ? b.stats.pending - a.stats.pending : new Date(b.last?.createdAt ?? 0).getTime() - new Date(a.last?.createdAt ?? 0).getTime());
 
