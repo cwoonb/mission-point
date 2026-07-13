@@ -6,7 +6,6 @@ import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { useGroupStore } from '../store/groupStore';
 import { buildLeaderSnapshot } from '../utils/leaderAnalytics';
-import { statusConfig } from '../utils/studentStats';
 import {
   filterMissionsByAnalyticsPeriod,
   getAnalyticsPeriodLabel,
@@ -119,15 +118,16 @@ function FacilitatorHome() {
           {attentionStudents.length === 0 ? (
             <div className="rounded-2xl bg-emerald-50 p-4 text-center text-xs font-bold text-emerald-700">현재 집중 관리가 필요한 학생이 없습니다.</div>
           ) : attentionStudents.slice(0, 3).map((row) => {
-            const config = statusConfig[row.status];
+            const inactiveDays = Math.max(0, Math.floor((Date.now() - new Date(row.lastActiveAt).getTime()) / 86400000));
+            const needsSubmission = row.missed > 0;
             return (
               <button key={row.user.id} onClick={() => navigate(`/students/${row.user.id}`)} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm">
                 <span className="text-2xl">{row.user.avatar}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black text-slate-800">{row.user.name} · {row.className}</span>
-                  <span className="text-[11px] font-bold text-slate-400">미제출 {row.missed}건 · 최근 활동 확인</span>
+                  <span className="text-[11px] font-bold text-slate-400">{needsSubmission ? `미제출 ${row.missed}건 · 최근 활동 확인` : `${inactiveDays}일간 활동 기록 없음`}</span>
                 </span>
-                <span className={`rounded-full px-2 py-1 text-[9px] font-black ${config.bg} ${config.color}`}>{config.label}</span>
+                <span className={`rounded-full px-2 py-1 text-[9px] font-black ${needsSubmission ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{needsSubmission ? '미제출' : '활동 확인'}</span>
                 <ChevronRight size={14} className="text-slate-300" />
               </button>
             );
@@ -139,7 +139,7 @@ function FacilitatorHome() {
             <Lightbulb size={17} className="text-purple-600" />
             <h2 className="text-sm font-black text-purple-800">활동 요약</h2>
           </div>
-          <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{assignedCount === 0 ? '선택한 기간에 등록된 미션이 없습니다. 새 미션이 등록되면 진행 현황이 표시됩니다.' : snapshot.insights[0]}</p>
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{assignedCount === 0 ? '선택한 기간에 등록된 미션이 없습니다. 새 미션이 등록되면 진행 현황이 표시됩니다.' : snapshot.missedCount > 0 ? `미제출 ${snapshot.missedCount}건이 있습니다. 학생 목록에서 오래된 활동부터 확인해 주세요.` : snapshot.pendingReviewCount > 0 ? `검토를 기다리는 제출물 ${snapshot.pendingReviewCount}건이 있습니다.` : '현재 우선 확인이 필요한 미제출 항목이 없습니다.'}</p>
           <button onClick={() => navigate('/students')} className="mt-3 flex items-center gap-1 text-xs font-black text-purple-600">학생 활동 보기 <ChevronRight size={13} /></button>
         </section>
       </main>
