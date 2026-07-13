@@ -17,6 +17,7 @@ import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
 import type { Mission, MissionStatus } from '../types';
 import { formatDate, formatDateTime } from '../utils/helpers';
+import { getActiveDemoScenario } from '../data/demoSession';
 
 const STATUS: Record<MissionStatus, { label: string; tone: string }> = {
   PENDING: { label: '시작 전', tone: 'bg-slate-100 text-slate-600' },
@@ -43,7 +44,9 @@ export default function StudentDetailPage() {
   const [rejectReason, setRejectReason] = useState<Record<string, string>>({});
 
   const student = users.find((user) => user.id === id);
-  if (!student) return <div className="page-container"><Header title="학생 정보" showBack /><main className="content-area flex items-center justify-center px-6 text-center text-sm font-bold text-slate-400">학생을 찾을 수 없습니다.</main></div>;
+  const demoScenario = currentUser?.id.startsWith('demo-') ? getActiveDemoScenario() : null;
+  const memberLabel = demoScenario?.memberLabel ?? '학생';
+  if (!student) return <div className="page-container"><Header title={`${memberLabel} 정보`} showBack /><main className="content-area flex items-center justify-center px-6 text-center text-sm font-bold text-slate-400">{memberLabel}을 찾을 수 없습니다.</main></div>;
 
   const period = params.get('period') ?? '30';
   const cutoff = period === 'all' ? null : (() => { const date = new Date(); date.setDate(date.getDate() - Number(period || 30) + 1); date.setHours(0, 0, 0, 0); return date; })();
@@ -69,7 +72,7 @@ export default function StudentDetailPage() {
   };
 
   return <div className="page-container bg-slate-50">
-    <Header title="학생 상세" showBack showPoints={false} />
+    <Header title={`${memberLabel} 상세`} showBack showPoints={false} />
     <main className="content-area space-y-4 px-4 py-4">
       <section className="rounded-3xl bg-gradient-to-br from-slate-800 to-slate-950 p-5 text-white shadow-lg">
         <div className="flex items-center gap-4">
@@ -93,7 +96,7 @@ export default function StudentDetailPage() {
       </section>}
 
       <section className="rounded-3xl bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2"><CalendarClock size={17} className="text-purple-600"/><h2 className="font-black text-slate-800">최근 활동</h2></div><button onClick={() => navigate(`/students?period=${period}`)} className="min-h-10 text-xs font-black text-purple-600">학생 목록</button></div>
+        <div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2"><CalendarClock size={17} className="text-purple-600"/><h2 className="font-black text-slate-800">최근 활동</h2></div><button onClick={() => navigate(`/students?period=${period}`)} className="min-h-10 text-xs font-black text-purple-600">{memberLabel} 목록</button></div>
         {recent.length === 0 ? <p className="rounded-2xl bg-slate-50 px-4 py-8 text-center text-sm font-bold text-slate-400">선택 기간에 활동 기록이 없습니다.</p> : <div className="space-y-2">{recent.map(({ mission, submission, review }) => <button key={mission.id} onClick={() => navigate(`/missions/${mission.id}`)} className="flex min-h-16 w-full items-center gap-3 rounded-2xl bg-slate-50 p-3 text-left">
           <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${STATUS[mission.status].tone}`}>{mission.status === 'SUCCESS' ? <CheckCircle2 size={18}/> : mission.status === 'REJECTED' ? <RefreshCcw size={18}/> : <FileText size={18}/>}</span>
           <span className="min-w-0 flex-1"><strong className="block truncate text-sm text-slate-800">{mission.title}</strong><span className="mt-0.5 block truncate text-[11px] font-bold text-slate-400">{review?.reason || submission?.message || mission.description || '활동 기록'}</span></span>

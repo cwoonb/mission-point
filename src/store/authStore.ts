@@ -113,6 +113,7 @@ interface AuthState {
 
 // users 테이블에 로컬 상태를 반영하는 헬퍼 (실패해도 로컬 상태는 이미 갱신된 상태로 둠)
 const pushUserUpdate = (userId: string, patch: Record<string, unknown>) => {
+  if (isDemoUserId(userId)) return;
   supabase.from('users').update(patch).eq('id', userId).then(({ error }) => {
     if (error) console.error('Supabase user update failed:', error.message);
   });
@@ -129,8 +130,7 @@ export const useAuthStore = create<AuthState>()(
       isDemoMode: false,
 
       initializeData: async () => {
-        if (get().currentUser && isDemoUserId(get().currentUser?.id)) {
-          set({ users: initialUsers, isDemoMode: true });
+        if (get().isDemoMode && get().currentUser && isDemoUserId(get().currentUser?.id)) {
           return;
         }
         const { data, error } = await supabase.from('users').select('*');

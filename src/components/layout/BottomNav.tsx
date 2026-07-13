@@ -9,6 +9,7 @@ import {
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../store/authStore';
 import { useMissionStore } from '../../store/missionStore';
+import { getActiveDemoScenario } from '../../data/demoSession';
 
 type NavTab = {
   to: string;
@@ -24,6 +25,7 @@ export default function BottomNav() {
   const pendingReviews = missions.filter(
     (m) => m.status === 'REVIEWING' && m.creatorId === currentUser?.id
   ).length;
+  const memberLabel = currentUser?.id.startsWith('demo-') ? getActiveDemoScenario().memberLabel : '학생';
 
   const performerTabs: NavTab[] = [
     { to: '/', icon: Home, label: '홈' },
@@ -35,7 +37,7 @@ export default function BottomNav() {
   const facilitatorTabs: NavTab[] = [
     { to: '/', icon: Home, label: '홈' },
     { to: '/missions', icon: Target, label: '미션', badge: pendingReviews },
-    { to: '/students', icon: UsersRound, label: '학생' },
+    { to: '/students', icon: UsersRound, label: memberLabel },
     { to: '/profile', icon: User, label: '내 정보' },
   ];
 

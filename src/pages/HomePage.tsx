@@ -11,6 +11,7 @@ import {
   getAnalyticsPeriodLabel,
   useAnalyticsPeriodStore,
 } from '../store/analyticsPeriodStore';
+import { getActiveDemoScenario } from '../data/demoSession';
 
 function FacilitatorHome() {
   const navigate = useNavigate();
@@ -20,6 +21,8 @@ function FacilitatorHome() {
   const { selectedPeriod, customStart, customEnd } = useAnalyticsPeriodStore();
 
   if (!currentUser) return null;
+  const demoScenario = currentUser.id.startsWith('demo-') ? getActiveDemoScenario() : null;
+  const memberLabel = demoScenario?.memberLabel ?? '학생';
 
   const periodMissions = filterMissionsByAnalyticsPeriod(missions, selectedPeriod, customStart, customEnd);
   const assignedCount = periodMissions.filter((mission) => mission.creatorId === currentUser.id).length;
@@ -66,7 +69,7 @@ function FacilitatorHome() {
           <div className="grid grid-cols-2 gap-2">
           {[
             { label: '미션 만들기', icon: Plus, to: '/missions/create', color: 'bg-purple-600' },
-            { label: '학생 초대', icon: UserPlus, to: '/students', color: 'bg-emerald-600' },
+            { label: `${memberLabel} 관리`, icon: UserPlus, to: '/students', color: 'bg-emerald-600' },
           ].map(({ label, icon: Icon, to, color }) => (
             <button
               key={label}
@@ -112,8 +115,8 @@ function FacilitatorHome() {
 
         <section className="space-y-2">
           <div className="flex items-center justify-between px-1">
-            <h2 className="font-black text-slate-800">오늘 확인할 학생</h2>
-            <button onClick={() => navigate('/students')} className="flex items-center text-xs font-black text-purple-600">학생 관리 <ChevronRight size={14} /></button>
+            <h2 className="font-black text-slate-800">오늘 확인할 {memberLabel}</h2>
+            <button onClick={() => navigate('/students')} className="flex items-center text-xs font-black text-purple-600">{memberLabel} 관리 <ChevronRight size={14} /></button>
           </div>
           {attentionStudents.length === 0 ? (
             <div className="rounded-2xl bg-emerald-50 p-4 text-center text-xs font-bold text-emerald-700">현재 집중 관리가 필요한 학생이 없습니다.</div>
@@ -139,7 +142,7 @@ function FacilitatorHome() {
             <h2 className="text-sm font-black text-purple-800">활동 요약</h2>
           </div>
           <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{assignedCount === 0 ? '선택한 기간에 등록된 미션이 없습니다. 새 미션이 등록되면 진행 현황이 표시됩니다.' : snapshot.missedCount > 0 ? `미제출 ${snapshot.missedCount}건이 있습니다. 학생 목록에서 오래된 활동부터 확인해 주세요.` : snapshot.pendingReviewCount > 0 ? `검토를 기다리는 제출물 ${snapshot.pendingReviewCount}건이 있습니다.` : '현재 우선 확인이 필요한 미제출 항목이 없습니다.'}</p>
-          <button onClick={() => navigate('/students')} className="mt-3 flex items-center gap-1 text-xs font-black text-purple-600">학생 활동 보기 <ChevronRight size={13} /></button>
+          <button onClick={() => navigate('/students')} className="mt-3 flex items-center gap-1 text-xs font-black text-purple-600">{memberLabel} 활동 보기 <ChevronRight size={13} /></button>
         </section>
       </main>
     </div>

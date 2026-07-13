@@ -204,6 +204,7 @@ export const useMissionStore = create<MissionState>()(
       },
 
       autoGenerateRepeatMissions: () => {
+        if (get().demoMode) return;
         const missions = get().missions;
         const now = new Date();
         const repeatMissions = missions.filter((m) => m.repeatType && m.repeatType !== 'ONCE');
@@ -274,6 +275,10 @@ export const useMissionStore = create<MissionState>()(
           status: 'IN_PROGRESS',
           createdAt: new Date().toISOString(),
         };
+        if (get().demoMode) {
+          set((s) => ({ missions: [...s.missions, mission] }));
+          return mission;
+        }
         const { data: created, error } = await supabase.from('missions').insert(missionToRow(mission)).select('*').single();
         if (error) {
           console.error('Failed to create mission in Supabase:', error.message);
@@ -290,6 +295,7 @@ export const useMissionStore = create<MissionState>()(
             m.id === missionId ? { ...m, ...data } : m
           ),
         }));
+        if (get().demoMode) return;
         const patch: Record<string, unknown> = {};
         if (data.title !== undefined) patch.title = data.title;
         if (data.description !== undefined) patch.description = data.description;
@@ -307,13 +313,14 @@ export const useMissionStore = create<MissionState>()(
             m.id === missionId ? { ...m, status } : m
           ),
         }));
-        pushMissionUpdate(missionId, { status });
+        if (!get().demoMode) pushMissionUpdate(missionId, { status });
       },
 
       deleteMission: (missionId) => {
         set((s) => ({
           missions: s.missions.filter((m) => m.id !== missionId),
         }));
+        if (get().demoMode) return;
         supabase.from('missions').delete().eq('id', missionId).then(({ error }) => {
           if (error) console.error('Failed to delete mission in Supabase:', error.message);
         });
@@ -333,16 +340,18 @@ export const useMissionStore = create<MissionState>()(
           submittedAt: new Date().toISOString(),
         };
 
-        const { error: subError } = await supabase.from('mission_submissions').insert({
-          id: submission.id,
-          mission_id: submission.missionId,
-          user_id: submission.userId,
-          message: submission.message ?? null,
-          image_url: submission.imageUrl ?? null,
-          attempt_number: submission.attemptNumber,
-          submitted_at: submission.submittedAt,
-        });
-        if (subError) console.error('Failed to save submission in Supabase:', subError.message);
+        if (!get().demoMode) {
+          const { error: subError } = await supabase.from('mission_submissions').insert({
+            id: submission.id,
+            mission_id: submission.missionId,
+            user_id: submission.userId,
+            message: submission.message ?? null,
+            image_url: submission.imageUrl ?? null,
+            attempt_number: submission.attemptNumber,
+            submitted_at: submission.submittedAt,
+          });
+          if (subError) console.error('Failed to save submission in Supabase:', subError.message);
+        }
 
         set((s) => ({
           submissions: [...s.submissions, submission],
@@ -350,7 +359,7 @@ export const useMissionStore = create<MissionState>()(
             m.id === missionId ? { ...m, status: 'REVIEWING' } : m
           ),
         }));
-        pushMissionUpdate(missionId, { status: 'REVIEWING' });
+        if (!get().demoMode) pushMissionUpdate(missionId, { status: 'REVIEWING' });
         return submission;
       },
 

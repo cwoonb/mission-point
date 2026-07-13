@@ -81,7 +81,7 @@ function PublicRoutes() {
 }
 
 function AppContent() {
-  const { currentUser, pendingSocialProfile, socialLogin, initializeData: initAuth } = useAuthStore();
+  const { currentUser, pendingSocialProfile, socialLogin, initializeData: initAuth, isDemoMode } = useAuthStore();
   const { initializeData: initMissions, autoGenerateRepeatMissions } = useMissionStore();
   const { initializeData: initGroups } = useGroupStore();
   const { initializeData: initTemplates } = useTemplateStore();
@@ -110,6 +110,14 @@ function AppContent() {
       socialLogin(profile);
     });
   }, []);
+
+  useEffect(() => {
+    if (!currentUser || isDemoMode || !useMissionStore.getState().demoMode) return;
+    useMissionStore.setState({ missions: [], submissions: [], reviewLogs: [], demoMode: false });
+    useGroupStore.setState({ groups: [], demoMode: false });
+    void initMissions();
+    initGroups();
+  }, [currentUser?.id, isDemoMode]);
 
   const showRegister = !currentUser && !!pendingSocialProfile;
 

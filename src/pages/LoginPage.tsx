@@ -4,13 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleLogin } from '@react-oauth/google';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
-import { startDemoSession } from '../data/demoSession';
+import { startDemoScenario } from '../data/demoSession';
+import { DEMO_SCENARIOS } from '../data/demoScenarios';
 import { googlePayloadToProfile, triggerKakaoLogin, initNaverLogin, triggerNaverLogin } from '../lib/socialAuth';
 import type { PendingSocialProfile } from '../types';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { socialLogin, login, users } = useAuthStore();
+  const { socialLogin } = useAuthStore();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDemo, setShowDemo] = useState(false);
@@ -55,8 +56,6 @@ export default function LoginPage() {
     triggerNaverLogin();
     // Result comes via URL hash redirect — handled in App.tsx
   };
-
-  const demoUsers = users.filter((u) => !u.socialProvider);
 
   return (
     <div className="page-container flex flex-col bg-white overflow-y-auto overflow-x-hidden">
@@ -197,24 +196,25 @@ export default function LoginPage() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="border-t border-gray-100 px-4 pb-4 pt-3 grid gap-2">
-                  {demoUsers.map((user) => (
-                    <button
-                      key={user.id}
-                      onClick={() => { startDemoSession(user.id) || login(user.id); navigate('/', { replace: true }); }}
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 hover:bg-purple-50 active:scale-98 transition-all text-left"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-xl flex items-center justify-center text-xl flex-shrink-0">
-                        {user.avatar}
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-800 text-sm">{user.name}</p>
-                        <p className="text-xs text-gray-400">
-                          {user.role === 'CHILD' ? '수행자' : '리더'}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
+                <div className="border-t border-gray-100 px-4 pb-4 pt-3">
+                  <div className="mb-3">
+                    <p className="text-sm font-black text-slate-800">어떤 운영 환경을 체험할까요?</p>
+                    <p className="mt-0.5 text-[11px] font-bold text-slate-400">업종마다 완전히 다른 데이터가 준비됩니다.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {DEMO_SCENARIOS.map((scenario) => (
+                      <button
+                        key={scenario.id}
+                        onClick={() => { startDemoScenario(scenario.id); navigate('/', { replace: true }); }}
+                        className="min-h-32 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-left transition-all hover:border-purple-200 hover:bg-purple-50 active:scale-[0.98]"
+                      >
+                        <span className="text-2xl">{scenario.emoji}</span>
+                        <p className="mt-2 text-xs font-black text-slate-800">{scenario.name}</p>
+                        <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-400">{scenario.description}</p>
+                        <p className="mt-2 text-[9px] font-black text-purple-600">{scenario.memberLabel} {scenario.memberCount} · 미션 {scenario.missionCount}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             )}

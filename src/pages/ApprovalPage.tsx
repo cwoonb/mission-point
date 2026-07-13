@@ -12,6 +12,8 @@ import { useMissionStore } from '../store/missionStore';
 import { formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
 import { missionTypeLabel } from '../utils/studentStats';
 import type { Mission } from '../types';
+import { getActiveDemoScenario } from '../data/demoSession';
+import { getDemoFacilitatorLabel } from '../data/demoScenarios';
 
 const REJECT_REASONS = [
   '사진이 흐립니다.',
@@ -49,6 +51,9 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
   const [sharedStudentId, setSharedStudentId] = useState<string | null>(null);
 
   if (!currentUser) return null;
+  const scenario = currentUser.id.startsWith('demo-') ? getActiveDemoScenario() : null;
+  const memberLabel = scenario?.memberLabel ?? '학생';
+  const facilitatorLabel = scenario ? getDemoFacilitatorLabel(scenario.id) : '선생님';
 
   const pendingMissions = missions.filter(
     (m) => m.status === 'REVIEWING' && m.creatorId === currentUser.id
@@ -95,7 +100,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
   const handleShareToParent = async () => {
     if (!parentShareMission || !currentUser) return;
     const student = getUser(parentShareMission.assigneeId);
-    const text = `[활동 알림] ${student?.name ?? ''} 학생\n\n미션: ${parentShareMission.title}\n\n선생님 의견:\n${parentShareMsg}\n\n— ${currentUser.name} 선생님`;
+    const text = `[활동 알림] ${student?.name ?? ''} ${memberLabel}\n\n미션: ${parentShareMission.title}\n\n${facilitatorLabel} 의견:\n${parentShareMsg}\n\n— ${currentUser.name} ${facilitatorLabel}`;
     if (typeof navigator.share === 'function') {
       try { await navigator.share({ title: `${student?.name} 미션 알림`, text }); } catch {}
     } else {
@@ -153,7 +158,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                         </div>
                         <div className="text-left">
                           <span className="text-sm font-black text-gray-800">{assignee?.name}</span>
-                          <p className="text-[11px] text-gray-400">학생 활동 보기 →</p>
+                          <p className="text-[11px] text-gray-400">{memberLabel} 활동 보기 →</p>
                         </div>
                       </button>
                       <span className="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-black text-amber-700">승인 대기</span>
@@ -409,7 +414,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                     : student?.avatar}
                 </div>
                 <div className="flex-1">
-                  <p className="font-bold text-gray-800 text-sm">{student?.name} 학생</p>
+                  <p className="font-bold text-gray-800 text-sm">{student?.name} {memberLabel}</p>
                   <p className="mt-0.5 text-[11px] text-gray-400">{submission ? `${formatDateTime(submission.submittedAt)} · ${submission.attemptNumber}회차 제출` : '제출 기록 확인 필요'}</p>
                 </div>
                 <div className="text-right">
@@ -420,7 +425,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
 
               {/* 리더 의견 */}
               <div>
-                <p className="text-xs font-bold text-gray-500 mb-2">선생님 의견 <span className="text-red-400">*</span></p>
+                <p className="text-xs font-bold text-gray-500 mb-2">{facilitatorLabel} 의견 <span className="text-red-400">*</span></p>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {[
                     '잘 따라오고 있어요 👍',
@@ -449,7 +454,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
               <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3">
                 <p className="text-[10px] font-bold text-emerald-600 mb-1.5">📋 전송 미리보기</p>
                 <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">
-                  {`[활동 알림] ${student?.name ?? ''} 학생\n\n미션: ${parentShareMission.title}\n\n선생님 의견:\n${parentShareMsg || '(의견을 입력해주세요)'}\n\n— ${currentUser?.name} 선생님`}
+                  {`[활동 알림] ${student?.name ?? ''} ${memberLabel}\n\n미션: ${parentShareMission.title}\n\n${facilitatorLabel} 의견:\n${parentShareMsg || '(의견을 입력해주세요)'}\n\n— ${currentUser?.name} ${facilitatorLabel}`}
                 </p>
               </div>
 
