@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleLogin } from '@react-oauth/google';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { startDemoSession } from '../data/demoSession';
 import { googlePayloadToProfile, triggerKakaoLogin, initNaverLogin, triggerNaverLogin } from '../lib/socialAuth';
 import type { PendingSocialProfile } from '../types';
 
@@ -200,7 +201,7 @@ export default function LoginPage() {
                   {demoUsers.map((user) => (
                     <button
                       key={user.id}
-                      onClick={() => { login(user.id); navigate('/', { replace: true }); }}
+                      onClick={() => { startDemoSession(user.id) || login(user.id); navigate('/', { replace: true }); }}
                       className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50 hover:bg-purple-50 active:scale-98 transition-all text-left"
                     >
                       <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-xl flex items-center justify-center text-xl flex-shrink-0">

@@ -8,7 +8,7 @@ export interface HomeworkStats {
   pending: number;
   missing: number;
   inProgress: number;
-  completionRate: number;
+  completionRate: number | null;
 }
 
 const COMPLETED = new Set(['SUCCESS', 'COMPLETED']);
@@ -68,7 +68,7 @@ export function calculateHomeworkStats(missions: Mission[], now = new Date()): H
     pending,
     missing,
     inProgress,
-    completionRate: total === 0 ? 0 : Math.round((completed / total) * 100),
+    completionRate: total === 0 ? null : Math.round((completed / total) * 100),
   };
 }
 
@@ -86,7 +86,7 @@ export function calculateClassStats(missions: Mission[], now = new Date()): Home
   const missing = statuses.filter((status) => status === 'missing').length;
   const inProgress = statuses.filter((status) => status === 'in_progress').length;
   const total = assignments.length;
-  return { total, completed, pending, missing, inProgress, completionRate: total === 0 ? 0 : Math.round((completed / total) * 100) };
+  return { total, completed, pending, missing, inProgress, completionRate: total === 0 ? null : Math.round((completed / total) * 100) };
 }
 export const calculateCompletionCount = (missions: Mission[]) => calculateHomeworkStats(missions).completed;
 export const calculatePendingCount = (missions: Mission[]) => calculateHomeworkStats(missions).pending;

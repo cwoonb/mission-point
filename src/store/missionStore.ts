@@ -136,6 +136,7 @@ interface MissionState {
   missions: Mission[];
   submissions: MissionSubmission[];
   reviewLogs: MissionReviewLog[];
+  demoMode: boolean;
 
   initializeData: () => Promise<void>;
   autoGenerateRepeatMissions: () => void;
@@ -162,8 +163,10 @@ export const useMissionStore = create<MissionState>()(
       missions: [],
       submissions: [],
       reviewLogs: [],
+      demoMode: false,
 
       initializeData: async () => {
+        if (get().demoMode) return;
         const [{ data: missionRows, error: mErr }, { data: subRows, error: sErr }, { data: logRows, error: lErr }] = await Promise.all([
           supabase.from('missions').select('*'),
           supabase.from('mission_submissions').select('*'),
@@ -367,8 +370,8 @@ export const useMissionStore = create<MissionState>()(
             m.id === missionId ? { ...m, status: 'SUCCESS' } : m
           ),
         }));
-        pushMissionUpdate(missionId, { status: 'SUCCESS' });
-        if (log) supabase.from('mission_review_logs').insert({
+        if (!get().demoMode) pushMissionUpdate(missionId, { status: 'SUCCESS' });
+        if (log && !get().demoMode) supabase.from('mission_review_logs').insert({
           id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
           reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
         }).then(({ error }) => {
@@ -393,8 +396,8 @@ export const useMissionStore = create<MissionState>()(
             m.id === missionId ? { ...m, status: 'REJECTED' } : m
           ),
         }));
-        pushMissionUpdate(missionId, { status: 'REJECTED' });
-        if (log) supabase.from('mission_review_logs').insert({
+        if (!get().demoMode) pushMissionUpdate(missionId, { status: 'REJECTED' });
+        if (log && !get().demoMode) supabase.from('mission_review_logs').insert({
           id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
           reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
         }).then(({ error }) => {

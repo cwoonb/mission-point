@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import type { MissionDisplayStatus } from '../utils/missionStats';
 import { calculateHomeworkStats, getLatestReviewByMission, getLatestSubmissionByMission, groupMissionsByHomework, missionsByDisplayStatus } from '../utils/missionStats';
+import { formatFriendlyDateTime, formatMissionPeriod } from '../utils/missionDates';
 
 type Filter = 'all' | MissionDisplayStatus;
 const FILTERS: Array<[Filter, string]> = [['all', '전체'], ['completed', '완료'], ['pending', '승인 대기'], ['missing', '미제출'], ['in_progress', '진행 중']];
@@ -28,9 +29,9 @@ export default function HomeworkDetailPage() {
     <Header title={base.title} showBack showPoints={false}/>
     <main className="content-area space-y-4 px-4 py-4">
       <section className="rounded-3xl bg-white p-4 shadow-sm">
-        <p className="text-xs font-bold text-slate-400">{typeLabel[base.missionType ?? 'OTHER']} · {new Date(base.endDate).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}까지</p>
+        <p className="text-xs font-bold text-slate-400">{typeLabel[base.missionType ?? 'OTHER']} · {formatMissionPeriod(base)}</p><p className="mt-1 text-[11px] font-black text-purple-600">{formatFriendlyDateTime(base.endDate)}까지</p>
         <div className="mt-3 grid grid-cols-5 gap-1 text-center"><div><p className="text-xl font-black text-slate-800">{stats.total}</p><p className="text-[9px] text-slate-400">전체 학생</p></div><div><p className="text-xl font-black text-emerald-600">{stats.completed}</p><p className="text-[9px] text-slate-400">완료</p></div><div><p className="text-xl font-black text-orange-600">{stats.pending}</p><p className="text-[9px] text-slate-400">승인 대기</p></div><div><p className="text-xl font-black text-red-600">{stats.missing}</p><p className="text-[9px] text-slate-400">미제출</p></div><div><p className="text-xl font-black text-blue-600">{stats.inProgress}</p><p className="text-[9px] text-slate-400">진행 중</p></div></div>
-        <div className="mt-4 flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-purple-500" style={{ width: `${stats.completionRate}%` }}/></div><span className="text-xs font-black text-purple-600">{stats.completionRate}%</span></div>
+        {stats.completionRate === null ? <p className="mt-4 text-center text-sm font-bold text-slate-400">배정된 학생이 없습니다.</p> : <div className="mt-4 flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-purple-500" style={{ width: `${stats.completionRate}%` }}/></div><span className="text-xs font-black text-purple-600">{stats.completionRate}%</span></div>}
       </section>
 
       <div className="grid grid-cols-5 gap-1 rounded-2xl bg-white p-1 shadow-sm">{FILTERS.map(([key, label]) => { const count = key === 'all' ? stats.total : key === 'in_progress' ? stats.inProgress : stats[key]; return <button key={key} onClick={() => setFilter(key)} className={`min-h-11 rounded-xl px-0.5 text-[9px] font-black ${filter === key ? 'bg-purple-600 text-white' : 'text-slate-500'}`}>{label} {count}</button>; })}</div>

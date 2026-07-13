@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { User, ViewMode, PendingSocialProfile, SocialProvider, UserRole, StatusThresholds } from '../types';
 import { initialUsers, initialGroups } from '../data/mockData';
 import { supabase } from '../lib/supabase';
+import { isDemoUserId } from '../utils/demoMode';
 
 const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
@@ -85,6 +86,7 @@ interface AuthState {
   viewMode: ViewMode;
   pendingSocialProfile: PendingSocialProfile | null;
   teacherNotes: Record<string, TeacherNote[]>;
+  isDemoMode: boolean;
 
   initializeData: () => Promise<void>;
   login: (userId: string) => void;
@@ -124,8 +126,13 @@ export const useAuthStore = create<AuthState>()(
       viewMode: 'FACILITATOR',
       pendingSocialProfile: null,
       teacherNotes: {},
+      isDemoMode: false,
 
       initializeData: async () => {
+        if (get().isDemoMode && get().currentUser && isDemoUserId(get().currentUser?.id)) {
+          set({ users: initialUsers });
+          return;
+        }
         const { data, error } = await supabase.from('users').select('*');
         if (error) {
           console.error('Failed to load users from Supabase:', error.message);
@@ -224,11 +231,12 @@ export const useAuthStore = create<AuthState>()(
           set({
             currentUser: user,
             viewMode: user.role === 'CHILD' ? 'PERFORMER' : 'FACILITATOR',
+            isDemoMode: isDemoUserId(user.id),
           });
         }
       },
 
-      logout: () => set({ currentUser: null }),
+      logout: () => set({ currentUser: null, isDemoMode: false }),
 
       switchViewMode: () => {
         const { viewMode, currentUser } = get();

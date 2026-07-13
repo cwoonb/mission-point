@@ -2,12 +2,12 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Mission } from '../types';
 
-export type AnalyticsPeriod = 'week' | 'month' | 'last30' | 'all' | 'custom';
+export type AnalyticsPeriod = 'last7' | 'last30' | 'last90' | 'all' | 'custom';
 
 export const ANALYTICS_PERIOD_OPTIONS: Array<{ value: AnalyticsPeriod; label: string; reportLabel: string }> = [
-  { value: 'week', label: '이번주', reportLabel: '이번 주' },
-  { value: 'month', label: '이번달', reportLabel: '이번 달' },
+  { value: 'last7', label: '최근 7일', reportLabel: '최근 7일' },
   { value: 'last30', label: '최근 30일', reportLabel: '최근 30일' },
+  { value: 'last90', label: '최근 3개월', reportLabel: '최근 3개월' },
   { value: 'all', label: '전체', reportLabel: '누적' },
   { value: 'custom', label: '사용자 지정', reportLabel: '선택 기간' },
 ];
@@ -30,8 +30,8 @@ initialStart.setDate(initialStart.getDate() - 6);
 export const useAnalyticsPeriodStore = create<AnalyticsPeriodState>()(
   persist(
     (set) => ({
-      selectedPeriod: 'week',
-      defaultPeriod: 'week',
+      selectedPeriod: 'last30',
+      defaultPeriod: 'last30',
       customStart: isoDate(initialStart),
       customEnd: isoDate(initialEnd),
       setSelectedPeriod: (selectedPeriod) => set({ selectedPeriod }),
@@ -58,15 +58,15 @@ export function getAnalyticsPeriodRange(
   end.setHours(23, 59, 59, 999);
   let start: Date;
 
-  if (period === 'week') {
+  if (period === 'last7') {
     start = new Date(now);
-    const day = start.getDay();
-    start.setDate(start.getDate() - (day === 0 ? 6 : day - 1));
-  } else if (period === 'month') {
-    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    start.setDate(start.getDate() - 6);
   } else if (period === 'last30') {
     start = new Date(now);
     start.setDate(start.getDate() - 29);
+  } else if (period === 'last90') {
+    start = new Date(now);
+    start.setDate(start.getDate() - 89);
   } else {
     start = customStart ? new Date(`${customStart}T00:00:00`) : new Date(0);
     const customEndDate = customEnd ? new Date(`${customEnd}T23:59:59.999`) : end;
@@ -85,7 +85,6 @@ export function filterMissionsByAnalyticsPeriod(
   const { start, end } = getAnalyticsPeriodRange(period, customStart, customEnd);
   if (!start || !end) return missions;
   return missions.filter((mission) => {
-    const date = new Date(mission.createdAt);
-    return date >= start && date <= end;
+    return new Date(mission.startDate) <= end && new Date(mission.endDate) >= start;
   });
 }

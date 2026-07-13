@@ -7,6 +7,7 @@ const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2
 
 interface GroupState {
   groups: PerformerGroup[];
+  demoMode: boolean;
   initializeData: () => void;
   createGroup: (params: { name: string; emoji: string; facilitatorId: string }) => PerformerGroup;
   deleteGroup: (groupId: string) => void;
@@ -18,8 +19,10 @@ export const useGroupStore = create<GroupState>()(
   persist(
     (set, get) => ({
       groups: [],
+      demoMode: false,
 
       initializeData: () => {
+        if (get().demoMode) return;
         const existing = get().groups;
         if (existing.length === 0) {
           set({ groups: initialGroups });

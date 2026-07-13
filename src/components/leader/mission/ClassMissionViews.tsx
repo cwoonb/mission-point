@@ -69,7 +69,7 @@ export function StudentAnalysisSummary({ student, expanded = false }: { student:
   return (
     <div className={`${expanded ? 'mt-3 bg-slate-50' : 'mt-1.5 bg-slate-50/80'} rounded-lg px-2.5 py-1.5`}>
       <p className="truncate text-[10px] font-semibold text-slate-600">
-        <span className="mr-1 font-black text-purple-600">AI</span>{shortSummary}
+        <span className="mr-1 font-black text-purple-600">요약</span>{shortSummary}
       </p>
     </div>
   );
@@ -177,7 +177,7 @@ export function StudentProgressCard({
               </div>
 
               <div className="mt-3 rounded-lg bg-purple-50 p-2.5">
-                <p className="text-[10px] font-black text-purple-700">AI 분석</p>
+                <p className="text-[10px] font-black text-purple-700">활동 요약</p>
                 <p className="mt-1 text-[10px] font-semibold leading-relaxed text-slate-600">
                   {student.analysisSummary} {student.missed > 0 ? `미제출 ${student.missed}건에 대한 보호자 안내를 권장합니다.` : '현재 수행 패턴을 유지해 주세요.'}
                 </p>

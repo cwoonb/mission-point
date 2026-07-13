@@ -32,7 +32,7 @@ describe('mission statistics', () => {
   });
 
   it('배정 학생 0명은 100%로 표시하지 않는다', () => {
-    expect(calculateHomeworkStats([], now)).toMatchObject({ total: 0, completionRate: 0 });
+    expect(calculateHomeworkStats([], now)).toMatchObject({ total: 0, completionRate: null });
   });
 
   it('반 통계는 학생별 최신 1건이 아니라 모든 학생-숙제 배정을 센다', () => {

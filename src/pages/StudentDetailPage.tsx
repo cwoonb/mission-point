@@ -78,8 +78,7 @@ export default function StudentDetailPage() {
   // 상담 메모
   const myNotes = teacherNotes[student.id] ?? [];
 
-  // AI 리포트 생성 (더미)
-  const aiReport = generateAIReport(student.name, weekRate, overallRate, unsubmitted, bestType?.type, worstType?.type, streak);
+  const activitySummary = generateActivitySummary(student.name, myMissions.length, weekRate, overallRate, unsubmitted, bestType?.type, worstType?.type, streak);
 
   return (
     <div className="page-container">
@@ -123,7 +122,7 @@ export default function StudentDetailPage() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
           className="bg-white rounded-3xl shadow-sm p-5 space-y-4">
           <p className="text-sm font-black text-gray-700 flex items-center gap-2"><BarChart3 size={16} className="text-purple-500" /> 수행률 현황</p>
-          <div className="space-y-3">
+          {myMissions.length === 0 ? <div className="rounded-2xl bg-slate-50 px-4 py-5 text-center"><p className="text-sm font-bold text-slate-600">선택한 기간에 배정된 미션이 없습니다.</p><p className="mt-1 text-xs text-slate-400">학생이 수행하지 않은 것이 아니라 현재 배정된 미션이 없는 상태입니다.</p></div> : <><div className="space-y-3">
             <div>
               <div className="flex justify-between mb-1">
                 <span className="text-xs text-gray-500">이번 주 수행률</span>
@@ -152,7 +151,7 @@ export default function StudentDetailPage() {
                 <p className="text-xs text-gray-500">{s.label}</p>
               </div>
             ))}
-          </div>
+          </div></>}
         </motion.div>
 
         {/* 미션 유형별 수행률 */}
@@ -318,7 +317,7 @@ export default function StudentDetailPage() {
           </AnimatePresence>
         </motion.div>
 
-        {/* AI 리포트 */}
+        {/* 실제 미션 데이터 기준 활동 요약 */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
           className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100 rounded-3xl p-5">
           <div className="flex items-center gap-2 mb-3">
@@ -326,11 +325,11 @@ export default function StudentDetailPage() {
               <span className="text-white text-sm">🤖</span>
             </div>
             <div>
-              <p className="text-sm font-black text-indigo-800">AI 학습 분석 리포트</p>
-              <p className="text-[10px] text-indigo-500">자동 생성 · 더미 데이터 기반</p>
+              <p className="text-sm font-black text-indigo-800">활동 요약</p>
+              <p className="text-[10px] text-indigo-500">선택 기간의 미션 수행 기록 기준</p>
             </div>
           </div>
-          <p className="text-sm text-indigo-700 leading-relaxed">{aiReport}</p>
+          <p className="text-sm text-indigo-700 leading-relaxed">{activitySummary}</p>
         </motion.div>
 
         {/* 최근 미션 */}
@@ -371,11 +370,13 @@ export default function StudentDetailPage() {
   );
 }
 
-function generateAIReport(
-  name: string, weekRate: number, overallRate: number, unsubmitted: number,
+function generateActivitySummary(
+  name: string, missionCount: number, weekRate: number, overallRate: number, unsubmitted: number,
   bestType?: string, worstType?: string, streak?: number
 ): string {
   const parts: string[] = [];
+
+  if (missionCount === 0) return '이번 기간에는 배정된 미션이 없습니다. 최근 활동 기록을 아래에서 확인할 수 있습니다.';
 
   if (weekRate >= 80) {
     parts.push(`${name} 실천자는 이번 주 수행률이 ${weekRate}%로 매우 우수합니다.`);

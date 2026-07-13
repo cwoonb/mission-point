@@ -55,6 +55,10 @@ export const initialUsers: User[] = [
     createdAt: new Date('2024-02-01').toISOString(),
     groupId: 'group-afternoon',
   },
+  { id: 'user-child-5', name: '윤서준', role: 'CHILD', point: 0, avatar: '🧑', createdAt: new Date('2026-05-10').toISOString(), groupId: 'group-morning' },
+  { id: 'user-child-6', name: '한지우', role: 'CHILD', point: 0, avatar: '👧', createdAt: new Date('2026-05-11').toISOString(), groupId: 'group-morning' },
+  { id: 'user-child-7', name: '정하윤', role: 'CHILD', point: 0, avatar: '🧒', createdAt: new Date('2026-05-12').toISOString(), groupId: 'group-afternoon' },
+  { id: 'user-child-8', name: '강민재', role: 'CHILD', point: 0, avatar: '👦', createdAt: new Date('2026-05-13').toISOString(), groupId: 'group-weekend' },
 ];
 
 export const initialGroups: PerformerGroup[] = [
@@ -72,6 +76,7 @@ export const initialGroups: PerformerGroup[] = [
     facilitatorId: 'user-teacher-1',
     createdAt: new Date('2024-01-10').toISOString(),
   },
+  { id: 'group-weekend', name: '주말반', emoji: '📚', facilitatorId: 'user-teacher-1', createdAt: new Date('2026-05-01').toISOString() },
 ];
 
 const now = new Date();
@@ -322,6 +327,12 @@ export const initialMissions: Mission[] = [
     endDate: d(3),
     createdAt: ago(2),
   },
+  { id: 'demo-m16', title: '과학 관찰 일지', description: '관찰한 내용을 사진과 함께 제출해 주세요.', rewardPoint: 0, creatorId: 'user-teacher-1', assigneeId: 'user-child-5', status: 'REVIEWING', submissionType: 'BOTH', startDate: ago(3), endDate: d(2), createdAt: ago(3), missionType: 'HOMEWORK' },
+  { id: 'demo-m17', title: '생각 정리하기', description: '오늘 배운 내용을 세 문장으로 정리해 주세요.', rewardPoint: 0, creatorId: 'user-teacher-1', assigneeId: 'user-child-6', status: 'REVIEWING', submissionType: 'TEXT', startDate: ago(2), endDate: d(1), createdAt: ago(2), missionType: 'OTHER' },
+  { id: 'demo-m18', title: '독서 감상문 작성', description: '책을 읽고 기억에 남는 장면을 써 주세요.', rewardPoint: 0, creatorId: 'user-teacher-1', assigneeId: 'user-child-7', status: 'REVIEWING', submissionType: 'TEXT', startDate: ago(5), endDate: d(2), createdAt: ago(5), missionType: 'READING' },
+  { id: 'demo-m19', title: '수학 문제집 3페이지', description: '문제집 풀이 사진을 제출해 주세요.', rewardPoint: 0, creatorId: 'user-teacher-1', assigneeId: 'user-child-8', status: 'IN_PROGRESS', submissionType: 'IMAGE', startDate: ago(1), endDate: d(4), createdAt: ago(1), missionType: 'HOMEWORK' },
+  { id: 'demo-m20', title: '수학 숙제 완료', description: '완료한 숙제를 확인해 주세요.', rewardPoint: 0, creatorId: 'user-teacher-1', assigneeId: 'user-child-5', status: 'SUCCESS', submissionType: 'IMAGE', startDate: ago(12), endDate: ago(8), createdAt: ago(12), missionType: 'HOMEWORK' },
+  { id: 'demo-m21', title: '영어 단어 30개 암기', description: '암기 결과를 제출해 주세요.', rewardPoint: 0, creatorId: 'user-teacher-1', assigneeId: 'user-child-8', status: 'REJECTED', submissionType: 'TEXT', startDate: ago(7), endDate: d(1), createdAt: ago(7), missionType: 'VOCABULARY' },
 ];
 
 export const initialCoupons: Coupon[] = [
