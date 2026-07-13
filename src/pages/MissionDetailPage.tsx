@@ -162,7 +162,7 @@ export default function MissionDetailPage() {
               variant={mission.status === 'REJECTED' ? 'danger' : 'primary'}
               onClick={() => navigate(`/missions/${mission.id}/submit`)}
             >
-              {mission.status === 'REJECTED' ? '🔄 재제출하기' : '📤 미션 제출하기'}
+              {mission.status === 'REJECTED' ? '재제출하기' : '미션 제출하기'}
             </Button>
           </motion.div>
         )}
@@ -199,7 +199,7 @@ export default function MissionDetailPage() {
             )}
             {!latestSubmission.imageUrl && (
               <div className="bg-gray-50 rounded-2xl p-3 flex items-center justify-center h-24">
-                <p className="text-gray-400 text-sm">📷 이미지 없음</p>
+                <p className="text-gray-400 text-sm">첨부 이미지 없음</p>
               </div>
             )}
 
@@ -215,10 +215,10 @@ export default function MissionDetailPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <Button variant="success" fullWidth onClick={handleApprove}>
-                ✅ 승인
+                승인
               </Button>
               <Button variant="danger" fullWidth onClick={() => setRejectModal(true)}>
-                ❌ 반려
+                반려
               </Button>
             </div>
           </motion.div>
@@ -243,7 +243,7 @@ export default function MissionDetailPage() {
         {/* 반려 로그 */}
         {reviewLogs.length > 0 && (
           <div className="bg-white rounded-3xl shadow-sm p-5 space-y-3">
-            <h3 className="font-bold text-gray-700">📜 검토 내역</h3>
+            <h3 className="font-bold text-gray-700">검토 내역</h3>
             <div className="space-y-3">
               {reviewLogs.map((log) => {
                 const reviewer = getUser(log.reviewerId);
@@ -256,7 +256,7 @@ export default function MissionDetailPage() {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className={`font-bold ${log.action === 'APPROVED' ? 'text-green-600' : 'text-red-600'}`}>
-                        {log.action === 'APPROVED' ? '✅ 승인' : '❌ 반려'}
+                        {log.action === 'APPROVED' ? '승인' : '반려'}
                       </span>
                       <span className="text-gray-400 text-xs">{formatDateTime(log.createdAt)}</span>
                     </div>
@@ -272,7 +272,7 @@ export default function MissionDetailPage() {
       </div>
 
       {/* 반려 모달 */}
-      <Modal isOpen={rejectModal} onClose={() => setRejectModal(false)} title="❌ 반려 사유">
+      <Modal isOpen={rejectModal} onClose={() => setRejectModal(false)} title="반려 사유">
         <div className="space-y-3">
           <p className="text-sm text-gray-500">빠른 선택:</p>
           <div className="flex flex-wrap gap-2">
@@ -309,7 +309,7 @@ export default function MissionDetailPage() {
       </Modal>
 
       {/* 삭제 확인 모달 */}
-      <Modal isOpen={deleteModal} onClose={() => setDeleteModal(false)} title="⚠️ 미션 삭제">
+      <Modal isOpen={deleteModal} onClose={() => setDeleteModal(false)} title="미션 삭제">
         <div className="space-y-4">
           <p className="text-gray-600 text-sm">이 미션을 삭제하면 복구할 수 없습니다.</p>
           <div className="grid grid-cols-2 gap-3">

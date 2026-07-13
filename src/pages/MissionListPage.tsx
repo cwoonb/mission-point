@@ -32,6 +32,7 @@ const DOT_COLOR: Record<MissionStatus, string> = {
 };
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const cleanGroupName = (name: string) => name.replace(/^[^\p{L}\p{N}]+/u, '').trim();
 
 function LeaderClassMissionOverview() {
   const navigate = useNavigate();
@@ -60,10 +61,10 @@ function LeaderClassMissionOverview() {
       {[[children.length, `전체 ${memberLabel}`, 'bg-purple-50 text-purple-700'], [totalStats.inProgress, '진행 중', 'bg-blue-50 text-blue-700'], [totalStats.missing, '미제출', 'bg-red-50 text-red-700'], [totalStats.pending, '검토 대기', 'bg-orange-50 text-orange-700']].map(([value, label, color]) => <div key={label as string} className={`rounded-2xl p-2 text-center ${color}`}><p className="text-lg font-black">{value as number}</p><p className="text-[9px] font-bold">{label as string}</p></div>)}
     </section>
     <div className="flex items-center justify-between px-1"><h2 className="font-black text-slate-800">{groupLabel}별 미션 현황</h2><span className="text-[11px] font-bold text-slate-400">미제출 {totalStats.missing}건</span></div>
-    {classRows.length === 0 ? <div className="rounded-3xl bg-white px-5 py-12 text-center shadow-sm"><p className="font-black text-slate-700">등록된 {groupLabel}이 없습니다.</p><button onClick={() => navigate('/students')} className="mt-3 min-h-11 rounded-xl bg-purple-600 px-4 text-sm font-black text-white">{memberLabel} 관리</button></div> : classRows.map(({ group, members, titles, stats }) => <button key={group.id} onClick={() => navigate(`/missions/class/${group.id}`)} className="w-full rounded-3xl bg-white p-4 text-left shadow-sm active:scale-[0.99]">
-      <div className="flex items-start gap-3"><span className="text-2xl">{group.emoji}</span><div className="min-w-0 flex-1"><div className="flex items-center justify-between"><h3 className="font-black text-slate-900">{group.name}</h3><ChevronRight size={17} className="text-slate-300" /></div><p className="text-[11px] font-bold text-slate-400">{memberLabel} {members.length}명 · 미션 {titles.length}개</p><div className="mt-2 space-y-0.5">{titles.slice(0, 2).map((title) => <p key={title} className="truncate text-xs font-bold text-slate-600">• {title}</p>)}{titles.length > 2 && <p className="text-[10px] text-slate-400">+{titles.length - 2}개 더</p>}</div></div></div>
+    {classRows.length === 0 ? <div className="rounded-3xl bg-white px-5 py-12 text-center shadow-sm"><p className="font-black text-slate-700">등록된 {groupLabel}이 없습니다.</p><button onClick={() => navigate('/students')} className="mt-3 min-h-11 rounded-xl bg-purple-600 px-4 text-sm font-black text-white">{memberLabel} 관리</button></div> : classRows.map(({ group, members, titles, stats }) => <button key={group.id} onClick={() => navigate(`/missions/class/${group.id}`)} className="premium-row w-full p-4 text-left active:scale-[0.99]">
+      <div className="flex items-start gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#E9EDF2] text-sm font-bold text-[#14233B]">{cleanGroupName(group.name).slice(0,1)}</span><div className="min-w-0 flex-1"><div className="flex items-center justify-between"><h3 className="font-black text-slate-900">{cleanGroupName(group.name)}</h3><ChevronRight size={17} className="text-slate-300" /></div><p className="text-[11px] font-bold text-slate-400">{memberLabel} {members.length}명 · 미션 {titles.length}개</p><div className="mt-2 space-y-0.5">{titles.slice(0, 2).map((title) => <p key={title} className="truncate text-xs font-bold text-slate-600">{title}</p>)}{titles.length > 2 && <p className="text-[10px] text-slate-400">외 {titles.length - 2}개</p>}</div></div></div>
       <div className="mt-3 grid grid-cols-4 gap-1 text-center text-[9px] font-black"><span className="rounded-lg bg-emerald-50 py-1.5 text-emerald-600">완료 {stats.completed}</span><span className="rounded-lg bg-orange-50 py-1.5 text-orange-600">승인 {stats.pending}</span><span className="rounded-lg bg-red-50 py-1.5 text-red-600">미제출 {stats.missing}</span><span className="rounded-lg bg-blue-50 py-1.5 text-blue-600">진행 {stats.inProgress}</span></div>
-      {stats.completionRate === null ? <p className="mt-3 text-xs font-bold text-slate-400">등록된 미션 없음</p> : <div className="mt-3 flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-purple-500" style={{ width: `${stats.completionRate}%` }} /></div><span className="text-xs font-black text-purple-600">{stats.completionRate}%</span></div>}
+      {stats.completionRate === null && <p className="mt-3 text-xs font-bold text-slate-400">등록된 미션 없음</p>}
     </button>)}
   </div>;
 }
@@ -170,7 +171,7 @@ function CalendarView({ missions }: { missions: Mission[] }) {
             </div>
             {selectedMissions.length === 0 ? (
               <div className="bg-white rounded-2xl p-6 text-center shadow-sm">
-                <p className="text-gray-400 text-sm">이 날 마감 미션이 없어요 ✨</p>
+                <p className="text-gray-400 text-sm">이 날 마감 미션이 없습니다.</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -201,15 +202,24 @@ export default function MissionListPage() {
 
   if (isFacilitator) {
     const requestedTab = searchParams.get('tab');
-    const leaderTab = ['all', 'pending', 'history'].includes(requestedTab ?? '')
-      ? requestedTab as 'all' | 'pending' | 'history'
-      : 'all';
+    const normalizedTab = requestedTab === 'history' ? 'completed' : requestedTab;
+    const leaderTab = ['all', 'active', 'due', 'pending', 'completed'].includes(normalizedTab ?? '')
+      ? normalizedTab as 'all' | 'active' | 'due' | 'pending' | 'completed' : 'all';
     const createdMissions = missions.filter((mission) => mission.creatorId === currentUser.id);
     const pendingCount = createdMissions.filter((mission) => mission.status === 'REVIEWING').length;
+    const now = new Date();
+    const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const activeMissions = createdMissions.filter((mission) => ['PENDING', 'IN_PROGRESS', 'REJECTED'].includes(mission.status));
+    const dueMissions = createdMissions.filter((mission) => mission.endDate.slice(0, 10) === todayKey && mission.status !== 'SUCCESS');
+    const completedMissions = createdMissions.filter((mission) => mission.status === 'SUCCESS');
     const leaderTabs = [
       { key: 'all', label: '전체', count: createdMissions.length },
+      { key: 'active', label: '진행 중', count: activeMissions.length },
+      { key: 'due', label: '오늘 마감', count: dueMissions.length },
       { key: 'pending', label: '승인 대기', count: pendingCount },
+      { key: 'completed', label: '완료', count: completedMissions.length },
     ] as const;
+    const filteredLeaderMissions = leaderTab === 'active' ? activeMissions : leaderTab === 'due' ? dueMissions : completedMissions;
 
     return (
       <div className="page-container bg-slate-50">
@@ -217,18 +227,18 @@ export default function MissionListPage() {
           title="미션"
           showBack={false}
           rightElement={
-            <div className="flex items-center gap-1"><button onClick={() => setSearchParams({ tab: 'history' })} className="min-h-9 rounded-xl px-2 text-[10px] font-black text-slate-500">완료 히스토리</button><button onClick={() => navigate('/missions/create')} aria-label="미션 만들기" className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 text-white shadow-md"><Plus size={18} /></button></div>
+            <button onClick={() => navigate('/missions/create')} aria-label="미션 만들기" className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[#14233B] text-white"><Plus size={18} /></button>
           }
         />
         <div className="content-area">
           <div className="sticky top-0 z-30 border-b border-slate-100 bg-slate-50/95 px-3 py-2 backdrop-blur">
-            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-sm">
+            <div className="flex gap-1 overflow-x-auto rounded-xl border border-[#E7E1D9] bg-[#FFFDFC] p-1 scrollbar-hide">
               {leaderTabs.map((tab) => (
                 <button
                   key={tab.key}
                   type="button"
                   onClick={() => setSearchParams(tab.key === 'all' ? {} : { tab: tab.key })}
-                  className={`relative min-h-11 rounded-xl px-1 text-[11px] font-black transition-colors ${leaderTab === tab.key ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-500'}`}
+                  className={`relative min-h-11 shrink-0 rounded-[9px] px-3 text-[11px] font-bold transition-colors ${leaderTab === tab.key ? 'bg-[#14233B] text-white' : 'text-[#687282]'}`}
                 >
                   {tab.label}
                   {tab.count > 0 && <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[9px] ${leaderTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>}
@@ -236,7 +246,7 @@ export default function MissionListPage() {
               ))}
             </div>
           </div>
-          {leaderTab === 'pending' ? <ApprovalPage embedded /> : leaderTab === 'history' ? <div className="px-4 py-4"><div className="mb-3 flex items-center justify-between"><h2 className="font-black text-slate-800">완료 히스토리</h2><button onClick={() => setSearchParams({})} className="min-h-11 px-3 text-xs font-black text-purple-600">전체 현황으로</button></div><div className="space-y-2">{createdMissions.filter((mission) => mission.status === 'SUCCESS').map((mission) => <MissionCard key={mission.id} mission={mission} showAssignee />)}{!createdMissions.some((mission) => mission.status === 'SUCCESS') && <p className="rounded-2xl bg-white py-12 text-center text-sm text-slate-400">완료 기록이 없습니다.</p>}</div></div> : <LeaderClassMissionOverview />}
+          {leaderTab === 'pending' ? <ApprovalPage embedded /> : leaderTab === 'all' ? <LeaderClassMissionOverview /> : <div className="space-y-2 px-4 py-4">{filteredLeaderMissions.map((mission) => <MissionCard key={mission.id} mission={mission} showAssignee />)}{filteredLeaderMissions.length === 0 && <p className="premium-panel py-12 text-center text-sm text-[#687282]">해당 상태의 미션이 없습니다.</p>}</div>}
         </div>
       </div>
     );
@@ -258,7 +268,7 @@ export default function MissionListPage() {
   return (
     <div className="page-container">
       <Header
-        title="🎯 미션"
+        title="미션"
         showBack={false}
         rightElement={
           isFacilitator ? (

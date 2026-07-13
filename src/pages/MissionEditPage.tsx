@@ -9,9 +9,9 @@ import { useMissionStore } from '../store/missionStore';
 import type { SubmissionType } from '../types';
 
 const SUBMISSION_TYPES: Array<{ key: SubmissionType; label: string; emoji: string; desc: string }> = [
-  { key: 'IMAGE', label: '이미지', emoji: '📷', desc: '사진으로 제출' },
-  { key: 'TEXT', label: '텍스트', emoji: '✍️', desc: '글로 제출' },
-  { key: 'BOTH', label: '둘 다', emoji: '📎', desc: '이미지 + 텍스트' },
+  { key: 'IMAGE', label: '이미지', emoji: '사진', desc: '사진으로 제출' },
+  { key: 'TEXT', label: '텍스트', emoji: '글', desc: '글로 제출' },
+  { key: 'BOTH', label: '둘 다', emoji: '혼합', desc: '이미지 + 텍스트' },
 ];
 
 
@@ -60,14 +60,14 @@ export default function MissionEditPage() {
 
   return (
     <div className="page-container">
-      <Header title="✏️ 미션 수정" showBack showPoints={false} />
+      <Header title="미션 수정" showBack showPoints={false} />
 
       <div className="content-area px-4 py-5 space-y-5">
         {/* 제목 + 설명 */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-sm p-5 space-y-4">
           <div>
             <label className="text-xs font-bold text-gray-500 mb-1.5 block">
-              📝 미션 제목 <span className="text-red-400">*</span>
+              미션 제목 <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
@@ -120,7 +120,6 @@ export default function MissionEditPage() {
                     <p className={`text-sm font-bold ${assigneeId === child.id ? 'text-purple-700' : 'text-gray-700'}`}>
                       {child.name}
                     </p>
-                    <p className="text-xs text-amber-500 font-semibold">{child.point.toLocaleString()}P</p>
                   </div>
                 </button>
               ))}

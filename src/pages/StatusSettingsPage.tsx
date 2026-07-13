@@ -82,7 +82,7 @@ export default function StatusSettingsPage() {
 
   return (
     <div className="page-container">
-      <Header title="⚙️ 실천자 상태 기준 설정" showBack showPoints={false} />
+      <Header title="실천자 상태 기준 설정" showBack showPoints={false} />
 
       <div className="content-area px-4 py-5 space-y-4">
         <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4">
@@ -153,7 +153,7 @@ export default function StatusSettingsPage() {
             기본값으로
           </button>
           <Button fullWidth size="lg" onClick={handleSave} className="rounded-2xl">
-            {savedFeedback ? '✅ 저장됐어요!' : '저장하기'}
+            {savedFeedback ? '저장되었습니다.' : '저장하기'}
           </Button>
         </div>
       </div>

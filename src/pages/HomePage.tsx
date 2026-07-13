@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, ChevronRight, ClipboardCheck, Lightbulb, Plus, UserPlus } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ClipboardCheck, Lightbulb, Plus, UserPlus } from 'lucide-react';
 import PerformerHome from '../components/home/PerformerHome';
 import Header from '../components/layout/Header';
 import { useAuthStore } from '../store/authStore';
@@ -37,29 +37,30 @@ function FacilitatorHome() {
   const attentionClass = [...snapshot.classes].filter((row) => row.missed > 0).sort((a, b) => b.missed - a.missed)[0];
 
   return (
-    <div className="page-container bg-slate-50">
-      <Header title="리더 홈" showBack={false} showPoints={false} />
+    <div className="page-container bg-[#F8F5F0]">
+      <Header title="홈" showBack={false} showPoints={false} />
       <main className="content-area space-y-4 px-4 py-4">
-        <section className="rounded-3xl bg-slate-900 p-5 text-white shadow-lg">
-          <p className="text-xs font-black text-white/50">오늘의 관리 요약</p>
-          <h1 className="mt-1 text-xl font-black">{currentUser.name}님, 오늘 관리 현황이에요</h1>
+        <section className="border-b border-[#E7E1D9] px-1 pb-4 pt-1">
+          <p className="text-sm text-[#687282]">{currentUser.name} 선생님,</p>
+          <h1 className="mt-1 text-[21px] font-bold tracking-[-0.03em] text-[#14233B]">오늘 확인할 내용을 정리했습니다.</h1>
+          <p className="mt-5 text-xs font-semibold text-[#687282]">오늘 확인할 항목</p>
           <div className="mt-4 grid grid-cols-3 gap-2">
             {[
               ['검토대기', `${snapshot.pendingReviewCount}건`, 'text-amber-300'],
               ['미제출', `${snapshot.missedCount}건`, 'text-red-300'],
               ['기간 수행률', assignedCount === 0 ? '—' : `${snapshot.weeklyRate}%`, 'text-emerald-300'],
-            ].map(([label, value, color]) => (
-              <div key={label} className="rounded-2xl bg-white/10 p-3 text-center">
-                <p className={`text-xl font-black ${color}`}>{value}</p>
-                <p className="mt-1 text-[9px] font-bold text-white/50">{label}</p>
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-[#E7E1D9] bg-[#FFFDFC] p-3 text-left">
+                <p className="text-xl font-bold text-[#14233B]">{value}</p>
+                <p className="mt-1 text-[9px] font-medium text-[#687282]">{label}</p>
               </div>
             ))}
           </div>
           {attentionClass && assignedCount > 0 && (
-            <button onClick={() => navigate(`/students?class=${attentionClass.id}&status=missing&sort=missing`)} className="mt-3 flex min-h-11 w-full items-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-left">
-              <AlertTriangle size={14} className="text-red-300" />
-              <span className="flex-1 text-[11px] font-bold text-white/80">{attentionClass.name} 미제출 {attentionClass.missed}건 · {memberLabel} 확인</span>
-              <ChevronRight size={14} className="text-white/40" />
+            <button onClick={() => navigate(`/students?class=${attentionClass.id}&status=missing&sort=missing`)} className="mt-3 flex min-h-11 w-full items-center gap-2 rounded-xl bg-[#F8EAE8] px-3 py-2 text-left">
+              <AlertTriangle size={14} className="text-[#B35F5A]" />
+              <span className="flex-1 text-[11px] font-semibold text-[#7D4743]">{attentionClass.name} 미제출 {attentionClass.missed}건 · {memberLabel} 확인</span>
+              <ChevronRight size={14} className="text-[#B35F5A]" />
             </button>
           )}
         </section>
@@ -70,12 +71,12 @@ function FacilitatorHome() {
           {[
             { label: '미션 만들기', icon: Plus, to: '/missions/create', color: 'bg-purple-600' },
             { label: `${memberLabel} 관리`, icon: UserPlus, to: '/students', color: 'bg-emerald-600' },
-          ].map(({ label, icon: Icon, to, color }) => (
+          ].map(({ label, icon: Icon, to }) => (
             <button
               key={label}
               type="button"
               onClick={() => navigate(to)}
-              className={`rounded-2xl ${color} p-3 text-left text-white shadow-md active:scale-95`}
+              className="rounded-xl border border-[#E7E1D9] bg-[#FFFDFC] p-3 text-left text-[#14233B] active:scale-[0.98]"
             >
               <Icon size={19} />
               <p className="mt-2 text-xs font-black">{label}</p>
@@ -98,7 +99,7 @@ function FacilitatorHome() {
                 key={mission.id}
                 type="button"
                 onClick={() => navigate('/missions?tab=pending')}
-                className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm"
+                className="premium-row flex min-h-16 w-full items-center gap-3 p-3 text-left"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
                   <ClipboardCheck size={20} />
@@ -123,8 +124,8 @@ function FacilitatorHome() {
           ) : attentionStudents.slice(0, 3).map((row) => {
             const needsSubmission = row.missed > 0;
             return (
-              <button key={row.user.id} onClick={() => navigate(`/students/${row.user.id}`)} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm">
-                <span className="text-2xl">{row.user.avatar}</span>
+              <button key={row.user.id} onClick={() => navigate(`/students/${row.user.id}`)} className="premium-row flex min-h-16 w-full items-center gap-3 p-3 text-left">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E9EDF2] text-sm font-bold text-[#14233B]">{row.user.name.slice(0, 1)}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black text-slate-800">{row.user.name} · {row.className}</span>
                   <span className="text-[11px] font-bold text-slate-400">{needsSubmission ? `미제출 ${row.missed}건 · 최근 활동 확인` : '최근 제출 활동 확인 필요'}</span>
@@ -136,10 +137,10 @@ function FacilitatorHome() {
           })}
         </section>
 
-        <section className="rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-4">
+        <section className="rounded-xl border border-[#D8D0C5] bg-[#F3EFE9] p-4">
           <div className="flex items-center gap-2">
             <Lightbulb size={17} className="text-purple-600" />
-            <h2 className="text-sm font-black text-purple-800">활동 요약</h2>
+            <h2 className="text-sm font-bold text-[#14233B]">운영 메모</h2>
           </div>
           <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{assignedCount === 0 ? '선택한 기간에 등록된 미션이 없습니다. 새 미션이 등록되면 진행 현황이 표시됩니다.' : snapshot.missedCount > 0 ? `미제출 ${snapshot.missedCount}건이 있습니다. ${memberLabel} 목록에서 오래된 활동부터 확인해 주세요.` : snapshot.pendingReviewCount > 0 ? `검토를 기다리는 제출물 ${snapshot.pendingReviewCount}건이 있습니다.` : '현재 우선 확인이 필요한 미제출 항목이 없습니다.'}</p>
           <button onClick={() => navigate('/students')} className="mt-3 flex items-center gap-1 text-xs font-black text-purple-600">{memberLabel} 활동 보기 <ChevronRight size={13} /></button>

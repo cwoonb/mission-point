@@ -127,7 +127,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
         {pendingMissions.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="text-6xl">✅</div>
+            <CheckCircle2 size={44} strokeWidth={1.5} className="text-[#4F8A68]" />
             <p className="text-gray-700 font-bold text-lg">모든 미션을 검토했어요!</p>
             <p className="text-gray-400 text-sm">검토할 제출물이 없습니다.</p>
           </motion.div>
@@ -144,7 +144,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
 
               return (
                 <motion.div key={mission.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.06 }} className="bg-white rounded-3xl shadow-sm overflow-hidden">
+                  transition={{ delay: i * 0.03 }} className="premium-panel overflow-hidden">
 
                   {/* 실천자 정보 헤더 */}
                   <div className="bg-slate-50 px-4 py-3 border-b border-gray-100">
@@ -154,7 +154,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                         <div className="w-9 h-9 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl overflow-hidden flex items-center justify-center text-lg">
                           {assignee?.profileImage
                             ? <img src={assignee.profileImage} alt="" className="w-full h-full object-cover" />
-                            : assignee?.avatar}
+                            : assignee?.name.slice(0, 1)}
                         </div>
                         <div className="text-left">
                           <span className="text-sm font-black text-gray-800">{assignee?.name}</span>
@@ -191,7 +191,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                         <img src={submission.imageUrl} alt="제출 이미지" className="w-full rounded-2xl object-cover max-h-48" />
                       ) : (
                         <div className="bg-gray-50 rounded-xl p-3 text-center">
-                          <p className="text-gray-400 text-xs">📷 이미지 없음</p>
+                          <p className="text-gray-400 text-xs">첨부 이미지 없음</p>
                         </div>
                       )}
                       {submission.message && (
@@ -229,7 +229,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                       <button
                         onClick={() => openParentShare(mission)}
                         className={`flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${sharedStudentId === mission.assigneeId ? 'bg-green-100 text-green-700' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {sharedStudentId === mission.assigneeId ? '✅ 공유됨' : '📤 보호자 공유'}
+                        {sharedStudentId === mission.assigneeId ? '공유됨' : '보호자 공유'}
                       </button>
                     </div>
                   </div>
@@ -312,13 +312,13 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                   {/* 제출 내용 */}
                   {dmSubmission && (
                     <div className="space-y-3">
-                      <p className="text-xs font-bold text-gray-500">📤 제출 내용</p>
+                      <p className="text-xs font-bold text-gray-500">제출 내용</p>
                       {dmSubmission.imageUrl ? (
                         <img src={dmSubmission.imageUrl} alt="제출 이미지"
                           className="w-full rounded-2xl object-cover max-h-52" />
                       ) : (
                         <div className="bg-gray-50 rounded-xl h-16 flex items-center justify-center">
-                          <p className="text-gray-400 text-xs">📷 이미지 없음</p>
+                          <p className="text-gray-400 text-xs">첨부 이미지 없음</p>
                         </div>
                       )}
                       {dmSubmission.message && (
@@ -335,13 +335,13 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                   {/* 검토 내역 */}
                   {dmLogs.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-xs font-bold text-gray-500">📜 검토 내역</p>
+                      <p className="text-xs font-bold text-gray-500">검토 내역</p>
                       {dmLogs.map((log) => (
                         <div key={log.id}
                           className={`rounded-2xl p-3 text-sm ${log.action === 'APPROVED' ? 'bg-green-50' : 'bg-red-50'}`}>
                           <div className="flex items-center justify-between mb-1">
                             <span className={`font-bold ${log.action === 'APPROVED' ? 'text-green-600' : 'text-red-600'}`}>
-                              {log.action === 'APPROVED' ? '✅ 승인' : '❌ 반려'}
+                              {log.action === 'APPROVED' ? '승인' : '반려'}
                             </span>
                             <span className="text-gray-400 text-xs">{formatDateTime(log.createdAt)}</span>
                           </div>
@@ -369,7 +369,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                         </button>
                         <button onClick={() => { setDetailMission(null); openParentShare(dm); }}
                           className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${sharedStudentId === dm.assigneeId ? 'bg-green-100 text-green-700' : 'bg-emerald-50 text-emerald-600'}`}>
-                          {sharedStudentId === dm.assigneeId ? '✅ 공유됨' : '📤 보호자 공유'}
+                          {sharedStudentId === dm.assigneeId ? '공유됨' : '보호자 공유'}
                         </button>
                       </div>
                     </div>
@@ -382,7 +382,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
       </AnimatePresence>
 
       {/* 반려 모달 */}
-      <Modal isOpen={rejectModal} onClose={() => setRejectModal(false)} title="❌ 반려 사유">
+      <Modal isOpen={rejectModal} onClose={() => setRejectModal(false)} title="반려 사유">
         <div className="space-y-3">
           <p className="text-sm font-semibold text-gray-700">"{selectedMission?.title}" 반려</p>
           <div className="flex flex-wrap gap-2">
@@ -400,7 +400,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
       </Modal>
 
       {/* 보호자 공유 모달 */}
-      <Modal isOpen={parentShareModal} onClose={() => setParentShareModal(false)} title="📤 보호자 공유">
+      <Modal isOpen={parentShareModal} onClose={() => setParentShareModal(false)} title="보호자 공유">
         {parentShareMission && (() => {
           const student = getUser(parentShareMission.assigneeId);
           const submission = getLatestSubmission(parentShareMission.id);
@@ -430,7 +430,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
                   {[
                     '잘 따라오고 있어요 👍',
                     '조금 더 독려가 필요합니다.',
-                    '꾸준히 성장하고 있어요 🌱',
+                    '꾸준히 성장하고 있습니다.',
                     '가정에서도 확인 부탁드려요.',
                   ].map((t) => (
                     <button key={t} onClick={() => setParentShareMsg(t)}
@@ -459,7 +459,7 @@ export default function ApprovalPage({ embedded = false }: { embedded?: boolean 
               </div>
 
               <Button fullWidth variant="primary" onClick={handleShareToParent} disabled={!parentShareMsg.trim()}>
-                📤 보호자에게 공유하기
+                보호자에게 공유하기
               </Button>
             </div>
           );

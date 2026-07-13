@@ -26,7 +26,7 @@ export default function Modal({ isOpen, onClose, title, children, hideClose }: M
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50"
+            className="fixed inset-0 z-50 bg-[#0D192B]/45 backdrop-blur-[1px]"
             onClick={onClose}
           />
           {/* 바텀 시트 — left-0 right-0 mx-auto 방식으로 iOS transform 충돌 방지 */}
@@ -35,7 +35,7 @@ export default function Modal({ isOpen, onClose, title, children, hideClose }: M
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 320 }}
-            className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white rounded-t-3xl z-50 shadow-2xl flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-w-[480px] flex-col rounded-t-[20px] border border-[#E7E1D9] bg-[#FFFDFC] shadow-2xl"
             style={{ maxHeight: '90dvh' }}
           >
             {(title || !hideClose) && (
@@ -45,7 +45,7 @@ export default function Modal({ isOpen, onClose, title, children, hideClose }: M
                   <button
                     onClick={onClose}
                     aria-label="닫기"
-                    className="p-1.5 rounded-full hover:bg-gray-100 transition-colors ml-auto"
+                    className="ml-auto flex h-11 w-11 items-center justify-center rounded-[10px] hover:bg-[#F1EDE7] transition-colors"
                   >
                     <X size={18} className="text-gray-500" />
                   </button>

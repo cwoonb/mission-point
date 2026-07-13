@@ -61,7 +61,7 @@ export default function MissionSubmitPage() {
 
   return (
     <div className="page-container">
-      <Header title="📤 미션 제출" showBack showPoints={false} />
+      <Header title="미션 제출" showBack showPoints={false} />
 
       <div className="content-area px-4 py-5 space-y-4">
         {/* 반려 메시지 */}
@@ -71,7 +71,7 @@ export default function MissionSubmitPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-red-50 border border-red-200 rounded-2xl p-4"
           >
-            <p className="text-red-600 font-bold text-sm mb-1">❌ 이전 반려 사유</p>
+            <p className="text-red-600 font-bold text-sm mb-1">이전 반려 사유</p>
             <p className="text-red-500 text-sm">"{latestRejectLog.reason}"</p>
           </motion.div>
         )}
@@ -84,7 +84,6 @@ export default function MissionSubmitPage() {
           </div>
           <p className="text-gray-500 text-sm mb-3">{mission.description}</p>
           <div className="flex items-center gap-2">
-            <span className="text-amber-500 text-sm">⭐</span>
             <span className="text-amber-700 font-bold text-sm">
               제출 후 리더의 확인을 기다려주세요
             </span>
@@ -95,7 +94,7 @@ export default function MissionSubmitPage() {
         {needsImage && (
           <div className="bg-white rounded-3xl shadow-sm p-5">
             <label className="text-xs font-bold text-gray-500 mb-3 block">
-              📷 이미지 첨부 {mission.submissionType === 'IMAGE' && <span className="text-red-400">*</span>}
+              이미지 첨부 {mission.submissionType === 'IMAGE' && <span className="text-red-400">*</span>}
             </label>
             <input
               ref={fileRef}
@@ -136,7 +135,7 @@ export default function MissionSubmitPage() {
         {needsText && (
           <div className="bg-white rounded-3xl shadow-sm p-5">
             <label className="text-xs font-bold text-gray-500 mb-3 block">
-              ✍️ 완료 메시지 {mission.submissionType === 'TEXT' && <span className="text-red-400">*</span>}
+              완료 메시지 {mission.submissionType === 'TEXT' && <span className="text-red-400">*</span>}
             </label>
             <textarea
               value={message}

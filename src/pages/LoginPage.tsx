@@ -1,230 +1,91 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { GoogleLogin } from '@react-oauth/google';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { BookOpen, BriefcaseBusiness, Building2, ChevronDown, Dumbbell, HeartHandshake, Home, Palette, PawPrint, Piano, Stethoscope } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { startDemoScenario } from '../data/demoSession';
-import { DEMO_SCENARIOS } from '../data/demoScenarios';
-import { googlePayloadToProfile, triggerKakaoLogin, initNaverLogin, triggerNaverLogin } from '../lib/socialAuth';
+import { DEMO_SCENARIOS, type DemoScenarioId } from '../data/demoScenarios';
+import { googlePayloadToProfile, initNaverLogin, triggerKakaoLogin, triggerNaverLogin } from '../lib/socialAuth';
 import type { PendingSocialProfile } from '../types';
+
+const scenarioIcons: Record<DemoScenarioId, typeof Building2> = {
+  'large-academy': Building2, 'study-room': Home, 'pt-center': Dumbbell, family: HeartHandshake,
+  piano: Piano, art: Palette, movement: BookOpen, company: BriefcaseBusiness, rehab: Stethoscope, 'pet-care': PawPrint,
+};
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { socialLogin } = useAuthStore();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
 
-  useEffect(() => {
-    // Pre-load Naver SDK so the login button is ready
-    initNaverLogin().catch(() => {/* ignore if env not set */});
-  }, []);
+  useEffect(() => { initNaverLogin().catch(() => undefined); }, []);
 
   const handleSocialProfile = async (profile: PendingSocialProfile) => {
     const result = await socialLogin(profile);
-    if (result === 'REGISTER') {
-      navigate('/register', { replace: true });
-    } else {
-      navigate('/', { replace: true });
-    }
+    navigate(result === 'REGISTER' ? '/register' : '/', { replace: true });
   };
-
   const handleKakaoLogin = async () => {
-    const restKey = import.meta.env.VITE_KAKAO_REST_KEY;
-    if (!restKey) {
-      setError('카카오 앱 키가 설정되지 않았습니다.');
-      return;
-    }
-    setLoading('KAKAO');
-    try {
-      await triggerKakaoLogin();
-    } catch (e: unknown) {
-      setLoading(null);
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(`카카오 로그인 실패: ${msg}`);
-    }
+    if (!import.meta.env.VITE_KAKAO_REST_KEY) { setError('카카오 로그인을 위한 환경 설정이 필요합니다.'); return; }
+    setLoading('KAKAO'); setError(null);
+    try { await triggerKakaoLogin(); } catch (reason) { setLoading(null); setError(reason instanceof Error ? reason.message : '카카오 로그인에 실패했습니다.'); }
   };
-
   const handleNaverLogin = () => {
-    const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
-    if (!clientId) {
-      setError('네이버 클라이언트 ID가 설정되지 않았습니다. .env.local 파일을 확인하세요.');
-      return;
-    }
-    setLoading('NAVER');
-    triggerNaverLogin();
-    // Result comes via URL hash redirect — handled in App.tsx
+    if (!import.meta.env.VITE_NAVER_CLIENT_ID) { setError('네이버 로그인을 위한 환경 설정이 필요합니다.'); return; }
+    setLoading('NAVER'); setError(null); triggerNaverLogin();
   };
 
   return (
-    <div className="page-container flex flex-col bg-white overflow-y-auto overflow-x-hidden">
-      {/* 상단 배경 */}
-      <div className="absolute inset-x-0 top-0 h-72 bg-gradient-to-br from-purple-600 via-violet-500 to-indigo-600 rounded-b-[3rem] pointer-events-none" />
-
-      <div className="relative z-10 flex-1 flex flex-col px-6">
-        {/* 헤더 */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="pt-16 pb-8 text-center"
-        >
-          <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-[1.8rem] flex items-center justify-center text-5xl shadow-2xl mx-auto mb-5 border border-white/30">
-            🎯
+    <div className="page-container overflow-y-auto bg-[#F8F5F0]">
+      <main className="flex min-h-full flex-col px-6 pb-8 pt-[max(2rem,env(safe-area-inset-top))]">
+        <section className="relative flex min-h-[410px] flex-col">
+          <div className="serif-brand text-[52px] leading-none">M</div>
+          <div className="mt-3 h-px w-14 bg-[#B58A4A]" />
+          <div className="mt-16 max-w-[300px]">
+            <h1 className="serif-brand text-[38px] font-medium leading-[1.35]">교육 운영을<br />더 정교하게</h1>
+            <p className="mt-5 text-[15px] leading-7 text-[#687282]">숙제 배정부터 제출 확인, 피드백과 학부모 리포트까지 모든 과정을 한곳에서 관리하세요.</p>
           </div>
-          <h1 className="text-3xl font-black text-white mb-2">미션</h1>
-          <p className="text-white/70 text-sm">미션을 배정하고 수행 현황을 관리해요.</p>
-        </motion.div>
-
-        {/* 로그인 카드 */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-white rounded-3xl shadow-2xl p-6 flex flex-col gap-4 mb-4"
-        >
-          <div className="text-center mb-1">
-            <h2 className="text-lg font-black text-gray-800">로그인</h2>
-            <p className="text-gray-400 text-xs mt-0.5">소셜 계정으로 간편하게 시작하세요</p>
+          <div aria-hidden="true" className="absolute bottom-0 right-0 h-36 w-40 opacity-80">
+            <div className="absolute bottom-2 right-2 h-20 w-16 rounded-t-[42%] border border-[#D8D0C5] bg-[#EEE8DF]" />
+            <div className="absolute bottom-6 right-[46px] h-24 w-px rotate-[-8deg] bg-[#7D8667]" />
+            <div className="absolute bottom-[82px] right-[41px] h-6 w-3 rotate-[-38deg] rounded-[100%_0] border border-[#7D8667]" />
+            <div className="absolute bottom-[62px] right-[54px] h-6 w-3 rotate-[42deg] rounded-[0_100%] border border-[#7D8667]" />
+            <div className="absolute bottom-0 right-20 h-2 w-24 border border-[#D8D0C5] bg-[#FFFDFC]" />
+            <div className="absolute bottom-3 right-[78px] h-2 w-20 border border-[#D8D0C5] bg-[#F3EFE9]" />
           </div>
+        </section>
 
-          {/* 오류 메시지 */}
+        <section className="relative z-10 mt-auto space-y-2.5">
+          <button onClick={() => setShowLogin(true)} className="flex min-h-12 w-full items-center justify-center rounded-[10px] bg-[#14233B] px-5 text-sm font-bold text-white hover:bg-[#0D192B]">운영자로 시작하기</button>
+          <button onClick={() => setShowLogin(true)} className="flex min-h-12 w-full items-center justify-center rounded-[10px] border border-[#14233B] px-5 text-sm font-bold text-[#14233B] hover:bg-[#E9EDF2]">학생으로 참여하기</button>
           <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-red-600 text-xs text-center"
-              >
-                {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Google 로그인 */}
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={(res) => {
-                if (!res.credential) return;
-                setError(null);
-                const profile = googlePayloadToProfile(res.credential);
-                handleSocialProfile(profile);
-              }}
-              onError={() => setError('구글 로그인에 실패했습니다.')}
-              useOneTap={false}
-              shape="pill"
-              size="large"
-              text="signin_with"
-              width={280}
-            />
-          </div>
-
-          {/* 카카오 로그인 */}
-          <button
-            onClick={handleKakaoLogin}
-            disabled={loading === 'KAKAO'}
-            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl font-bold text-sm transition-all active:scale-95 disabled:opacity-60"
-            style={{ backgroundColor: '#FEE500', color: '#191919' }}
-          >
-            {loading === 'KAKAO' ? (
-              <span className="w-4 h-4 border-2 border-gray-600/30 border-t-gray-600 rounded-full animate-spin" />
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M10 2C5.582 2 2 4.805 2 8.244c0 2.227 1.377 4.179 3.46 5.318l-.88 3.26c-.077.286.252.517.502.35l3.827-2.542c.36.047.726.074 1.091.074 4.418 0 8-2.805 8-6.26C18 4.805 14.418 2 10 2z"
-                  fill="#191919"
-                />
-              </svg>
-            )}
-            카카오로 로그인
-          </button>
-
-          {/* 네이버 로그인 */}
-          <button
-            onClick={handleNaverLogin}
-            disabled={loading === 'NAVER'}
-            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl font-bold text-sm text-white transition-all active:scale-95 disabled:opacity-60"
-            style={{ backgroundColor: '#03C75A' }}
-          >
-            {loading === 'NAVER' ? (
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24">
-                <path
-                  d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"
-                  fill="white"
-                />
-              </svg>
-            )}
-            네이버로 로그인
-          </button>
-        </motion.div>
-
-        {/* 데모 계정 */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-3xl shadow-md overflow-hidden mb-6"
-        >
-          <button
-            onClick={() => setShowDemo((v) => !v)}
-            className="w-full flex items-center justify-between px-5 py-4 text-gray-600"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🎮</span>
-              <div className="text-left">
-                <p className="font-bold text-sm text-gray-700">데모 체험하기</p>
-                <p className="text-xs text-gray-400">API 키 없이 샘플 계정으로 체험</p>
+            {showLogin && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+              <div className="mt-3 space-y-2 rounded-2xl border border-[#E7E1D9] bg-[#FFFDFC] p-4">
+                <p className="mb-3 text-center text-xs font-medium text-[#687282]">소셜 계정으로 안전하게 계속하세요</p>
+                {error && <p role="alert" className="rounded-[10px] bg-[#F8EAE8] px-3 py-2 text-center text-xs text-[#A2504C]">{error}</p>}
+                <div className="flex justify-center"><GoogleLogin onSuccess={(res) => { if (res.credential) handleSocialProfile(googlePayloadToProfile(res.credential)); }} onError={() => setError('구글 로그인에 실패했습니다.')} useOneTap={false} shape="rectangular" size="large" text="signin_with" width={280} /></div>
+                <button onClick={handleKakaoLogin} disabled={loading === 'KAKAO'} className="flex min-h-11 w-full items-center justify-center rounded-[10px] bg-[#FEE500] text-sm font-bold text-[#191919] disabled:opacity-50">카카오로 로그인</button>
+                <button onClick={handleNaverLogin} disabled={loading === 'NAVER'} className="flex min-h-11 w-full items-center justify-center rounded-[10px] bg-[#03C75A] text-sm font-bold text-white disabled:opacity-50">네이버로 로그인</button>
               </div>
-            </div>
-            {showDemo ? (
-              <ChevronUp size={16} className="text-gray-400" />
-            ) : (
-              <ChevronDown size={16} className="text-gray-400" />
-            )}
-          </button>
-
-          <AnimatePresence>
-            {showDemo && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="border-t border-gray-100 px-4 pb-4 pt-3">
-                  <div className="mb-3">
-                    <p className="text-sm font-black text-slate-800">어떤 운영 환경을 체험할까요?</p>
-                    <p className="mt-0.5 text-[11px] font-bold text-slate-400">업종마다 완전히 다른 데이터가 준비됩니다.</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {DEMO_SCENARIOS.map((scenario) => (
-                      <button
-                        key={scenario.id}
-                        onClick={() => { startDemoScenario(scenario.id); navigate('/', { replace: true }); }}
-                        className="min-h-32 rounded-2xl border border-slate-100 bg-slate-50 p-3 text-left transition-all hover:border-purple-200 hover:bg-purple-50 active:scale-[0.98]"
-                      >
-                        <span className="text-2xl">{scenario.emoji}</span>
-                        <p className="mt-2 text-xs font-black text-slate-800">{scenario.name}</p>
-                        <p className="mt-1 line-clamp-2 text-[10px] font-semibold leading-relaxed text-slate-400">{scenario.description}</p>
-                        <p className="mt-2 text-[9px] font-black text-purple-600">{scenario.memberLabel} {scenario.memberCount} · 미션 {scenario.missionCount}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
+            </motion.div>}
           </AnimatePresence>
-        </motion.div>
 
-        <p className="text-center text-xs text-gray-400 pb-6">
-          로그인 시 서비스 이용약관 및 개인정보처리방침에 동의합니다
-        </p>
-      </div>
+          <button onClick={() => setShowDemo((value) => !value)} className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 text-sm font-semibold text-[#14233B]">데모 체험하기 <ChevronDown size={16} className={showDemo ? 'rotate-180' : ''} /></button>
+          <AnimatePresence>
+            {showDemo && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                {DEMO_SCENARIOS.map((scenario) => { const Icon = scenarioIcons[scenario.id]; return <button key={scenario.id} onClick={() => { startDemoScenario(scenario.id); navigate('/', { replace: true }); }} className="min-h-28 rounded-xl border border-[#E7E1D9] bg-[#FFFDFC] p-3 text-left hover:border-[#B58A4A]">
+                  <Icon size={20} className="text-[#B58A4A]" /><p className="mt-2 text-xs font-bold text-[#14233B]">{scenario.name}</p><p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-[#687282]">{scenario.description}</p>
+                </button>; })}
+              </div>
+            </motion.div>}
+          </AnimatePresence>
+          <p className="pt-4 text-center text-[10px] leading-5 text-[#9299A3]">로그인하면 서비스 이용약관 및 개인정보처리방침에 동의합니다.</p>
+        </section>
+      </main>
     </div>
   );
 }

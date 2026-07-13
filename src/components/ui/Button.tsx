@@ -9,18 +9,18 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants = {
-  primary: 'glossy bg-gradient-to-b from-purple-400 to-indigo-500 text-white shadow-md hover:shadow-lg',
-  secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
-  success: 'glossy bg-gradient-to-b from-emerald-400 to-green-500 text-white shadow-md',
-  danger: 'glossy bg-gradient-to-b from-rose-400 to-red-500 text-white shadow-md',
-  amber: 'glossy bg-gradient-to-b from-amber-400 to-orange-400 text-white shadow-md',
-  ghost: 'text-purple-600 hover:bg-purple-50',
+  primary: 'bg-[#14233B] text-white hover:bg-[#0D192B]',
+  secondary: 'border border-[#14233B] bg-transparent text-[#14233B] hover:bg-[#E9EDF2]',
+  success: 'bg-[#4F8A68] text-white hover:bg-[#417559]',
+  danger: 'border border-[#DFB9B5] bg-[#FFF8F7] text-[#B35F5A] hover:bg-[#FBECEB]',
+  amber: 'bg-[#B58A4A] text-white hover:bg-[#9D753D]',
+  ghost: 'text-[#14233B] hover:bg-[#E9EDF2]',
 };
 
 const sizes = {
-  sm: 'py-2 px-4 text-sm rounded-xl',
-  md: 'py-3 px-6 text-base rounded-xl',
-  lg: 'py-4 px-8 text-lg rounded-2xl',
+  sm: 'min-h-10 py-2 px-4 text-sm rounded-[10px]',
+  md: 'min-h-11 py-3 px-6 text-sm rounded-[10px]',
+  lg: 'min-h-12 py-3.5 px-8 text-base rounded-[10px]',
 };
 
 export default function Button({
@@ -42,7 +42,7 @@ export default function Button({
         onClick?.(e);
       }}
       className={clsx(
-        'font-bold active:scale-90 transition-all duration-100 ease-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2',
+        'font-bold active:scale-[0.98] transition-colors duration-150 ease-out disabled:opacity-45 disabled:cursor-not-allowed flex items-center justify-center gap-2',
         variants[variant],
         sizes[size],
         fullWidth && 'w-full',

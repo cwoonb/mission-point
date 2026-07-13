@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface SuccessAnimationProps {
   isVisible: boolean;
-  points?: number;
   title?: string;
   description?: string;
   onClose: () => void;
@@ -11,7 +10,7 @@ interface SuccessAnimationProps {
 
 const CONFETTI_COLORS = ['#f59e0b', '#8b5cf6', '#10b981', '#ec4899', '#3b82f6', '#f97316'];
 
-export default function SuccessAnimation({ isVisible, points, title, description, onClose }: SuccessAnimationProps) {
+export default function SuccessAnimation({ isVisible, title, description, onClose }: SuccessAnimationProps) {
   const [confetti, setConfetti] = useState<Array<{ id: number; color: string; x: number; delay: number }>>([]);
 
   useEffect(() => {
@@ -69,14 +68,14 @@ export default function SuccessAnimation({ isVisible, points, title, description
             </motion.div>
             <div>
               <h2 className="text-2xl font-black text-gray-800 mb-1">{title ?? '미션 성공!'}</h2>
-              {(description || points != null) && (
+              {description && (
                 <motion.p
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.3 }}
                   className="text-amber-500 font-bold text-base whitespace-pre-line leading-relaxed"
                 >
-                  {description ?? `+${points!.toLocaleString('ko-KR')}P 획득! ⭐`}
+                  {description}
                 </motion.p>
               )}
               <p className="text-gray-400 text-sm mt-2">탭해서 닫기</p>

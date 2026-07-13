@@ -2,166 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --navy: #14233b; --navy-deep: #0d192b; --navy-soft: #e9edf2;
+  --ivory: #f8f5f0; --ivory-alt: #f3efe9; --surface: #fffdfc; --surface-muted: #f1ede7;
+  --text: #27313f; --text-muted: #687282; --text-faint: #9299a3; --line: #e7e1d9;
+  --gold: #b58a4a; --success: #4f8a68; --warning: #b7793c; --danger: #b35f5a; --info: #5d718f;
+  color: var(--text); background: var(--ivory-alt);
+  font-family: Pretendard Variable, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+}
+
 @layer base {
-  *,
-  *::before,
-  *::after {
-    -webkit-tap-highlight-color: transparent;
-    box-sizing: border-box;
-  }
-
-  html {
-    overflow-x: hidden;
-    /* iOS 노치/홈바 대응 */
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-
-  body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background: linear-gradient(135deg, #f3e8ff 0%, #dbeafe 100%);
-    min-height: 100vh;
-    min-height: 100dvh;
-    overscroll-behavior: none;
-    overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  #root {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
-  }
-
-  /* 기본 입력 스타일 초기화 */
-  input, textarea, select {
-    font-family: inherit;
-    font-size: 16px; /* iOS 자동확대 방지 */
-  }
+  *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { overflow-x: hidden; background: var(--ivory-alt); }
+  body { min-height: 100vh; min-height: 100dvh; margin: 0; overflow-x: hidden; background: var(--ivory-alt); color: var(--text); overscroll-behavior: none; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  #root { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+  button, input, textarea, select { font: inherit; }
+  input, textarea, select { font-size: 16px; }
+  button, a { touch-action: manipulation; }
+  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 }
 
 @layer components {
-  .page-container {
-    @apply max-w-md mx-auto w-full flex flex-col bg-white shadow-2xl relative;
-    height: 100dvh;
-    overflow-x: hidden;
-  }
-
-  .content-area {
-    @apply flex-1 overflow-y-auto;
-    /* !important: a page's own padding utilities (py-5, pb-4, etc., from Tailwind's
-       utilities layer) would otherwise win the cascade and wipe out this safe-area
-       buffer, letting content hide behind the fixed BottomNav */
-    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px)) !important;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-  }
-
-  .card {
-    @apply bg-white rounded-2xl shadow-md p-4;
-  }
-
-  .btn-primary {
-    @apply bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-bold py-3 px-6 rounded-xl
-           active:scale-95 transition-all duration-150 shadow-md hover:shadow-lg;
-  }
-
-  .btn-secondary {
-    @apply bg-gray-100 text-gray-700 font-semibold py-3 px-6 rounded-xl
-           active:scale-95 transition-all duration-150;
-  }
-
-  .btn-success {
-    @apply bg-gradient-to-r from-emerald-400 to-green-500 text-white font-bold py-3 px-6 rounded-xl
-           active:scale-95 transition-all duration-150 shadow-md;
-  }
-
-  .btn-danger {
-    @apply bg-gradient-to-r from-rose-400 to-red-500 text-white font-bold py-3 px-6 rounded-xl
-           active:scale-95 transition-all duration-150 shadow-md;
-  }
-
-  .btn-amber {
-    @apply bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold py-3 px-6 rounded-xl
-           active:scale-95 transition-all duration-150 shadow-md;
-  }
-
-  .point-badge {
-    @apply inline-flex items-center gap-1 bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full text-sm;
-  }
-
-  .status-badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
-  }
-
-  .input-field {
-    @apply w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm font-medium
-           focus:outline-none focus:border-purple-400 transition-colors;
-    font-size: 16px; /* iOS 자동확대 방지 */
-  }
-
-  .section-title {
-    @apply text-base font-bold text-gray-800 mb-3;
-  }
+  .page-container { @apply relative mx-auto flex w-full max-w-[480px] flex-col; min-height: 100dvh; background: var(--ivory); overflow-x: hidden; box-shadow: 0 0 0 1px rgba(20,35,59,.04), 0 18px 56px rgba(20,35,59,.08); }
+  .content-area { @apply flex-1 overflow-y-auto; padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; box-shadow: 0 4px 14px rgba(20,35,59,.035); }
+  .btn-primary, .btn-success { @apply min-h-11 px-5 py-3 font-bold text-white; border-radius: 10px; background: var(--navy); transition: background .15s ease, transform .15s ease; }
+  .btn-primary:hover, .btn-success:hover { background: var(--navy-deep); }
+  .btn-secondary { @apply min-h-11 px-5 py-3 font-semibold; border: 1px solid var(--navy); border-radius: 10px; color: var(--navy); background: transparent; }
+  .btn-danger { @apply min-h-11 px-5 py-3 font-bold; border: 1px solid #dfb9b5; border-radius: 10px; color: var(--danger); background: #fff8f7; }
+  .btn-amber { @apply min-h-11 px-5 py-3 font-bold text-white; border-radius: 10px; background: var(--gold); }
+  .status-badge, .point-badge { @apply inline-flex items-center px-2 py-1 text-[11px] font-semibold; border-radius: 7px; }
+  .input-field { @apply min-h-11 w-full px-3.5 py-3; border: 1px solid var(--line); border-radius: 10px; color: var(--text); background: var(--surface); }
+  .input-field:focus { border-color: var(--navy); outline: none; box-shadow: 0 0 0 3px rgba(20,35,59,.08); }
+  .section-title { @apply mb-3 text-base font-bold; color: var(--navy); }
+  .premium-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 4px 14px rgba(20,35,59,.035); }
+  .premium-row { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 2px 8px rgba(20,35,59,.025); }
+  .serif-brand { font-family: Georgia, "Noto Serif KR", serif; letter-spacing: -.035em; color: var(--navy); }
 }
 
 @layer utilities {
-  /* 글로시 하이라이트 — 둥근 그라데이션 버튼/배지 위쪽에 반투명 광택 띠를 얹어 입체감을 준다 */
-  .glossy {
-    position: relative;
-    overflow: hidden;
-  }
-  .glossy::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.12) 45%, rgba(255, 255, 255, 0) 65%);
-    pointer-events: none;
-  }
-
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 1rem);
-  }
-
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .glossy { position: relative; overflow: hidden; }
 }
 
-.coin-particle {
-  position: fixed;
-  pointer-events: none;
-  z-index: 9999;
-  font-size: 1.5rem;
-  animation: coinFly 0.8s ease-out forwards;
-}
+/* Compatibility bridge for existing screens: one premium palette, no purple gradients. */
+.text-purple-400,.text-purple-500,.text-purple-600,.text-purple-700,.text-purple-800,.text-violet-500,.text-violet-600,.text-violet-700,.text-indigo-500,.text-indigo-600,.text-indigo-700 { color: var(--navy) !important; }
+.bg-purple-50,.bg-purple-100,.bg-violet-50,.bg-violet-100,.bg-indigo-50,.bg-indigo-100 { background-color: var(--navy-soft) !important; }
+.bg-purple-400,.bg-purple-500,.bg-purple-600,.bg-purple-700,.bg-violet-600,.bg-violet-700,.bg-indigo-500,.bg-indigo-600,.bg-indigo-800 { background-color: var(--navy) !important; }
+.border-purple-100,.border-purple-200,.border-purple-300,.border-purple-400,.border-violet-100,.border-indigo-100 { border-color: var(--line) !important; }
+.from-purple-400,.from-purple-500,.from-purple-600,.from-purple-50,.from-violet-500,.from-violet-700,.from-indigo-600,.from-slate-800 { --tw-gradient-from: var(--navy) var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(20 35 59 / 0) var(--tw-gradient-to-position) !important; }
+.via-violet-500,.via-purple-50 { --tw-gradient-stops: var(--tw-gradient-from), var(--navy), var(--tw-gradient-to) !important; }
+.to-indigo-500,.to-indigo-600,.to-indigo-800,.to-slate-950 { --tw-gradient-to: var(--navy-deep) var(--tw-gradient-to-position) !important; }
+.focus\:ring-purple-200:focus,.focus\:ring-purple-300:focus { --tw-ring-color: rgb(20 35 59 / .14) !important; }
+.focus\:border-purple-300:focus,.focus\:border-purple-400:focus { border-color: var(--navy) !important; }
 
-@keyframes coinFly {
-  0%   { transform: translateY(0) scale(1); opacity: 1; }
-  50%  { transform: translateY(-60px) scale(1.2); }
-  100% { transform: translateY(-110px) scale(0.5); opacity: 0; }
-}
+/* Normalize legacy page geometry without touching feature logic. */
+.page-container .rounded-3xl { border-radius: 16px !important; }
+.page-container .rounded-2xl { border-radius: 12px !important; }
+.page-container .rounded-full { border-radius: 9999px; }
+.page-container .shadow-2xl,.page-container .shadow-xl,.page-container .shadow-lg,.page-container .shadow-md,.page-container .shadow-sm { box-shadow: 0 3px 14px rgba(20,35,59,.045) !important; }
+.page-container main > section.bg-white,
+.page-container main > div.bg-white { border: 1px solid var(--line); background: var(--surface) !important; }
+.page-container input:not([type="radio"]):not([type="checkbox"]),
+.page-container textarea,.page-container select { border-color: var(--line); background-color: var(--surface) !important; color: var(--text); }
+.page-container h1,.page-container h2,.page-container h3 { letter-spacing: -.02em; }
+.page-container .font-black { font-weight: 700; }
+.page-container .active\:scale-90:active,.page-container .active\:scale-95:active { transform: scale(.98); }
 
-@keyframes confetti-fall {
-  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
-  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-}
-
-.confetti-piece {
-  position: fixed;
-  width: 10px;
-  height: 10px;
-  pointer-events: none;
-  z-index: 9999;
-  animation: confetti-fall 2s ease-in forwards;
-}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

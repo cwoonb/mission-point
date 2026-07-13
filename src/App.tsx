@@ -23,7 +23,6 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const StatusSettingsPage = lazy(() => import('./pages/StatusSettingsPage'));
 const StudentDetailPage = lazy(() => import('./pages/StudentDetailPage'));
 const ParentReportPage = lazy(() => import('./pages/ParentReportPage'));
-const RankingPage = lazy(() => import('./pages/RankingPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const MissionClassPage = lazy(() => import('./pages/MissionClassPage'));
 const HomeworkDetailPage = lazy(() => import('./pages/HomeworkDetailPage'));
@@ -49,7 +48,7 @@ function AuthenticatedRoutes() {
         <Route path="students/:id" element={<StudentDetailPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="students/:id/report" element={<ParentReportPage />} />
-        <Route path="ranking" element={<RankingPage />} />
+        <Route path="ranking" element={<Navigate to="/" replace />} />
         <Route path="analytics" element={<Navigate to="/students?view=analysis" replace />} />
         <Route path="analysis" element={<Navigate to="/students?view=analysis" replace />} />
         <Route path="rewards" element={<Navigate to="/" replace />} />
@@ -122,7 +121,7 @@ function AppContent() {
   const showRegister = !currentUser && !!pendingSocialProfile;
 
   return (
-    <div className="min-h-screen flex justify-center bg-gradient-to-br from-violet-100 via-purple-50 to-sky-100">
+    <div className="min-h-screen flex justify-center bg-[#F3EFE9]">
       <AnimatePresence mode="wait">
         {currentUser ? (
           <AuthenticatedRoutes />
@@ -142,7 +141,7 @@ export default function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? 'placeholder-client-id'}>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center text-sm font-bold text-purple-600">화면을 불러오는 중...</div>}>
+        <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center text-sm font-semibold text-[#14233B]">화면을 불러오는 중...</div>}>
           <AppContent />
         </Suspense>
       </BrowserRouter>

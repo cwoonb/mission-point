@@ -12,19 +12,19 @@ import type { SubmissionType, MissionType, MissionGoal, RepeatType, ParentShareT
 import { missionTypeLabel } from '../utils/studentStats';
 
 const SUBMISSION_TYPES: Array<{ key: SubmissionType; label: string; emoji: string; desc: string }> = [
-  { key: 'IMAGE', label: '이미지', emoji: '📷', desc: '사진으로 제출' },
-  { key: 'TEXT', label: '텍스트', emoji: '✍️', desc: '글로 제출' },
-  { key: 'BOTH', label: '둘 다', emoji: '📎', desc: '이미지 + 텍스트' },
+  { key: 'IMAGE', label: '이미지', emoji: '사진', desc: '사진으로 제출' },
+  { key: 'TEXT', label: '텍스트', emoji: '글', desc: '글로 제출' },
+  { key: 'BOTH', label: '둘 다', emoji: '혼합', desc: '이미지 + 텍스트' },
 ];
 
 const MISSION_TYPES: Array<{ key: MissionType; label: string; emoji: string }> = [
-  { key: 'HOMEWORK', label: '숙제', emoji: '📝' },
-  { key: 'VOCABULARY', label: '단어암기', emoji: '📖' },
-  { key: 'READING', label: '독서', emoji: '📚' },
-  { key: 'ATTENDANCE', label: '출석', emoji: '✅' },
-  { key: 'REVIEW_NOTES', label: '오답정리', emoji: '✏️' },
-  { key: 'LIFESTYLE', label: '생활습관', emoji: '🌱' },
-  { key: 'OTHER', label: '기타', emoji: '🎯' },
+  { key: 'HOMEWORK', label: '숙제', emoji: '과제' },
+  { key: 'VOCABULARY', label: '단어암기', emoji: '단어' },
+  { key: 'READING', label: '독서', emoji: '독서' },
+  { key: 'ATTENDANCE', label: '출석', emoji: '출석' },
+  { key: 'REVIEW_NOTES', label: '오답정리', emoji: '오답' },
+  { key: 'LIFESTYLE', label: '생활습관', emoji: '생활' },
+  { key: 'OTHER', label: '기타', emoji: '기타' },
 ];
 
 const MISSION_GOALS: Array<{ key: MissionGoal; label: string }> = [
@@ -42,9 +42,9 @@ const REPEAT_TYPES: Array<{ key: RepeatType; label: string; desc: string }> = [
 ];
 
 const PARENT_SHARES: Array<{ key: ParentShareType; label: string; emoji: string }> = [
-  { key: 'NONE', label: '공유 안 함', emoji: '🔒' },
-  { key: 'ON_COMPLETE', label: '완료 시 공유', emoji: '📨' },
-  { key: 'WEEKLY_REPORT', label: '주간 리포트 포함', emoji: '📊' },
+  { key: 'NONE', label: '공유 안 함', emoji: '안 함' },
+  { key: 'ON_COMPLETE', label: '완료 시 공유', emoji: '완료' },
+  { key: 'WEEKLY_REPORT', label: '주간 리포트 포함', emoji: '리포트' },
 ];
 
 
@@ -144,7 +144,7 @@ export default function MissionCreatePage() {
 
   return (
     <div className="page-container">
-      <Header title="✨ 미션 만들기" showBack showPoints={false} />
+      <Header title="새 미션 만들기" showBack showPoints={false} />
 
       <div className="content-area px-4 py-5 space-y-4">
 
@@ -154,7 +154,7 @@ export default function MissionCreatePage() {
           className="w-full flex items-center gap-3 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl px-4 py-3 active:scale-[0.98] transition-transform">
           <BookMarked size={18} className="text-purple-500 flex-shrink-0" />
           <div className="text-left flex-1">
-            <p className="text-sm font-bold text-purple-700">📋 템플릿에서 불러오기</p>
+            <p className="text-sm font-bold text-purple-700">템플릿에서 불러오기</p>
             <p className="text-xs text-purple-500">{templates.length}개 저장됨 · 탭해서 빠르게 시작</p>
           </div>
           <span className="text-purple-400 text-xs">→</span>
@@ -163,7 +163,7 @@ export default function MissionCreatePage() {
         {/* 기본 정보 */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl shadow-sm p-5 space-y-4">
           <div>
-            <label className="text-xs font-bold text-gray-500 mb-1.5 block">📝 미션 제목 <span className="text-red-400">*</span></label>
+            <label className="text-xs font-bold text-gray-500 mb-1.5 block">미션 제목 <span className="text-red-400">*</span></label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
               placeholder="예: 수학 숙제 완료하기" className="input-field" maxLength={50} />
             <p className="text-xs text-gray-400 text-right mt-1">{title.length}/50</p>
@@ -260,7 +260,7 @@ export default function MissionCreatePage() {
                         <span className="text-2xl">{child.avatar}</span>
                         <div className="text-left flex-1">
                           <p className={`text-sm font-bold ${checked ? 'text-purple-700' : 'text-gray-700'}`}>{child.name}</p>
-                          <p className="text-xs text-gray-400">{child.groupId ? (myGroups.find(g => g.id === child.groupId)?.name ?? '반 없음') : '반 없음'} · {child.point.toLocaleString()}P</p>
+                          <p className="text-xs text-gray-400">{child.groupId ? (myGroups.find(g => g.id === child.groupId)?.name ?? '반 없음') : '반 없음'}</p>
                         </div>
                       </button>
                     );
@@ -295,7 +295,7 @@ export default function MissionCreatePage() {
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                   className="mt-3 bg-purple-50 border border-purple-200 rounded-2xl px-4 py-3 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-purple-700">✅ {targetIds.length}명 선택됨</p>
+                    <p className="text-xs font-bold text-purple-700">{targetIds.length}명 선택됨</p>
                     <p className="text-[11px] text-purple-500 mt-0.5">
                       {targetIds.map(id => children.find(c => c.id === id)?.name).filter(Boolean).join(' · ')}
                     </p>
@@ -382,7 +382,7 @@ export default function MissionCreatePage() {
             onClick={handleSaveTemplate}
             className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold border-2 transition-all active:scale-95 ${savedFeedback ? 'border-emerald-400 bg-emerald-50 text-emerald-600' : 'border-dashed border-gray-300 text-gray-400'}`}>
             <BookMarked size={15} />
-            {savedFeedback ? '✅ 템플릿으로 저장됐어요!' : '현재 폼을 템플릿으로 저장'}
+            {savedFeedback ? '템플릿으로 저장됐습니다.' : '현재 폼을 템플릿으로 저장'}
           </motion.button>
         )}
 

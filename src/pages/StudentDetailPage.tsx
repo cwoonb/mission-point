@@ -71,17 +71,17 @@ export default function StudentDetailPage() {
     setNoteInput('');
   };
 
-  return <div className="page-container bg-slate-50">
+  return <div className="page-container bg-[#F8F5F0]">
     <Header title={`${memberLabel} 상세`} showBack showPoints={false} />
     <main className="content-area space-y-4 px-4 py-4">
-      <section className="rounded-3xl bg-gradient-to-br from-slate-800 to-slate-950 p-5 text-white shadow-lg">
+      <section className="premium-panel p-5">
         <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 text-4xl">{student.profileImage ? <img src={student.profileImage} alt={`${student.name} 프로필`} className="h-full w-full object-cover" /> : student.avatar}</div>
-          <div className="min-w-0 flex-1"><h1 className="truncate text-xl font-black">{student.name}</h1><p className="mt-1 text-xs font-bold text-white/60">{groupName} · 최근 {period === 'all' ? '전체' : `${period}일`} 활동</p><p className="mt-1 text-[11px] text-white/45">등록 {formatDate(student.createdAt)}</p></div>
-          <button onClick={() => navigate(`/students/${student.id}/report`)} className="min-h-11 shrink-0 rounded-xl bg-white px-3 text-xs font-black text-emerald-700">리포트</button>
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E9EDF2] text-xl font-bold text-[#14233B]">{student.profileImage ? <img src={student.profileImage} alt={`${student.name} 프로필`} className="h-full w-full object-cover" /> : student.name.slice(0,1)}</div>
+          <div className="min-w-0 flex-1"><h1 className="truncate text-xl font-bold text-[#14233B]">{student.name}</h1><p className="mt-1 text-xs font-medium text-[#687282]">{groupName} · 최근 {period === 'all' ? '전체' : `${period}일`} 활동</p><p className="mt-1 text-[11px] text-[#9299A3]">등록 {formatDate(student.createdAt)}</p></div>
+          <button onClick={() => navigate(`/students/${student.id}/report`)} className="min-h-11 shrink-0 rounded-[10px] bg-[#14233B] px-3 text-xs font-bold text-white">리포트</button>
         </div>
         <div className="mt-4 grid grid-cols-4 gap-1.5 text-center">
-          {[[active.length, '진행'], [pending.length, '승인 대기'], [missing.length, '미제출'], [completed.length, '완료']].map(([value, label]) => <div key={label as string} className="rounded-xl bg-white/10 px-1 py-2"><strong className="block text-base">{value}</strong><span className="text-[9px] font-bold text-white/60">{label}</span></div>)}
+          {[[active.length, '진행'], [pending.length, '승인 대기'], [missing.length, '미제출'], [completed.length, '완료']].map(([value, label]) => <div key={label as string} className="rounded-[10px] bg-[#F3EFE9] px-1 py-2"><strong className="block text-base text-[#14233B]">{value}</strong><span className="text-[9px] font-medium text-[#687282]">{label}</span></div>)}
         </div>
       </section>
 
@@ -115,7 +115,7 @@ export default function StudentDetailPage() {
         <p className="mt-2 text-sm leading-relaxed text-indigo-800">{missing.length > 0 ? `${missing.length}건의 미제출 미션부터 확인해 주세요.` : pending.length > 0 ? `${pending.length}건의 제출물이 검토를 기다리고 있습니다.` : active.length > 0 ? `${active.length}건의 진행 중 미션을 이어가고 있습니다.` : completed.length > 0 ? `최근 ${completed.length}건의 미션을 완료했습니다.` : '선택 기간에 배정된 미션이 없습니다.'}</p>
       </section>
 
-      <button onClick={() => navigate(`/students/${student.id}/report`)} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-sm font-black text-white shadow-md"><FileText size={18}/>학부모 활동 리포트 보기<ChevronRight size={17}/></button>
+      <button onClick={() => navigate(`/students/${student.id}/report`)} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-[10px] bg-[#14233B] text-sm font-bold text-white"><FileText size={18}/>학부모 활동 리포트 보기<ChevronRight size={17}/></button>
     </main>
   </div>;
 }

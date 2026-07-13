@@ -15,7 +15,7 @@ const ROLES: Array<{
 }> = [
   {
     role: 'PARENT',
-    emoji: '🧑‍🏫',
+    emoji: '운영',
     title: '리더',
     desc: '미션을 만들고 관리하며 피드백을 줘요',
     examples: '미션 생성 · 배정 · 승인/반려',
@@ -25,7 +25,7 @@ const ROLES: Array<{
   },
   {
     role: 'CHILD',
-    emoji: '🧒',
+    emoji: '학생',
     title: '실천자',
     desc: '받은 미션을 수행하고 제출해요',
     examples: '미션 수행 · 제출 · 상태 확인',
@@ -59,7 +59,7 @@ export default function RoleSelectionPage() {
   };
 
   return (
-    <div className="page-container min-h-screen flex flex-col bg-gradient-to-br from-purple-50 to-indigo-50">
+    <div className="page-container min-h-screen flex flex-col bg-[#F8F5F0]">
       <div className="flex-1 overflow-y-auto px-5 py-8">
         {/* 프로필 인사 */}
         <motion.div
@@ -74,15 +74,15 @@ export default function RoleSelectionPage() {
               className="w-20 h-20 rounded-3xl mx-auto mb-4 object-cover shadow-lg border-2 border-white"
             />
           ) : (
-            <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-3xl flex items-center justify-center text-4xl shadow-lg mx-auto mb-4">
-              👤
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-[#E9EDF2] text-2xl font-bold text-[#14233B]">
+              {pendingSocialProfile.name.slice(0, 1)}
             </div>
           )}
           <p className="text-gray-500 text-sm">
             {PROVIDER_LABEL[pendingSocialProfile.socialProvider]} 계정으로 가입
           </p>
           <h1 className="text-xl font-black text-gray-800 mt-1">
-            안녕하세요, {pendingSocialProfile.name}님! 👋
+            안녕하세요, {pendingSocialProfile.name}님
           </h1>
           <p className="text-gray-500 text-sm mt-2">어떤 역할로 이용하실 건가요?</p>
         </motion.div>
@@ -94,7 +94,6 @@ export default function RoleSelectionPage() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-yellow-50 border-2 border-yellow-300 rounded-3xl p-4 mb-2 text-center"
           >
-            <p className="text-2xl mb-1">🎉</p>
             <p className="font-black text-yellow-800 text-sm">초대를 받았어요!</p>
             <p className="text-yellow-700 text-xs mt-1">
               <span className="font-bold">실천자</span>로 가입하면 초대한 분과 바로 연결돼요
@@ -115,7 +114,7 @@ export default function RoleSelectionPage() {
               className={`w-full border-2 ${r.lightBg} rounded-3xl p-5 flex items-center gap-4 text-left transition-all`}
             >
               <div
-                className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${r.gradient} flex items-center justify-center text-3xl shadow-lg flex-shrink-0`}
+                className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-[#E9EDF2] text-xs font-bold text-[#14233B]"
               >
                 {r.emoji}
               </div>

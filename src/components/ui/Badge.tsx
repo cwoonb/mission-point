@@ -11,7 +11,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold',
+        'inline-flex items-center px-2 py-1 rounded-[7px] text-[11px] font-semibold',
         statusBgColor[status],
         className
       )}
@@ -28,19 +28,19 @@ interface BadgeProps {
 }
 
 const badgeColors = {
-  purple: 'bg-purple-100 text-purple-700',
-  amber: 'bg-amber-100 text-amber-700',
-  green: 'bg-green-100 text-green-700',
-  red: 'bg-red-100 text-red-600',
-  blue: 'bg-blue-100 text-blue-700',
-  gray: 'bg-gray-100 text-gray-600',
+  purple: 'bg-[#E9EDF2] text-[#14233B]',
+  amber: 'bg-[#F7EEDF] text-[#9A642E]',
+  green: 'bg-[#E9F3EC] text-[#3E7555]',
+  red: 'bg-[#F8EAE8] text-[#A2504C]',
+  blue: 'bg-[#EAF0F5] text-[#4E6483]',
+  gray: 'bg-[#F1EDE7] text-[#687282]',
 };
 
 export function Badge({ color = 'gray', children, className }: BadgeProps) {
   return (
     <span
       className={clsx(
-        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold',
+        'inline-flex items-center px-2 py-1 rounded-[7px] text-[11px] font-semibold',
         badgeColors[color],
         className
       )}

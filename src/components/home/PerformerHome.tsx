@@ -53,7 +53,7 @@ export default function PerformerHome() {
         <section>
           <div className="mb-2 flex items-center justify-between"><h2 className="font-black text-slate-800">내 미션</h2><button type="button" onClick={() => navigate('/missions')} className="min-h-11 px-2 text-xs font-black text-purple-600">전체 보기</button></div>
           <div className="space-y-2">{active.slice(0, 5).map((mission) => <MissionRow key={mission.id} mission={mission} onOpen={() => navigate(`/missions/${mission.id}`)} />)}</div>
-          {active.length === 0 && <div className="rounded-3xl bg-white px-5 py-12 text-center shadow-sm"><p className="text-4xl">✅</p><p className="mt-3 font-black text-slate-700">진행할 미션이 없어요</p></div>}
+          {active.length === 0 && <div className="rounded-3xl bg-white px-5 py-12 text-center shadow-sm"><p className="font-black text-slate-700">진행할 미션이 없어요</p></div>}
         </section>
       </main>
 

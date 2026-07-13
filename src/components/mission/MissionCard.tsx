@@ -33,15 +33,15 @@ export default function MissionCard({ mission, showAssignee }: MissionCardProps)
     <motion.div
       whileTap={{ scale: 0.98 }}
       onClick={() => navigate(`/missions/${mission.id}`)}
-      className={`bg-white rounded-2xl shadow-sm border border-gray-100 border-l-4 ${statusColors[mission.status] ?? 'border-l-gray-300'} p-4 cursor-pointer active:bg-gray-50 transition-colors`}
+      className={`premium-row border-l-[3px] ${statusColors[mission.status] ?? 'border-l-gray-300'} cursor-pointer p-4 transition-colors active:bg-[#F3EFE9]`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <StatusBadge status={mission.status} />
             {showAssignee && assignee && (
-              <span className="text-xs text-gray-500">
-                {assignee.avatar} {assignee.name}
+              <span className="text-xs text-[#687282]">
+                {assignee.name}
               </span>
             )}
           </div>
@@ -56,7 +56,7 @@ export default function MissionCard({ mission, showAssignee }: MissionCardProps)
       <div className="flex items-center justify-end mt-3 pt-3 border-t border-gray-50">
         <div className="flex items-center gap-3 text-xs text-gray-400">
           {!showAssignee && creator && (
-            <span>{creator.avatar} {creator.name}</span>
+            <span>{creator.name}</span>
           )}
           {daysLeft > 0 && mission.status === 'IN_PROGRESS' && (
             <span className="flex items-center gap-0.5">
