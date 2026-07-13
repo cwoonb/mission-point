@@ -118,14 +118,13 @@ function FacilitatorHome() {
           {attentionStudents.length === 0 ? (
             <div className="rounded-2xl bg-emerald-50 p-4 text-center text-xs font-bold text-emerald-700">현재 집중 관리가 필요한 학생이 없습니다.</div>
           ) : attentionStudents.slice(0, 3).map((row) => {
-            const inactiveDays = Math.max(0, Math.floor((Date.now() - new Date(row.lastActiveAt).getTime()) / 86400000));
             const needsSubmission = row.missed > 0;
             return (
               <button key={row.user.id} onClick={() => navigate(`/students/${row.user.id}`)} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm">
                 <span className="text-2xl">{row.user.avatar}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black text-slate-800">{row.user.name} · {row.className}</span>
-                  <span className="text-[11px] font-bold text-slate-400">{needsSubmission ? `미제출 ${row.missed}건 · 최근 활동 확인` : `${inactiveDays}일간 활동 기록 없음`}</span>
+                  <span className="text-[11px] font-bold text-slate-400">{needsSubmission ? `미제출 ${row.missed}건 · 최근 활동 확인` : '최근 제출 활동 확인 필요'}</span>
                 </span>
                 <span className={`rounded-full px-2 py-1 text-[9px] font-black ${needsSubmission ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>{needsSubmission ? '미제출' : '활동 확인'}</span>
                 <ChevronRight size={14} className="text-slate-300" />
