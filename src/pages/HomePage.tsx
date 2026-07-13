@@ -58,7 +58,7 @@ function FacilitatorHome() {
           {attentionClass && assignedCount > 0 && (
             <button onClick={() => navigate(`/students?class=${attentionClass.id}&status=missing&sort=missing`)} className="mt-3 flex min-h-11 w-full items-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-left">
               <AlertTriangle size={14} className="text-red-300" />
-              <span className="flex-1 text-[11px] font-bold text-white/80">{attentionClass.name} 미제출 {attentionClass.missed}건 · 학생 확인</span>
+              <span className="flex-1 text-[11px] font-bold text-white/80">{attentionClass.name} 미제출 {attentionClass.missed}건 · {memberLabel} 확인</span>
               <ChevronRight size={14} className="text-white/40" />
             </button>
           )}
@@ -119,7 +119,7 @@ function FacilitatorHome() {
             <button onClick={() => navigate('/students')} className="flex items-center text-xs font-black text-purple-600">{memberLabel} 관리 <ChevronRight size={14} /></button>
           </div>
           {attentionStudents.length === 0 ? (
-            <div className="rounded-2xl bg-emerald-50 p-4 text-center text-xs font-bold text-emerald-700">현재 집중 관리가 필요한 학생이 없습니다.</div>
+            <div className="rounded-2xl bg-emerald-50 p-4 text-center text-xs font-bold text-emerald-700">현재 집중 관리가 필요한 {memberLabel}이 없습니다.</div>
           ) : attentionStudents.slice(0, 3).map((row) => {
             const needsSubmission = row.missed > 0;
             return (
@@ -141,7 +141,7 @@ function FacilitatorHome() {
             <Lightbulb size={17} className="text-purple-600" />
             <h2 className="text-sm font-black text-purple-800">활동 요약</h2>
           </div>
-          <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{assignedCount === 0 ? '선택한 기간에 등록된 미션이 없습니다. 새 미션이 등록되면 진행 현황이 표시됩니다.' : snapshot.missedCount > 0 ? `미제출 ${snapshot.missedCount}건이 있습니다. 학생 목록에서 오래된 활동부터 확인해 주세요.` : snapshot.pendingReviewCount > 0 ? `검토를 기다리는 제출물 ${snapshot.pendingReviewCount}건이 있습니다.` : '현재 우선 확인이 필요한 미제출 항목이 없습니다.'}</p>
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{assignedCount === 0 ? '선택한 기간에 등록된 미션이 없습니다. 새 미션이 등록되면 진행 현황이 표시됩니다.' : snapshot.missedCount > 0 ? `미제출 ${snapshot.missedCount}건이 있습니다. ${memberLabel} 목록에서 오래된 활동부터 확인해 주세요.` : snapshot.pendingReviewCount > 0 ? `검토를 기다리는 제출물 ${snapshot.pendingReviewCount}건이 있습니다.` : '현재 우선 확인이 필요한 미제출 항목이 없습니다.'}</p>
           <button onClick={() => navigate('/students')} className="mt-3 flex items-center gap-1 text-xs font-black text-purple-600">{memberLabel} 활동 보기 <ChevronRight size={13} /></button>
         </section>
       </main>
