@@ -52,12 +52,13 @@ export const txLabel: Record<PointTransactionType, string> = {
   MISSION_REWARD: '미션 보상 🎯',
   MISSION_DEDUCT: '미션 포인트 지급',
   AD_REWARD: '광고 시청 📺',
-  COUPON_EXCHANGE: '쿠폰 교환 🎁 (legacy)',
+  COUPON_EXCHANGE: '보상 획득 🎁 (legacy)',
   DECORATION_PURCHASE: '마을 꾸미기 🏡',
   ADMIN_GRANT: '관리자 지급',
   ADMIN_DEDUCT: '관리자 차감',
   PET_FEED: '펫 밥 주기 🍖',
   PET_EGG: '새 알 받기 🥚',
+  AVATAR_PURCHASE: '아바타 아이템',
 };
 
 export const txColor: Record<PointTransactionType, string> = {
@@ -70,6 +71,7 @@ export const txColor: Record<PointTransactionType, string> = {
   ADMIN_DEDUCT: 'text-red-500',
   PET_FEED: 'text-red-500',
   PET_EGG: 'text-red-500',
+  AVATAR_PURCHASE: 'text-violet-600',
 };
 
 export const txSign = (amount: number) => (amount >= 0 ? `+${formatPoint(amount)}P` : `${formatPoint(amount)}P`);

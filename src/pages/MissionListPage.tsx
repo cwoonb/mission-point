@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, ChevronLeft, ChevronRight, CalendarDays, List, X } from 'lucide-react';
 import Header from '../components/layout/Header';
@@ -7,6 +7,9 @@ import MissionCard from '../components/mission/MissionCard';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import type { Mission, MissionStatus } from '../types';
+import ApprovalPage from './ApprovalPage';
+import { useGroupStore } from '../store/groupStore';
+import { calculateClassStats, groupMissionsByHomework } from '../utils/missionStats';
 
 type FilterTab = 'all' | 'active' | 'done';
 type ViewMode = 'list' | 'calendar';
@@ -28,6 +31,38 @@ const DOT_COLOR: Record<MissionStatus, string> = {
 };
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function LeaderClassMissionOverview() {
+  const navigate = useNavigate();
+  const { currentUser, users } = useAuthStore();
+  const missions = useMissionStore((state) => state.missions);
+  const groups = useGroupStore((state) => state.groups);
+  if (!currentUser) return null;
+  const children = users.filter((user) => user.role === 'CHILD');
+  const created = missions.filter((mission) => mission.creatorId === currentUser.id);
+  const classRows = groups.filter((group) => group.facilitatorId === currentUser.id).map((group) => {
+    const members = children.filter((user) => user.groupId === group.id);
+    const memberIds = new Set(members.map((user) => user.id));
+    const assigned = created.filter((mission) => memberIds.has(mission.assigneeId));
+    const homework = groupMissionsByHomework(assigned);
+    const titles = homework.map((items) => items[0].title);
+    const stats = calculateClassStats(assigned);
+    return { group, members, titles, stats };
+  });
+
+  const totalStats = calculateClassStats(created);
+  return <div className="space-y-3 px-3 py-3">
+    <section className="grid grid-cols-4 gap-2">
+      {[[children.length, '전체 학생', 'bg-purple-50 text-purple-700'], [classRows.filter((row) => row.stats.completionRate < 60).length, '주의 반', 'bg-amber-50 text-amber-700'], [classRows.filter((row) => row.stats.completionRate < 30).length, '위험 반', 'bg-red-50 text-red-700'], [totalStats.pending, '검토 대기', 'bg-orange-50 text-orange-700']].map(([value, label, color]) => <div key={label as string} className={`rounded-2xl p-2 text-center ${color}`}><p className="text-lg font-black">{value as number}</p><p className="text-[9px] font-bold">{label as string}</p></div>)}
+    </section>
+    <div className="flex items-center justify-between px-1"><h2 className="font-black text-slate-800">반별 숙제 현황</h2><span className="text-[11px] font-bold text-slate-400">미제출 {totalStats.missing}건</span></div>
+    {classRows.length === 0 ? <div className="rounded-3xl bg-white px-5 py-12 text-center shadow-sm"><p className="font-black text-slate-700">등록된 반이 없습니다.</p><button onClick={() => navigate('/students')} className="mt-3 min-h-11 rounded-xl bg-purple-600 px-4 text-sm font-black text-white">학생 관리</button></div> : classRows.map(({ group, members, titles, stats }) => <button key={group.id} onClick={() => navigate(`/missions/class/${group.id}`)} className="w-full rounded-3xl bg-white p-4 text-left shadow-sm active:scale-[0.99]">
+      <div className="flex items-start gap-3"><span className="text-2xl">{group.emoji}</span><div className="min-w-0 flex-1"><div className="flex items-center justify-between"><h3 className="font-black text-slate-900">{group.name}</h3><ChevronRight size={17} className="text-slate-300" /></div><p className="text-[11px] font-bold text-slate-400">학생 {members.length}명 · 이번 주 숙제 {titles.length}개</p><div className="mt-2 space-y-0.5">{titles.slice(0, 2).map((title) => <p key={title} className="truncate text-xs font-bold text-slate-600">• {title}</p>)}{titles.length > 2 && <p className="text-[10px] text-slate-400">+{titles.length - 2}개 더</p>}</div></div></div>
+      <div className="mt-3 grid grid-cols-4 gap-1 text-center text-[9px] font-black"><span className="rounded-lg bg-emerald-50 py-1.5 text-emerald-600">완료 {stats.completed}</span><span className="rounded-lg bg-orange-50 py-1.5 text-orange-600">승인 {stats.pending}</span><span className="rounded-lg bg-red-50 py-1.5 text-red-600">미제출 {stats.missing}</span><span className="rounded-lg bg-blue-50 py-1.5 text-blue-600">진행 {stats.inProgress}</span></div>
+      <div className="mt-3 flex items-center gap-2"><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-purple-500" style={{ width: `${stats.completionRate}%` }} /></div><span className="text-xs font-black text-purple-600">{stats.completionRate}%</span></div>
+    </button>)}
+  </div>;
+}
 
 function CalendarView({ missions }: { missions: Mission[] }) {
   const navigate = useNavigate();
@@ -149,6 +184,7 @@ function CalendarView({ missions }: { missions: Mission[] }) {
 
 export default function MissionListPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser, viewMode } = useAuthStore();
   const { missions } = useMissionStore();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
@@ -158,6 +194,49 @@ export default function MissionListPage() {
   if (!currentUser) return null;
 
   const isFacilitator = viewMode === 'FACILITATOR';
+
+  if (isFacilitator) {
+    const requestedTab = searchParams.get('tab');
+    const leaderTab = ['all', 'pending', 'history'].includes(requestedTab ?? '')
+      ? requestedTab as 'all' | 'pending' | 'history'
+      : 'all';
+    const createdMissions = missions.filter((mission) => mission.creatorId === currentUser.id);
+    const pendingCount = createdMissions.filter((mission) => mission.status === 'REVIEWING').length;
+    const leaderTabs = [
+      { key: 'all', label: '전체', count: createdMissions.length },
+      { key: 'pending', label: '승인 대기', count: pendingCount },
+    ] as const;
+
+    return (
+      <div className="page-container bg-slate-50">
+        <Header
+          title="미션"
+          showBack={false}
+          rightElement={
+            <div className="flex items-center gap-1"><button onClick={() => setSearchParams({ tab: 'history' })} className="min-h-9 rounded-xl px-2 text-[10px] font-black text-slate-500">완료 히스토리</button><button onClick={() => navigate('/missions/create')} aria-label="미션 만들기" className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 text-white shadow-md"><Plus size={18} /></button></div>
+          }
+        />
+        <div className="content-area">
+          <div className="sticky top-0 z-30 border-b border-slate-100 bg-slate-50/95 px-3 py-2 backdrop-blur">
+            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-white p-1 shadow-sm">
+              {leaderTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setSearchParams(tab.key === 'all' ? {} : { tab: tab.key })}
+                  className={`relative min-h-11 rounded-xl px-1 text-[11px] font-black transition-colors ${leaderTab === tab.key ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-500'}`}
+                >
+                  {tab.label}
+                  {tab.count > 0 && <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[9px] ${leaderTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>{tab.count}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+          {leaderTab === 'pending' ? <ApprovalPage embedded /> : leaderTab === 'history' ? <div className="px-4 py-4"><div className="mb-3 flex items-center justify-between"><h2 className="font-black text-slate-800">완료 히스토리</h2><button onClick={() => setSearchParams({})} className="min-h-11 px-3 text-xs font-black text-purple-600">전체 현황으로</button></div><div className="space-y-2">{createdMissions.filter((mission) => mission.status === 'SUCCESS').map((mission) => <MissionCard key={mission.id} mission={mission} showAssignee />)}{!createdMissions.some((mission) => mission.status === 'SUCCESS') && <p className="rounded-2xl bg-white py-12 text-center text-sm text-slate-400">완료 기록이 없습니다.</p>}</div></div> : <LeaderClassMissionOverview />}
+        </div>
+      </div>
+    );
+  }
 
   const baseMissions = isFacilitator
     ? missions.filter((m) => m.creatorId === currentUser.id)

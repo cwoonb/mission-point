@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Star, Users, FileText } from 'lucide-react';
+import { Calendar, Users, FileText } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Button from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
@@ -14,7 +14,6 @@ const SUBMISSION_TYPES: Array<{ key: SubmissionType; label: string; emoji: strin
   { key: 'BOTH', label: '둘 다', emoji: '📎', desc: '이미지 + 텍스트' },
 ];
 
-const PRESET_POINTS = [30, 50, 80, 100, 150, 200];
 
 export default function MissionEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +33,6 @@ export default function MissionEditPage() {
 
   const [title, setTitle] = useState(mission.title);
   const [description, setDescription] = useState(mission.description);
-  const [rewardPoint, setRewardPoint] = useState(mission.rewardPoint);
   const [assigneeId, setAssigneeId] = useState(mission.assigneeId);
   const [submissionType, setSubmissionType] = useState<SubmissionType>(mission.submissionType);
   const [startDate, setStartDate] = useState(mission.startDate.split('T')[0]);
@@ -42,7 +40,7 @@ export default function MissionEditPage() {
   const [loading, setLoading] = useState(false);
 
   const children = users.filter((u) => u.role === 'CHILD');
-  const isValid = title.trim() && description.trim() && assigneeId && rewardPoint > 0 && startDate && endDate;
+  const isValid = title.trim() && description.trim() && assigneeId && startDate && endDate;
 
   const handleSubmit = () => {
     if (!isValid) return;
@@ -51,7 +49,6 @@ export default function MissionEditPage() {
       updateMission(mission.id, {
         title: title.trim(),
         description: description.trim(),
-        rewardPoint,
         assigneeId,
         submissionType,
         startDate: new Date(startDate).toISOString(),
@@ -128,42 +125,6 @@ export default function MissionEditPage() {
                 </button>
               ))}
             </div>
-          )}
-        </motion.div>
-
-        {/* 보상 포인트 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-3xl shadow-sm p-5">
-          <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <Star size={13} className="text-amber-500" /> 보상 포인트
-          </label>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {PRESET_POINTS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setRewardPoint(p)}
-                className={`px-3 py-1.5 rounded-xl text-sm font-bold transition-all ${
-                  rewardPoint === p
-                    ? 'bg-amber-400 text-white shadow-md'
-                    : 'bg-amber-50 text-amber-600'
-                }`}
-              >
-                {p}P
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={rewardPoint}
-              onChange={(e) => setRewardPoint(Math.max(1, parseInt(e.target.value) || 0))}
-              className="input-field"
-              min={1}
-              max={99999}
-            />
-            <span className="text-amber-600 font-bold">P</span>
-          </div>
-          {currentUser && rewardPoint > currentUser.point && (
-            <p className="text-red-400 text-xs mt-1">⚠️ 현재 보유 포인트({currentUser.point.toLocaleString()}P)보다 많습니다.</p>
           )}
         </motion.div>
 

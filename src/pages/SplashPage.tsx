@@ -3,19 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
-import { useShopStore } from '../store/shopStore';
 
 export default function SplashPage() {
   const navigate = useNavigate();
   const { initializeData: initAuth, currentUser } = useAuthStore();
   const { initializeData: initMissions } = useMissionStore();
-  const { initializeData: initShop } = useShopStore();
 
   useEffect(() => {
     (async () => {
       await initAuth();
       await initMissions();
-      initShop();
     })();
 
     const timer = setTimeout(() => {
@@ -64,10 +61,10 @@ export default function SplashPage() {
           className="text-center"
         >
           <h1 className="text-white font-black text-4xl mb-2 tracking-tight">
-            미션 포인트
+            미션
           </h1>
           <p className="text-white/70 text-base font-medium">
-            미션을 완료하고 포인트를 모아보세요! 🌟
+            미션을 만들고 수행 과정을 함께 관리해요.
           </p>
         </motion.div>
 

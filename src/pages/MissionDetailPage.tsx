@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Star, User, Trash2, Edit3 } from 'lucide-react';
+import { Calendar, User, Trash2, Edit3 } from 'lucide-react';
 import Header from '../components/layout/Header';
 import { StatusBadge } from '../components/ui/Badge';
 import Button from '../components/ui/Button';
@@ -9,16 +9,13 @@ import Modal from '../components/ui/Modal';
 import SuccessAnimation from '../components/animations/SuccessAnimation';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
-import { usePointStore } from '../store/pointStore';
-import { usePetStore } from '../store/petStore';
-import { formatDate, formatDateTime, formatPoint, submissionTypeLabel } from '../utils/helpers';
+import { formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
 
 export default function MissionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentUser, viewMode, getUser, updateUserPoint } = useAuthStore();
+  const { currentUser, viewMode, getUser } = useAuthStore();
   const { getMission, getLatestSubmission, getReviewLogs, approveMission, rejectMission, deleteMission } = useMissionStore();
-  const { addTransaction } = usePointStore();
 
   const [rejectModal, setRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -56,30 +53,8 @@ export default function MissionDetailPage() {
     approveMission(mission.id, currentUser.id);
 
     const assigneeUser = getUser(mission.assigneeId);
-    const creatorUser = getUser(mission.creatorId);
-
-    updateUserPoint(mission.assigneeId, mission.rewardPoint);
-    addTransaction(
-      mission.assigneeId,
-      mission.rewardPoint,
-      'MISSION_REWARD',
-      `미션 완료: ${mission.title}`
-    );
-
-    if (creatorUser && creatorUser.point >= mission.rewardPoint) {
-      updateUserPoint(mission.creatorId, -mission.rewardPoint);
-      addTransaction(
-        mission.creatorId,
-        -mission.rewardPoint,
-        'MISSION_DEDUCT',
-        `미션 포인트 지급: ${mission.title} → ${assigneeUser?.name}`
-      );
-    }
-
-    usePetStore.getState().onMissionApproved(mission.assigneeId);
-
     setSuccessAssigneeName(assigneeUser?.name ?? '실천자');
-    setSuccessExtra('🐾 마이펫이 무럭무럭 자랐어요!');
+    setSuccessExtra("");
     setShowSuccess(true);
   };
 
@@ -112,12 +87,14 @@ export default function MissionDetailPage() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => navigate(`/missions/${mission.id}/edit`)}
+                aria-label="미션 수정"
                 className="p-1.5 text-purple-400 hover:bg-purple-50 rounded-lg transition-colors"
               >
                 <Edit3 size={16} />
               </button>
               <button
                 onClick={() => setDeleteModal(true)}
+                aria-label="미션 삭제"
                 className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <Trash2 size={16} />
@@ -130,7 +107,7 @@ export default function MissionDetailPage() {
       <SuccessAnimation
         isVisible={showSuccess}
         title="승인 완료!"
-        description={`${successAssigneeName}님에게 +${mission.rewardPoint.toLocaleString('ko-KR')}P 지급했어요! ⭐\n${successExtra}`}
+        description={`${successAssigneeName}님의 제출을 승인했어요.\n${successExtra}`}
         onClose={() => setShowSuccess(false)}
       />
 
@@ -148,13 +125,7 @@ export default function MissionDetailPage() {
 
           <p className="text-gray-600 text-sm leading-relaxed">{mission.description}</p>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-amber-50 rounded-2xl p-3">
-              <p className="text-xs text-amber-600 font-semibold mb-1 flex items-center gap-1">
-                <Star size={11} className="fill-amber-500 text-amber-500" /> 보상 포인트
-              </p>
-              <p className="font-black text-amber-700 text-xl">{formatPoint(mission.rewardPoint)}P</p>
-            </div>
+          <div>
             <div className="bg-purple-50 rounded-2xl p-3">
               <p className="text-xs text-purple-600 font-semibold mb-1">제출 방식</p>
               <p className="font-bold text-purple-700 text-sm">{submissionTypeLabel[mission.submissionType]}</p>

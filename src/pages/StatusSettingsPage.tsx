@@ -6,6 +6,11 @@ import Button from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
 import { defaultStatusThresholds, statusConfig } from '../utils/studentStats';
 import type { StatusThresholds } from '../types';
+import {
+  ANALYTICS_PERIOD_OPTIONS,
+  useAnalyticsPeriodStore,
+  type AnalyticsPeriod,
+} from '../store/analyticsPeriodStore';
 
 const FIELDS: {
   key: keyof StatusThresholds;
@@ -55,6 +60,8 @@ export default function StatusSettingsPage() {
     currentUser?.statusThresholds ?? defaultStatusThresholds
   );
   const [savedFeedback, setSavedFeedback] = useState(false);
+  const { defaultPeriod, setDefaultPeriod } = useAnalyticsPeriodStore();
+  const [periodValue, setPeriodValue] = useState<Exclude<AnalyticsPeriod, 'custom'>>(defaultPeriod);
 
   if (!currentUser) return null;
 
@@ -66,6 +73,7 @@ export default function StatusSettingsPage() {
 
   const handleSave = () => {
     updateStatusThresholds(currentUser.id, values);
+    setDefaultPeriod(periodValue);
     setSavedFeedback(true);
     setTimeout(() => setSavedFeedback(false), 2000);
   };
@@ -90,6 +98,26 @@ export default function StatusSettingsPage() {
             로 표시돼요. 아래에서 그 기준을 직접 조정할 수 있어요.
           </p>
         </div>
+
+        <section className="rounded-2xl bg-white p-4 shadow-sm">
+          <p className="text-sm font-bold text-gray-800">통계 기본 기간</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-gray-400">리더 화면에 처음 들어왔을 때 자동으로 적용할 조회 기간입니다.</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {ANALYTICS_PERIOD_OPTIONS.filter((option) => option.value !== 'custom').map((option) => (
+              <label key={option.value} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-bold ${periodValue === option.value ? 'border-purple-400 bg-purple-50 text-purple-700' : 'border-gray-100 bg-gray-50 text-gray-500'}`}>
+                <input
+                  type="radio"
+                  name="defaultAnalyticsPeriod"
+                  value={option.value}
+                  checked={periodValue === option.value}
+                  onChange={() => setPeriodValue(option.value as Exclude<AnalyticsPeriod, 'custom'>)}
+                  className="accent-purple-600"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </section>
 
         {FIELDS.map((field, i) => (
           <motion.div

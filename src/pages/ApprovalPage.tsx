@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, MessageSquare, Eye, TrendingUp, AlertCircle, Calendar, Star, X } from 'lucide-react';
+import { CheckCircle2, XCircle, MessageSquare, Eye, TrendingUp, AlertCircle, Calendar, X } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -9,9 +9,7 @@ import SuccessAnimation from '../components/animations/SuccessAnimation';
 import { StatusBadge } from '../components/ui/Badge';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
-import { usePointStore } from '../store/pointStore';
-import { usePetStore } from '../store/petStore';
-import { formatPoint, formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
+import { formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
 import { getWeeklyRate, getUnsubmittedCount, getCompletionRate, statusConfig, getStudentStatus, defaultStatusThresholds } from '../utils/studentStats';
 import { missionTypeLabel } from '../utils/studentStats';
 import type { Mission } from '../types';
@@ -32,11 +30,10 @@ const COMMENT_TEMPLATES = [
   '다음엔 더 빨리 제출해봐요!',
 ];
 
-export default function ApprovalPage() {
+export default function ApprovalPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
-  const { currentUser, getUser, updateUserPoint, users } = useAuthStore();
+  const { currentUser, getUser, users } = useAuthStore();
   const { missions, getLatestSubmission, approveMission, rejectMission } = useMissionStore();
-  const { addTransaction } = usePointStore();
 
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [detailMission, setDetailMission] = useState<Mission | null>(null);
@@ -48,7 +45,6 @@ export default function ApprovalPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [comment, setComment] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
-  const [successPoints, setSuccessPoints] = useState(0);
   const [successAssigneeName, setSuccessAssigneeName] = useState('');
   const [successExtra, setSuccessExtra] = useState('');
   const [sharedStudentId, setSharedStudentId] = useState<string | null>(null);
@@ -62,19 +58,8 @@ export default function ApprovalPage() {
 
   const handleApprove = (mission: Mission) => {
     approveMission(mission.id, currentUser.id);
-    updateUserPoint(mission.assigneeId, mission.rewardPoint);
-    addTransaction(mission.assigneeId, mission.rewardPoint, 'MISSION_REWARD', `미션 완료: ${mission.title}`);
-    const creatorUser = getUser(mission.creatorId);
-    if (creatorUser && creatorUser.point >= mission.rewardPoint) {
-      updateUserPoint(mission.creatorId, -mission.rewardPoint);
-      addTransaction(mission.creatorId, -mission.rewardPoint, 'MISSION_DEDUCT', `포인트 지급: ${mission.title}`);
-    }
-
-    usePetStore.getState().onMissionApproved(mission.assigneeId);
-
-    setSuccessPoints(mission.rewardPoint);
     setSuccessAssigneeName(getUser(mission.assigneeId)?.name ?? '실천자');
-    setSuccessExtra('🐾 마이펫이 무럭무럭 자랐어요!');
+    setSuccessExtra("");
     setShowSuccess(true);
     setSelectedMission(null);
     setDetailMission(null);
@@ -132,16 +117,16 @@ export default function ApprovalPage() {
   };
 
   return (
-    <div className="page-container">
-      <Header title="📋 실천자 행동 검토" />
+    <div className={embedded ? '' : 'page-container'}>
+      {!embedded && <Header title="📋 실천자 행동 검토" />}
       <SuccessAnimation
         isVisible={showSuccess}
         title="승인 완료!"
-        description={`${successAssigneeName}님에게 +${successPoints.toLocaleString('ko-KR')}P 지급했어요! ⭐${successExtra ? `\n${successExtra}` : ''}`}
+        description={`${successAssigneeName}님의 제출을 승인했어요.${successExtra ? `\n${successExtra}` : ''}`}
         onClose={() => setShowSuccess(false)}
       />
 
-      <div className="content-area px-4 py-5">
+      <div className={embedded ? 'px-4 py-4' : 'content-area px-4 py-5'}>
         {pendingMissions.length === 0 ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-20 gap-4">
@@ -220,7 +205,6 @@ export default function ApprovalPage() {
                         <h3 className="font-bold text-gray-800 text-sm">{mission.title}</h3>
                         <p className="text-xs text-gray-400 mt-0.5">{mission.description}</p>
                       </div>
-                      <span className="text-amber-600 font-black text-sm flex-shrink-0">+{formatPoint(mission.rewardPoint)}P</span>
                     </div>
                   </div>
 
@@ -317,14 +301,8 @@ export default function ApprovalPage() {
                   </div>
                   {dm.description && <p className="text-gray-500 text-sm leading-relaxed">{dm.description}</p>}
 
-                  {/* 보상 + 제출방식 */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-amber-50 rounded-2xl p-3">
-                      <p className="text-xs text-amber-600 font-semibold mb-1 flex items-center gap-1">
-                        <Star size={11} className="fill-amber-500 text-amber-500" /> 보상 포인트
-                      </p>
-                      <p className="font-black text-amber-700 text-xl">{formatPoint(dm.rewardPoint)}P</p>
-                    </div>
+                  {/* 제출 방식 */}
+                  <div>
                     <div className="bg-purple-50 rounded-2xl p-3">
                       <p className="text-xs text-purple-600 font-semibold mb-1">제출 방식</p>
                       <p className="font-bold text-purple-700 text-sm">{submissionTypeLabel[dm.submissionType]}</p>

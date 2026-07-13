@@ -63,8 +63,8 @@ export async function sendKakaoInviteMessages(
   const templateObject = {
     object_type: 'feed',
     content: {
-      title: '🎯 미션 포인트 초대',
-      description: `${facilitatorName}님이 실천자로 초대했어요! 미션을 수행하고 포인트를 모아보세요 🌟`,
+      title: '🎯 미션 초대',
+      description: `${facilitatorName}님이 수행자로 초대했어요. 배정된 미션을 확인해보세요.`,
       link: { mobile_web_url: inviteUrl, web_url: inviteUrl },
     },
     buttons: [{ title: '참여하기', link: { mobile_web_url: inviteUrl, web_url: inviteUrl } }],
@@ -92,8 +92,8 @@ export async function sendKakaoInviteMessages(
 export async function shareViaNative(facilitatorId: string, facilitatorName: string): Promise<void> {
   const inviteUrl = getInviteUrl(facilitatorId);
   await navigator.share({
-    title: '🎯 미션 포인트 초대',
-    text: `${facilitatorName}님이 미션 포인트에 초대했어요!`,
+    title: '🎯 미션 초대',
+    text: `${facilitatorName}님이 미션에 초대했어요.`,
     url: inviteUrl,
   });
 }

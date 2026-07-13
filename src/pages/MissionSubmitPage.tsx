@@ -7,7 +7,6 @@ import Button from '../components/ui/Button';
 import { StatusBadge } from '../components/ui/Badge';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
-import { formatPoint } from '../utils/helpers';
 
 export default function MissionSubmitPage() {
   const { id } = useParams<{ id: string }>();
@@ -87,7 +86,7 @@ export default function MissionSubmitPage() {
           <div className="flex items-center gap-2">
             <span className="text-amber-500 text-sm">⭐</span>
             <span className="text-amber-700 font-bold text-sm">
-              성공 시 +{formatPoint(mission.rewardPoint)}P
+              제출 후 리더의 확인을 기다려주세요
             </span>
           </div>
         </div>

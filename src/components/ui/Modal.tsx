@@ -44,6 +44,7 @@ export default function Modal({ isOpen, onClose, title, children, hideClose }: M
                 {!hideClose && (
                   <button
                     onClick={onClose}
+                    aria-label="닫기"
                     className="p-1.5 rounded-full hover:bg-gray-100 transition-colors ml-auto"
                   >
                     <X size={18} className="text-gray-500" />

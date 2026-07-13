@@ -5,7 +5,7 @@ import { ChevronRight, TrendingUp, AlertTriangle, CheckCircle2, Flame, BarChart3
 import Header from '../components/layout/Header';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
-import { formatPoint, formatDate } from '../utils/helpers';
+import { formatDate } from '../utils/helpers';
 import {
   getCompletionRate, getWeeklyRate, getStreak, getUnsubmittedCount,
   getStudentStatus, statusConfig, missionTypeLabel, getWeekRateByOffset, defaultStatusThresholds,
@@ -100,10 +100,6 @@ export default function StudentDetailPage() {
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${sc.bg} ${sc.color}`}>{sc.label}</span>
               </div>
               <p className="text-white/60 text-xs">가입: {formatDate(student.createdAt)}</p>
-              <div className="bg-white/20 rounded-xl px-3 py-1 inline-flex items-center gap-1 mt-1">
-                <span className="text-sm">⭐</span>
-                <span className="font-black text-sm">{formatPoint(student.point)}P</span>
-              </div>
             </div>
           </div>
 
@@ -235,20 +231,21 @@ export default function StudentDetailPage() {
         </motion.div>
 
         {/* 검토 대기 미션 */}
-        {reviewingMissions.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
             className="bg-white rounded-3xl shadow-sm p-5">
             <p className="text-sm font-black text-gray-700 mb-3 flex items-center gap-2">
               <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
               검토 대기 {reviewingMissions.length}건
             </p>
-            <div className="space-y-3">
+            {reviewingMissions.length === 0 ? (
+              <p className="rounded-2xl bg-gray-50 px-4 py-5 text-center text-xs text-gray-400">현재 검토 대기 제출물이 없습니다.</p>
+            ) : <div className="space-y-3">
               {reviewingMissions.map((m) => (
                 <div key={m.id} className="bg-amber-50 border border-amber-200 rounded-2xl p-3">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <p className="text-sm font-bold text-gray-800">{m.title}</p>
-                      <p className="text-[11px] text-gray-400">{missionTypeLabel[m.missionType ?? 'OTHER']} · {m.rewardPoint}P</p>
+                      <p className="text-[11px] text-gray-400">{missionTypeLabel[m.missionType ?? 'OTHER']}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -273,9 +270,8 @@ export default function StudentDetailPage() {
                   </div>
                 </div>
               ))}
-            </div>
+            </div>}
           </motion.div>
-        )}
 
         {/* 상담 메모 */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
@@ -338,6 +334,7 @@ export default function StudentDetailPage() {
         </motion.div>
 
         {/* 최근 미션 */}
+        {/* 최근 미션 */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <p className="text-xs font-bold text-gray-500 mb-2 px-1">최근 미션</p>
           <div className="space-y-2">
@@ -356,7 +353,6 @@ export default function StudentDetailPage() {
                   <p className="text-sm font-bold text-gray-800 truncate">{m.title}</p>
                   {m.missionType && <p className="text-[11px] text-gray-400">{missionTypeLabel[m.missionType] ?? m.missionType}</p>}
                 </div>
-                <span className="text-amber-600 font-bold text-xs">{m.rewardPoint}P</span>
               </div>
             ))}
           </div>

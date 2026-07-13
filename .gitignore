@@ -24,3 +24,12 @@ Thumbs.db
 *.sw?
 
 .vercel
+
+# Unity generated files
+MissionPangUnity/Library/
+MissionPangUnity/Temp/
+MissionPangUnity/Logs/
+MissionPangUnity/UserSettings/
+MissionPangUnity/obj/
+MissionPangUnity/Build/
+MissionPangUnity/Builds/

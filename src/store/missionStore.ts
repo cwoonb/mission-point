@@ -353,22 +353,22 @@ export const useMissionStore = create<MissionState>()(
 
       approveMission: (missionId, reviewerId) => {
         const latestSub = get().getLatestSubmission(missionId);
-        const log: MissionReviewLog = {
+        const log: MissionReviewLog | null = latestSub ? {
           id: genId(),
           missionId,
-          submissionId: latestSub?.id ?? '',
+          submissionId: latestSub.id,
           reviewerId,
           action: 'APPROVED',
           createdAt: new Date().toISOString(),
-        };
+        } : null;
         set((s) => ({
-          reviewLogs: [...s.reviewLogs, log],
+          reviewLogs: log ? [...s.reviewLogs, log] : s.reviewLogs,
           missions: s.missions.map((m) =>
             m.id === missionId ? { ...m, status: 'SUCCESS' } : m
           ),
         }));
         pushMissionUpdate(missionId, { status: 'SUCCESS' });
-        supabase.from('mission_review_logs').insert({
+        if (log) supabase.from('mission_review_logs').insert({
           id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
           reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
         }).then(({ error }) => {
@@ -378,23 +378,23 @@ export const useMissionStore = create<MissionState>()(
 
       rejectMission: (missionId, reviewerId, reason) => {
         const latestSub = get().getLatestSubmission(missionId);
-        const log: MissionReviewLog = {
+        const log: MissionReviewLog | null = latestSub ? {
           id: genId(),
           missionId,
-          submissionId: latestSub?.id ?? '',
+          submissionId: latestSub.id,
           reviewerId,
           action: 'REJECTED',
           reason,
           createdAt: new Date().toISOString(),
-        };
+        } : null;
         set((s) => ({
-          reviewLogs: [...s.reviewLogs, log],
+          reviewLogs: log ? [...s.reviewLogs, log] : s.reviewLogs,
           missions: s.missions.map((m) =>
             m.id === missionId ? { ...m, status: 'REJECTED' } : m
           ),
         }));
         pushMissionUpdate(missionId, { status: 'REJECTED' });
-        supabase.from('mission_review_logs').insert({
+        if (log) supabase.from('mission_review_logs').insert({
           id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
           reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
         }).then(({ error }) => {

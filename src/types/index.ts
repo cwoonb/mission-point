@@ -1,6 +1,6 @@
 export type UserRole = 'PARENT' | 'TEACHER' | 'CHILD';
 export type MissionType = 'HOMEWORK' | 'VOCABULARY' | 'READING' | 'ATTENDANCE' | 'REVIEW_NOTES' | 'LIFESTYLE' | 'OTHER';
-export type MissionGoal = 'SINCERITY' | 'STUDY_HABIT' | 'SUBMISSION_MGMT' | 'PARENT_REPORT' | 'REWARD_EVENT';
+export type MissionGoal = 'SINCERITY' | 'STUDY_HABIT' | 'SUBMISSION_MGMT' | 'PARENT_REPORT';
 export type RepeatType = 'ONCE' | 'DAILY' | 'WEEKLY' | 'WEEKDAYS';
 export type ParentShareType = 'NONE' | 'ON_COMPLETE' | 'WEEKLY_REPORT';
 export type StudentStatus = 'EXCELLENT' | 'CAUTION' | 'UNSUBMITTED' | 'COUNSELING' | 'NOT_STARTED';
@@ -25,7 +25,8 @@ export type PointTransactionType =
   | 'ADMIN_GRANT'
   | 'ADMIN_DEDUCT'
   | 'PET_FEED'
-  | 'PET_EGG';
+  | 'PET_EGG'
+  | 'AVATAR_PURCHASE';
 
 export type SubmissionType = 'IMAGE' | 'TEXT' | 'BOTH';
 export type ReviewAction = 'APPROVED' | 'REJECTED';

@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, Star, ChevronRight } from 'lucide-react';
+import { Clock, ChevronRight } from 'lucide-react';
 import type { Mission } from '../../types';
 import { StatusBadge } from '../ui/Badge';
-import { formatPoint, getDaysLeft } from '../../utils/helpers';
+import { getDaysLeft } from '../../utils/helpers';
 import { useAuthStore } from '../../store/authStore';
 
 interface MissionCardProps {
@@ -53,13 +53,7 @@ export default function MissionCard({ mission, showAssignee }: MissionCardProps)
         <ChevronRight size={16} className="text-gray-300 flex-shrink-0 mt-1" />
       </div>
 
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
-        <div className="flex items-center gap-1">
-          <Star size={13} className="text-amber-400 fill-amber-400" />
-          <span className="text-amber-600 font-bold text-sm">
-            {formatPoint(mission.rewardPoint)}P
-          </span>
-        </div>
+      <div className="flex items-center justify-end mt-3 pt-3 border-t border-gray-50">
         <div className="flex items-center gap-3 text-xs text-gray-400">
           {!showAssignee && creator && (
             <span>{creator.avatar} {creator.name}</span>

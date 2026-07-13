@@ -72,8 +72,8 @@ export default function LoginPage() {
           <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-[1.8rem] flex items-center justify-center text-5xl shadow-2xl mx-auto mb-5 border border-white/30">
             🎯
           </div>
-          <h1 className="text-3xl font-black text-white mb-2">미션 포인트</h1>
-          <p className="text-white/70 text-sm">미션을 완료하고 포인트를 모아요!</p>
+          <h1 className="text-3xl font-black text-white mb-2">미션</h1>
+          <p className="text-white/70 text-sm">미션을 배정하고 수행 현황을 관리해요.</p>
         </motion.div>
 
         {/* 로그인 카드 */}
@@ -209,7 +209,7 @@ export default function LoginPage() {
                       <div>
                         <p className="font-bold text-gray-800 text-sm">{user.name}</p>
                         <p className="text-xs text-gray-400">
-                          {user.role === 'CHILD' ? '실천자' : '리더'} · {user.point.toLocaleString()}P
+                          {user.role === 'CHILD' ? '수행자' : '리더'}
                         </p>
                       </div>
                     </button>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Star, Users, FileText, Tag, Target, RefreshCw, Share2, BookMarked, Trash2, X } from 'lucide-react';
+import { Calendar, Users, FileText, Tag, Target, RefreshCw, Share2, BookMarked, Trash2, X } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Button from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
@@ -32,7 +32,6 @@ const MISSION_GOALS: Array<{ key: MissionGoal; label: string }> = [
   { key: 'STUDY_HABIT', label: '학습 습관 형성' },
   { key: 'SUBMISSION_MGMT', label: '과제 제출 관리' },
   { key: 'PARENT_REPORT', label: '보호자 공유용 기록' },
-  { key: 'REWARD_EVENT', label: '보상용 이벤트' },
 ];
 
 const REPEAT_TYPES: Array<{ key: RepeatType; label: string; desc: string }> = [
@@ -48,7 +47,6 @@ const PARENT_SHARES: Array<{ key: ParentShareType; label: string; emoji: string 
   { key: 'WEEKLY_REPORT', label: '주간 리포트 포함', emoji: '📊' },
 ];
 
-const PRESET_POINTS = [30, 50, 80, 100, 150, 200];
 
 const today = () => new Date().toISOString().split('T')[0];
 const nextWeek = () => {
@@ -66,7 +64,6 @@ export default function MissionCreatePage() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [rewardPoint, setRewardPoint] = useState(100);
   const [targetMode, setTargetMode] = useState<'individual' | 'group'>('individual');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [groupId, setGroupId] = useState('');
@@ -110,7 +107,7 @@ export default function MissionCreatePage() {
 
     setTimeout(() => {
       const base = {
-        title: title.trim(), description: description.trim(), rewardPoint,
+        title: title.trim(), description: description.trim(), rewardPoint: 0,
         creatorId: currentUser.id, submissionType,
         startDate: new Date(startDate).toISOString(), endDate: new Date(endDate).toISOString(),
         missionType, missionGoal, repeatType, parentShare,
@@ -121,7 +118,7 @@ export default function MissionCreatePage() {
   };
 
   const isValid =
-    title.trim() && description.trim() && rewardPoint > 0 && startDate && endDate &&
+    title.trim() && description.trim() && startDate && endDate &&
     targetIds.length > 0;
 
   const applyTemplate = (tId: string) => {
@@ -129,7 +126,6 @@ export default function MissionCreatePage() {
     if (!t) return;
     setTitle(t.title);
     setDescription(t.description);
-    setRewardPoint(t.rewardPoint);
     setSubmissionType(t.submissionType);
     if (t.missionType) setMissionType(t.missionType);
     if (t.missionGoal) setMissionGoal(t.missionGoal);
@@ -141,7 +137,7 @@ export default function MissionCreatePage() {
 
   const handleSaveTemplate = () => {
     if (!title.trim()) return;
-    saveTemplate({ name: title.trim(), title: title.trim(), description, rewardPoint, submissionType, missionType, missionGoal, repeatType, parentShare });
+    saveTemplate({ name: title.trim(), title: title.trim(), description, submissionType, missionType, missionGoal, repeatType, parentShare });
     setSavedFeedback(true);
     setTimeout(() => setSavedFeedback(false), 2000);
   };
@@ -313,29 +309,6 @@ export default function MissionCreatePage() {
           )}
         </motion.div>
 
-        {/* 보상 포인트 */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }} className="bg-white rounded-3xl shadow-sm p-5">
-          <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
-            <Star size={13} className="text-amber-500" /> 보상 포인트
-          </label>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {PRESET_POINTS.map((p) => (
-              <button key={p} onClick={() => setRewardPoint(p)}
-                className={`px-3 py-1.5 rounded-xl text-sm font-bold transition-all ${rewardPoint === p ? 'bg-amber-400 text-white shadow-md' : 'bg-amber-50 text-amber-600'}`}>
-                {p}P
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="number" value={rewardPoint} onChange={(e) => setRewardPoint(Math.max(1, parseInt(e.target.value) || 0))}
-              className="input-field" min={1} max={99999} />
-            <span className="text-amber-600 font-bold">P</span>
-          </div>
-          {currentUser && rewardPoint > currentUser.point && (
-            <p className="text-red-400 text-xs mt-1">⚠️ 현재 보유 포인트({currentUser.point.toLocaleString()}P)보다 많습니다.</p>
-          )}
-        </motion.div>
-
         {/* 반복 설정 */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }} className="bg-white rounded-3xl shadow-sm p-5">
           <label className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-1">
@@ -444,7 +417,7 @@ export default function MissionCreatePage() {
                     <button onClick={() => applyTemplate(t.id)} className="flex-1 text-left">
                       <p className="text-sm font-bold text-gray-800">{t.name}</p>
                       <p className="text-[11px] text-gray-400">
-                        {missionTypeLabel[t.missionType ?? 'OTHER']} · {t.rewardPoint}P · {t.usageCount}회 사용
+                        {missionTypeLabel[t.missionType ?? 'OTHER']} · {t.usageCount}회 사용
                       </p>
                     </button>
                     <button onClick={() => deleteTemplate(t.id)} className="p-1.5 text-gray-300 hover:text-red-400 flex-shrink-0">

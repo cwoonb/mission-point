@@ -1,8 +1,21 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Target, TreePine, User, ClipboardCheck, Users, Trophy } from 'lucide-react';
+import {
+  HeartHandshake,
+  Home,
+  Target,
+  User,
+  UsersRound,
+} from 'lucide-react';
+import { clsx } from 'clsx';
 import { useAuthStore } from '../../store/authStore';
 import { useMissionStore } from '../../store/missionStore';
-import { clsx } from 'clsx';
+
+type NavTab = {
+  to: string;
+  icon: typeof Home;
+  label: string;
+  badge?: number;
+};
 
 export default function BottomNav() {
   const { viewMode, currentUser } = useAuthStore();
@@ -12,27 +25,28 @@ export default function BottomNav() {
     (m) => m.status === 'REVIEWING' && m.creatorId === currentUser?.id
   ).length;
 
-  const tabs = [
+  const performerTabs: NavTab[] = [
     { to: '/', icon: Home, label: '홈' },
     { to: '/missions', icon: Target, label: '미션' },
-    ...(viewMode === 'FACILITATOR'
-      ? [
-          { to: '/approvals', icon: ClipboardCheck, label: '승인', badge: pendingReviews },
-          { to: '/performers', icon: Users, label: '실천자' },
-        ]
-      : [
-          { to: '/ranking', icon: Trophy, label: '랭킹' },
-        ]),
-    { to: '/village', icon: TreePine, label: '내 공간' },
+    { to: '/ranking', icon: HeartHandshake, label: '친구' },
     { to: '/profile', icon: User, label: '내 정보' },
   ];
 
+  const facilitatorTabs: NavTab[] = [
+    { to: '/', icon: Home, label: '홈' },
+    { to: '/missions', icon: Target, label: '미션', badge: pendingReviews },
+    { to: '/students', icon: UsersRound, label: '학생' },
+    { to: '/profile', icon: User, label: '내 정보' },
+  ];
+
+  const tabs = viewMode === 'FACILITATOR' ? facilitatorTabs : performerTabs;
+
   return (
-    /* left-0 right-0 mx-auto 방식으로 iOS 안전 */
-    <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 shadow-lg z-40"
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-md border-t border-gray-100 bg-white shadow-lg"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="flex items-center justify-around py-2">
+      <div className="grid items-center py-2" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map(({ to, icon: Icon, label, badge }) => (
           <NavLink
             key={to}
@@ -40,7 +54,7 @@ export default function BottomNav() {
             end={to === '/'}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 min-w-0 active:scale-90',
+                'flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-1 transition-all duration-200 active:scale-90',
                 isActive ? 'text-purple-600' : 'text-gray-400'
               )
             }
@@ -50,7 +64,7 @@ export default function BottomNav() {
                 <div className="relative">
                   <div
                     className={clsx(
-                      'flex items-center justify-center w-9 h-9 rounded-2xl transition-all duration-200',
+                      'flex h-9 w-9 items-center justify-center rounded-2xl transition-all duration-200',
                       isActive ? 'glossy bg-gradient-to-b from-purple-400 to-indigo-500 shadow-md' : ''
                     )}
                   >
@@ -61,12 +75,12 @@ export default function BottomNav() {
                     />
                   </div>
                   {badge != null && badge > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm">
                       {badge > 9 ? '9+' : badge}
                     </span>
                   )}
                 </div>
-                <span className={clsx('text-[10px] font-semibold truncate', isActive ? 'text-purple-600' : 'text-gray-400')}>
+                <span className={clsx('truncate text-[10px] font-semibold', isActive ? 'text-purple-600' : 'text-gray-400')}>
                   {label}
                 </span>
               </>

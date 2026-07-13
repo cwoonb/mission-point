@@ -1,543 +1,154 @@
-import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, ChevronRight, Play, AlertTriangle, TrendingUp, Clock, Users, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronRight, ClipboardCheck, Lightbulb, Plus, UserPlus } from 'lucide-react';
+import PerformerHome from '../components/home/PerformerHome';
 import Header from '../components/layout/Header';
-import Modal from '../components/ui/Modal';
-import Button from '../components/ui/Button';
-import CoinAnimation from '../components/animations/CoinAnimation';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
-import { usePointStore } from '../store/pointStore';
-import { usePetStore } from '../store/petStore';
-import { PetSprite } from '../components/pet/PetSprite';
-import { SPECIES_LABEL, nextEvolutionInfo } from '../config/pets';
-import { formatPoint } from '../utils/helpers';
+import { useGroupStore } from '../store/groupStore';
+import { buildLeaderSnapshot } from '../utils/leaderAnalytics';
+import { statusConfig } from '../utils/studentStats';
 import {
-  getStudentStatus,
-  getWeeklyRate,
-  getOverdueMissions,
-  getUnsubmittedCount,
-  statusConfig,
-  defaultStatusThresholds,
-  missionTypeEmoji,
-  missionTypeLabel,
-} from '../utils/studentStats';
+  filterMissionsByAnalyticsPeriod,
+  getAnalyticsPeriodLabel,
+  useAnalyticsPeriodStore,
+} from '../store/analyticsPeriodStore';
 
-const AD_TOTAL_SECONDS = 5;
-const MAX_ADS = 5;
-
-const MISSION_TYPE_ACCENT: Record<string, string> = {
-  HOMEWORK: '#60A5FA',
-  VOCABULARY: '#F472B6',
-  READING: '#34D399',
-  ATTENDANCE: '#FBBF24',
-  REVIEW_NOTES: '#A78BFA',
-  LIFESTYLE: '#4ADE80',
-  OTHER: '#F87171',
-};
-
-const BOARD_POSITIONS = [
-  { x: 16, y: 84 },
-  { x: 50, y: 90 },
-  { x: 84, y: 84 },
-];
-
-export default function HomePage() {
+function FacilitatorHome() {
   const navigate = useNavigate();
-  const { currentUser, viewMode, updateUserPoint, users } = useAuthStore();
-  const { missions } = useMissionStore();
-  const { recordAdWatch, addTransaction, getTodayAdCount } = usePointStore();
-  const { pets, loadPets } = usePetStore();
-
-  const [adModal, setAdModal] = useState(false);
-  const [adCountdown, setAdCountdown] = useState(AD_TOTAL_SECONDS);
-  const [adDone, setAdDone] = useState(false);
-  const [coinTrigger, setCoinTrigger] = useState(false);
-  const [rewardMsg, setRewardMsg] = useState('');
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const todayAdCount = currentUser ? getTodayAdCount(currentUser.id) : 0;
-  const canWatchAd = todayAdCount < MAX_ADS;
-
-  const myMissions =
-    viewMode === 'PERFORMER'
-      ? missions.filter((m) => m.assigneeId === currentUser?.id)
-      : missions.filter((m) => m.creatorId === currentUser?.id);
-
-  const activeMissions = myMissions.filter(
-    (m) => m.status === 'IN_PROGRESS' || m.status === 'REVIEWING' || m.status === 'REJECTED'
-  );
-  const successMissions = myMissions.filter((m) => m.status === 'SUCCESS');
-  const reviewingMissions = myMissions.filter((m) => m.status === 'REVIEWING');
-
-  // 리더 대시보드 데이터 계산
-  const thresholds = currentUser?.statusThresholds ?? defaultStatusThresholds;
-  const myStudents = currentUser?.socialProvider
-    ? users.filter((u) => u.role === 'CHILD' && u.facilitatorId === currentUser.id)
-    : users.filter((u) => u.role === 'CHILD');
-
-  const overdueStudents = myStudents.filter(
-    (s) => getOverdueMissions(missions, s.id).length > 0
-  );
-  const counselingStudents = myStudents.filter(
-    (s) => getStudentStatus(missions, s.id, thresholds) === 'COUNSELING'
-  );
-  const weeklyRate = myStudents.length > 0
-    ? Math.round(myStudents.reduce((acc, s) => acc + getWeeklyRate(missions, s.id), 0) / myStudents.length)
-    : 0;
-  const totalUnsubmitted = myStudents.reduce(
-    (acc, s) => acc + getUnsubmittedCount(missions, s.id),
-    0
-  );
-
-  const recentReviewing = missions
-    .filter((m) => m.status === 'REVIEWING' && m.creatorId === currentUser?.id)
-    .slice(0, 3);
-
-  const recentSuccess = missions
-    .filter((m) => m.status === 'SUCCESS' && m.creatorId === currentUser?.id)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3);
-
-  const openAd = () => {
-    setAdCountdown(AD_TOTAL_SECONDS);
-    setAdDone(false);
-    setAdModal(true);
-  };
-
-  useEffect(() => {
-    if (!adModal) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-    if (adDone) return;
-
-    intervalRef.current = setInterval(() => {
-      setAdCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current!);
-          setAdDone(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [adModal, adDone]);
-
-  useEffect(() => {
-    if (currentUser && viewMode === 'PERFORMER') {
-      loadPets(currentUser.id);
-    }
-  }, [currentUser?.id, viewMode, loadPets]);
-
-  const handleAdReward = () => {
-    if (!currentUser || !adDone) return;
-    const result = recordAdWatch(currentUser.id);
-    if (result.success) {
-      updateUserPoint(currentUser.id, result.points);
-      addTransaction(currentUser.id, result.points, 'AD_REWARD', '광고 시청 보상');
-      setRewardMsg(result.message);
-      setCoinTrigger(true);
-    }
-    setAdModal(false);
-  };
+  const { currentUser, users } = useAuthStore();
+  const missions = useMissionStore((state) => state.missions);
+  const groups = useGroupStore((state) => state.groups);
+  const { selectedPeriod, customStart, customEnd } = useAnalyticsPeriodStore();
 
   if (!currentUser) return null;
 
-  const isFacilitator = viewMode === 'FACILITATOR';
+  const periodMissions = filterMissionsByAnalyticsPeriod(missions, selectedPeriod, customStart, customEnd);
+  const snapshot = buildLeaderSnapshot(users, periodMissions, groups, currentUser.id, getAnalyticsPeriodLabel(selectedPeriod), missions);
+  const students = users.filter((user) => user.role === 'CHILD');
+  const pendingReviews = periodMissions.filter(
+    (mission) => mission.creatorId === currentUser.id && mission.status === 'REVIEWING'
+  );
+  const attentionStudents = snapshot.students
+    .filter((student) => ['COUNSELING', 'UNSUBMITTED'].includes(student.status))
+    .sort((a, b) => b.missed - a.missed);
+  const weakestClass = [...snapshot.classes].filter((row) => row.studentCount > 0).sort((a, b) => a.weeklyRate - b.weeklyRate)[0];
 
-  // ── 실천자 뷰: 내 집 앞 ───────────────────────────────
-  if (!isFacilitator) {
-    const myPets = pets.filter((p) => p.ownerId === currentUser.id);
-    const activePet = myPets.find((p) => p.isActive && p.hatched) ?? myPets.find((p) => p.hatched);
-    const evo = activePet ? nextEvolutionInfo(activePet.rarity, activePet.stageIndex, activePet.totalExp) : null;
-    const activePetProgress = activePet ? (evo ? Math.min(100, Math.round((evo.current / evo.required) * 100)) : 100) : 0;
-
-    const missionsByType: Record<string, typeof activeMissions> = {};
-    activeMissions.forEach((m) => {
-      const type = m.missionType ?? 'OTHER';
-      if (!missionsByType[type]) missionsByType[type] = [];
-      missionsByType[type].push(m);
-    });
-    const missionGroups = Object.entries(missionsByType);
-
-    return (
-      <div className="page-container">
-        <Header />
-        <CoinAnimation trigger={coinTrigger} onComplete={() => setCoinTrigger(false)} />
-
-        <div className="content-area px-4 py-5 space-y-4">
-          {/* 포인트 */}
-          <div className="flex items-center justify-between px-1">
-            <div>
-              <p className="text-gray-500 text-xs font-bold">{currentUser.name}님, 안녕하세요 👋</p>
-              <p className="font-black text-gray-700 text-sm">⭐ {formatPoint(currentUser.point)}P</p>
-            </div>
-            <button
-              onClick={() => navigate('/points')}
-              className="text-gray-500 text-[11px] flex items-center gap-0.5 bg-white px-3 py-1.5 rounded-xl shadow-sm"
-            >
-              내역 보기 <ChevronRight size={12} />
-            </button>
-          </div>
-
-          {/* 마이 펫 위젯 */}
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            onClick={() => navigate('/pet')}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full bg-gradient-to-br from-emerald-400 via-teal-400 to-sky-400 rounded-3xl p-4 shadow-md flex items-center gap-4"
-          >
-            <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-              {activePet ? (
-                <PetSprite species={activePet.species} rarity={activePet.rarity} stageIndex={activePet.stageIndex} hatched={activePet.hatched} className="w-16 h-16" />
-              ) : (
-                <span className="text-4xl">🥚</span>
-              )}
-            </div>
-            <div className="flex-1 min-w-0 text-left text-white">
-              {activePet ? (
-                <>
-                  <p className="font-black text-lg truncate">{activePet.name || SPECIES_LABEL[activePet.species]}</p>
-                  <div className="h-2 bg-white/30 rounded-full overflow-hidden mt-1 mb-1">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${activePetProgress}%` }} transition={{ duration: 0.6 }} className="h-full bg-white rounded-full" />
-                  </div>
-                  <p className="text-[11px] text-white/80">{evo ? `다음 진화까지 ${evo.required - evo.current} EXP` : '최종 진화 완료! ✨'}</p>
-                </>
-              ) : (
-                <>
-                  <p className="font-black text-lg">알을 부화시켜 보세요!</p>
-                  <p className="text-[11px] text-white/80">마이 펫에서 새 친구를 만나보세요 🐾</p>
-                </>
-              )}
-            </div>
-            <ChevronRight size={18} className="text-white/70 flex-shrink-0" />
-          </motion.button>
-
-          {/* 진행 중인 미션 */}
-          <div>
-            <div className="flex items-center justify-between mb-2 px-1">
-              <p className="text-xs font-bold text-gray-500">진행 중인 미션</p>
-              <button onClick={() => navigate('/missions')} className="text-emerald-500 text-xs font-semibold flex items-center gap-0.5">
-                전체 <ChevronRight size={12} />
-              </button>
-            </div>
-            {missionGroups.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm py-8 text-center">
-                <p className="text-3xl mb-1">🌟</p>
-                <p className="text-sm font-bold text-gray-600">오늘 할 일을 모두 끝냈어요!</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {missionGroups.map(([type, list]) => (
-                  <button key={type} onClick={() => navigate(list.length === 1 ? `/missions/${list[0].id}` : '/missions')}
-                    className="w-full bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3 active:scale-95 transition-transform">
-                    <span className="text-2xl">{missionTypeEmoji[type] ?? '🪧'}</span>
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="text-sm font-bold text-gray-800 truncate">{missionTypeLabel[type] ?? '기타'}</p>
-                      <p className="text-[11px] text-gray-400">{list.length}개 진행 중</p>
-                    </div>
-                    <ChevronRight size={16} className="text-gray-300" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {successMissions.length > 0 && (
-            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2.5 flex items-center gap-2">
-              <span className="text-lg">✨</span>
-              <p className="text-xs text-emerald-600 font-semibold">완료한 미션 {successMissions.length}개 · 잘하고 있어요!</p>
-            </div>
-          )}
-
-          {/* 광고 보상 (간단히) */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl p-3.5 shadow-sm flex items-center gap-3">
-            <div className="text-2xl">📺</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-gray-700 font-bold text-sm">광고 보고 포인트 받기</p>
-              <p className="text-gray-400 text-[11px]">+10P · 오늘 {todayAdCount}/{MAX_ADS}회</p>
-            </div>
-            <button onClick={openAd} disabled={!canWatchAd}
-              className="bg-amber-400 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1 active:scale-95 transition-all disabled:opacity-40 flex-shrink-0">
-              <Play size={12} className="fill-white" />
-              {canWatchAd ? '시청' : '완료'}
-            </button>
-          </motion.div>
-        </div>
-
-        <AnimatePresence>
-          {rewardMsg && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: -20 }}
-              onAnimationComplete={() => setTimeout(() => setRewardMsg(''), 2000)}
-              className="fixed bottom-24 left-4 right-4 max-w-xs mx-auto bg-amber-400 text-white font-black px-4 py-3 rounded-2xl shadow-lg z-50 flex items-center justify-center gap-2"
-            >
-              <span className="text-xl">⭐</span>{rewardMsg}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <Modal isOpen={adModal} onClose={() => setAdModal(false)} title="📺 광고 시청" hideClose={!adDone}>
-          <div className="flex flex-col items-center gap-5 py-4">
-            <div className="w-full bg-gradient-to-br from-purple-100 to-indigo-100 rounded-2xl aspect-video flex flex-col items-center justify-center gap-3 relative overflow-hidden">
-              <span className="text-6xl z-10">📺</span>
-              <p className="text-gray-600 font-bold z-10">광고 영상</p>
-              <p className="text-gray-400 text-sm z-10">{adDone ? '시청 완료!' : `${adCountdown}초 후 완료`}</p>
-              {!adDone && (
-                <div className="absolute bottom-0 left-0 h-1.5 bg-purple-500 transition-all duration-1000"
-                  style={{ width: `${((AD_TOTAL_SECONDS - adCountdown) / AD_TOTAL_SECONDS) * 100}%` }} />
-              )}
-            </div>
-            {adDone ? (
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center">
-                <p className="text-2xl mb-1">🎉</p>
-                <p className="font-bold text-gray-800">광고 시청 완료!</p>
-                <p className="text-amber-500 font-black text-xl mt-1">+10P 받기</p>
-              </motion.div>
-            ) : (
-              <div className="text-center">
-                <p className="text-gray-500 text-sm">광고를 시청하는 중...</p>
-                <div className="flex gap-1.5 justify-center mt-2">
-                  {Array.from({ length: AD_TOTAL_SECONDS }).map((_, i) => (
-                    <div key={i} className={`w-2 h-2 rounded-full transition-all ${i < AD_TOTAL_SECONDS - adCountdown ? 'bg-purple-500' : 'bg-gray-200'}`} />
-                  ))}
-                </div>
-              </div>
-            )}
-            <Button onClick={handleAdReward} disabled={!adDone} fullWidth variant="amber" size="lg">
-              {adDone ? '⭐ +10P 받기' : `${adCountdown}초 기다리는 중...`}
-            </Button>
-          </div>
-        </Modal>
-      </div>
-    );
-  }
-
-  // ── 리더 대시보드 ───────────────────────────────
   return (
-    <div className="page-container">
-      <Header />
-      <CoinAnimation trigger={coinTrigger} onComplete={() => setCoinTrigger(false)} />
-
-      <div className="content-area px-4 py-5 space-y-4">
-
-        {/* 리더 헤더 */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl p-5 text-white shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/10 rounded-2xl overflow-hidden flex items-center justify-center text-2xl flex-shrink-0">
-                {currentUser.profileImage ? (
-                  <img src={currentUser.profileImage} alt="프로필" className="w-full h-full object-cover" />
-                ) : currentUser.avatar}
+    <div className="page-container bg-slate-50">
+      <Header title="리더 홈" showBack={false} showPoints={false} />
+      <main className="content-area space-y-4 px-4 py-4">
+        <section className="rounded-3xl bg-slate-900 p-5 text-white shadow-lg">
+          <p className="text-xs font-black text-white/50">오늘의 관리 요약</p>
+          <h1 className="mt-1 text-xl font-black">{currentUser.name}님, 오늘 관리 현황이에요</h1>
+          <div className="mt-4 grid grid-cols-3 gap-2">
+            {[
+              ['검토대기', `${snapshot.pendingReviewCount}건`, 'text-amber-300'],
+              ['미제출', `${snapshot.missedCount}건`, 'text-red-300'],
+              ['주간수행률', `${snapshot.weeklyRate}%`, 'text-emerald-300'],
+            ].map(([label, value, color]) => (
+              <div key={label} className="rounded-2xl bg-white/10 p-3 text-center">
+                <p className={`text-xl font-black ${color}`}>{value}</p>
+                <p className="mt-1 text-[9px] font-bold text-white/50">{label}</p>
               </div>
-              <div>
-                <p className="text-white/60 text-xs">리더 대시보드</p>
-                <p className="font-black text-lg">{currentUser.name} 리더님 👋</p>
-              </div>
-            </div>
-            <div className="bg-amber-400/20 border border-amber-400/30 rounded-xl px-3 py-1.5 text-right">
-              <p className="text-amber-300 text-[10px]">보유 포인트</p>
-              <p className="text-amber-300 font-black text-sm">⭐ {formatPoint(currentUser.point)}P</p>
-            </div>
+            ))}
           </div>
-          <p className="text-white/50 text-xs">실천자들의 미션 수행 현황을 확인하세요</p>
-        </motion.div>
+          {weakestClass && (
+            <button onClick={() => navigate('/students?view=analysis')} className="mt-3 flex w-full items-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-left">
+              <AlertTriangle size={14} className="text-red-300" />
+              <span className="flex-1 text-[11px] font-bold text-white/80">{weakestClass.name} 수행률 {weakestClass.weeklyRate}% · 우선 확인 필요</span>
+              <ChevronRight size={14} className="text-white/40" />
+            </button>
+          )}
+        </section>
 
-        {/* 오늘의 관리 요약 */}
-        <div>
-          <p className="text-xs font-bold text-gray-500 mb-2 px-1">오늘의 관리 요약</p>
-          <div className="grid grid-cols-2 gap-3">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }}
-              onClick={() => navigate('/performers', { state: { filter: 'unsubmitted' } })}
-              className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 cursor-pointer active:scale-95 transition-transform ${totalUnsubmitted > 0 ? 'border-orange-400' : 'border-green-400'}`}>
-              <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle size={14} className={totalUnsubmitted > 0 ? 'text-orange-500' : 'text-green-500'} />
-                <p className="text-xs font-bold text-gray-500">미제출 실천자</p>
-              </div>
-              <p className={`text-2xl font-black ${totalUnsubmitted > 0 ? 'text-orange-500' : 'text-green-600'}`}>
-                {overdueStudents.length}명
-              </p>
-              <p className={`text-[11px] mt-0.5 ${totalUnsubmitted > 0 ? 'text-orange-400' : 'text-gray-400'}`}>
-                {totalUnsubmitted > 0 ? `미제출 ${totalUnsubmitted}건 · 탭하여 확인 →` : '모두 제출했어요 ✓'}
-              </p>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.08 }}
-              onClick={() => navigate('/performers')}
-              className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-indigo-400 cursor-pointer active:scale-95 transition-transform">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp size={14} className="text-indigo-500" />
-                <p className="text-xs font-bold text-gray-500">이번 주 수행률</p>
-              </div>
-              <p className={`text-2xl font-black ${weeklyRate >= 70 ? 'text-indigo-600' : 'text-amber-600'}`}>
-                {weeklyRate}%
-              </p>
-              <p className="text-[11px] text-indigo-400 mt-0.5">
-                {weeklyRate >= 70 ? '양호 · 탭하여 보기 →' : '관리 필요 · 탭하여 보기 →'}
-              </p>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.11 }}
-              onClick={() => navigate('/approvals')}
-              className="bg-white rounded-2xl p-4 shadow-sm border-l-4 border-amber-400 cursor-pointer active:scale-95 transition-transform">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock size={14} className="text-amber-500" />
-                <p className="text-xs font-bold text-gray-500">검토 대기</p>
-              </div>
-              <p className="text-2xl font-black text-amber-600">{reviewingMissions.length}건</p>
-              <p className="text-[11px] text-amber-500 mt-0.5">탭하여 검토하기 →</p>
-            </motion.div>
-
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.14 }}
-              onClick={() => navigate('/performers', { state: { filter: 'counseling' } })}
-              className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 cursor-pointer active:scale-95 transition-transform ${counselingStudents.length > 0 ? 'border-red-400' : 'border-green-400'}`}>
-              <div className="flex items-center gap-2 mb-1">
-                <Users size={14} className={counselingStudents.length > 0 ? 'text-red-500' : 'text-green-500'} />
-                <p className="text-xs font-bold text-gray-500">상담 필요</p>
-              </div>
-              <p className={`text-2xl font-black ${counselingStudents.length > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                {counselingStudents.length}명
-              </p>
-              <p className={`text-[11px] mt-0.5 ${counselingStudents.length > 0 ? 'text-red-400' : 'text-gray-400'}`}>
-                {counselingStudents.length > 0 ? '즉시 확인 필요 · 탭하여 보기 →' : '이상 없음 ✓'}
-              </p>
-            </motion.div>
+        <section>
+          <h2 className="mb-2 px-1 text-xs font-black text-slate-500">빠른 액션</h2>
+          <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: '미션 만들기', icon: Plus, to: '/missions/create', color: 'bg-purple-600' },
+            { label: '학생 초대', icon: UserPlus, to: '/students', color: 'bg-emerald-600' },
+          ].map(({ label, icon: Icon, to, color }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => navigate(to)}
+              className={`rounded-2xl ${color} p-3 text-left text-white shadow-md active:scale-95`}
+            >
+              <Icon size={19} />
+              <p className="mt-2 text-xs font-black">{label}</p>
+            </button>
+          ))}
           </div>
-        </div>
+        </section>
 
-        {/* 빠른 액션 */}
-        <div className="grid grid-cols-2 gap-3">
-          <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-            onClick={() => navigate('/missions/create')}
-            className="bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl p-4 text-white flex items-center gap-3 shadow-md active:scale-95 transition-all">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-              <Plus size={20} />
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-sm">새 미션 만들기</p>
-              <p className="text-white/70 text-[11px]">실천자에게 미션 부여</p>
-            </div>
-          </motion.button>
-
-          <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
-            onClick={() => navigate('/performers')}
-            className="bg-gradient-to-br from-teal-500 to-emerald-600 rounded-2xl p-4 text-white flex items-center gap-3 shadow-md active:scale-95 transition-all">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center">
-              <Users size={20} />
-            </div>
-            <div className="text-left">
-              <p className="font-bold text-sm">실천자 관리</p>
-              <p className="text-white/70 text-[11px]">{myStudents.length}명 관리 중</p>
-            </div>
-          </motion.button>
-        </div>
-
-        {/* 상담 필요 실천자 */}
-        {counselingStudents.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-            className="bg-red-50 border border-red-100 rounded-3xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle size={15} className="text-red-500" />
-              <p className="text-sm font-bold text-red-700">상담 필요 실천자</p>
-            </div>
-            <div className="space-y-2">
-              {counselingStudents.map((s) => {
-                const sc = statusConfig[getStudentStatus(missions, s.id, thresholds)];
-                const unsubmitted = getUnsubmittedCount(missions, s.id);
-                return (
-                  <button key={s.id} onClick={() => navigate(`/students/${s.id}`)}
-                    className="w-full flex items-center gap-3 bg-white rounded-2xl px-3 py-2.5 active:scale-95 transition-transform">
-                    <span className="text-xl">{s.avatar}</span>
-                    <div className="flex-1 text-left">
-                      <p className="text-sm font-bold text-gray-800">{s.name}</p>
-                      <p className="text-xs text-red-500">미제출 {unsubmitted}건</p>
-                    </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${sc.bg} ${sc.color}`}>{sc.label}</span>
-                    <ChevronRight size={14} className="text-gray-300" />
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {/* 검토 대기 미션 */}
-        {recentReviewing.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
-            <div className="flex items-center justify-between mb-2 px-1">
-              <p className="text-xs font-bold text-gray-500">검토 대기 미션</p>
-              <button onClick={() => navigate('/approvals')} className="text-purple-500 text-xs font-semibold flex items-center gap-0.5">
-                전체 <ChevronRight size={12} />
-              </button>
-            </div>
-            <div className="space-y-2">
-              {recentReviewing.map((m) => {
-                const student = users.find((u) => u.id === m.assigneeId);
-                return (
-                  <div key={m.id} onClick={() => navigate('/approvals')}
-                    className="bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3 cursor-pointer active:scale-95 transition-transform">
-                    <span className="text-xl">{student?.avatar ?? '👤'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 truncate">{m.title}</p>
-                      <p className="text-xs text-gray-400">{student?.name} · +{formatPoint(m.rewardPoint)}P</p>
-                    </div>
-                    <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0">검토대기</span>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {/* 최근 완료 현황 */}
-        {recentSuccess.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-            <div className="flex items-center justify-between mb-2 px-1">
-              <p className="text-xs font-bold text-gray-500">최근 완료 현황</p>
-            </div>
-            <div className="space-y-2">
-              {recentSuccess.map((m) => {
-                const student = users.find((u) => u.id === m.assigneeId);
-                return (
-                  <div key={m.id} className="bg-white rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <CheckCircle2 size={16} className="text-green-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 truncate">{m.title}</p>
-                      <p className="text-xs text-gray-400">{student?.name}</p>
-                    </div>
-                    <span className="text-green-600 font-bold text-xs">+{formatPoint(m.rewardPoint)}P</span>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-
-        {/* 빈 상태 */}
-        {myStudents.length === 0 && (
-          <div className="text-center py-10">
-            <p className="text-4xl mb-3">👥</p>
-            <p className="text-gray-600 font-bold mb-1">아직 관리 중인 실천자가 없어요</p>
-            <p className="text-gray-400 text-sm mb-4">실천자 탭에서 실천자를 초대해보세요</p>
-            <button onClick={() => navigate('/performers')}
-              className="px-5 py-2.5 bg-purple-600 text-white font-bold text-sm rounded-2xl">
-              실천자 초대하기 →
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-black text-slate-800">검토 대기 제출물</h2>
+            <button type="button" onClick={() => navigate('/missions?tab=pending')} className="flex items-center text-xs font-black text-purple-600">
+              전체 보기 <ChevronRight size={14} />
             </button>
           </div>
-        )}
+          {pendingReviews.slice(0, 3).map((mission) => {
+            const student = students.find((user) => user.id === mission.assigneeId);
+            return (
+              <button
+                key={mission.id}
+                type="button"
+                onClick={() => navigate('/missions?tab=pending')}
+                className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+                  <ClipboardCheck size={20} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-black text-slate-800">{mission.title}</span>
+                  <span className="text-xs text-slate-400">{student?.name ?? '실천자'}</span>
+                </span>
+                <ChevronRight size={15} className="text-slate-300" />
+              </button>
+            );
+          })}
+        </section>
 
-      </div>
+        <section className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="font-black text-slate-800">오늘 확인할 학생</h2>
+            <button onClick={() => navigate('/students')} className="flex items-center text-xs font-black text-purple-600">학생 관리 <ChevronRight size={14} /></button>
+          </div>
+          {attentionStudents.length === 0 ? (
+            <div className="rounded-2xl bg-emerald-50 p-4 text-center text-xs font-bold text-emerald-700">현재 집중 관리가 필요한 학생이 없습니다.</div>
+          ) : attentionStudents.slice(0, 3).map((row) => {
+            const config = statusConfig[row.status];
+            return (
+              <button key={row.user.id} onClick={() => navigate(`/students/${row.user.id}`)} className="flex w-full items-center gap-3 rounded-2xl bg-white p-3 text-left shadow-sm">
+                <span className="text-2xl">{row.user.avatar}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-black text-slate-800">{row.user.name} · {row.className}</span>
+                  <span className="text-[11px] font-bold text-slate-400">수행률 {row.weeklyRate}% · 미제출 {row.missed}건</span>
+                </span>
+                <span className={`rounded-full px-2 py-1 text-[9px] font-black ${config.bg} ${config.color}`}>{config.label}</span>
+                <ChevronRight size={14} className="text-slate-300" />
+              </button>
+            );
+          })}
+        </section>
+
+        <section className="rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-4">
+          <div className="flex items-center gap-2">
+            <Lightbulb size={17} className="text-purple-600" />
+            <h2 className="text-sm font-black text-purple-800">자동 분석 요약</h2>
+          </div>
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{snapshot.insights[0]}</p>
+          <button onClick={() => navigate('/students?view=analysis')} className="mt-3 flex items-center gap-1 text-xs font-black text-purple-600">전체 분석 보기 <ChevronRight size={13} /></button>
+        </section>
+      </main>
     </div>
   );
+}
+
+export default function HomePage() {
+  const { currentUser, viewMode } = useAuthStore();
+
+  if (!currentUser) return null;
+  return viewMode === 'FACILITATOR' ? <FacilitatorHome /> : <PerformerHome />;
 }
