@@ -129,8 +129,8 @@ export const useAuthStore = create<AuthState>()(
       isDemoMode: false,
 
       initializeData: async () => {
-        if (get().isDemoMode && get().currentUser && isDemoUserId(get().currentUser?.id)) {
-          set({ users: initialUsers });
+        if (get().currentUser && isDemoUserId(get().currentUser?.id)) {
+          set({ users: initialUsers, isDemoMode: true });
           return;
         }
         const { data, error } = await supabase.from('users').select('*');

@@ -7,6 +7,7 @@ import { useMissionStore } from './store/missionStore';
 import { useGroupStore } from './store/groupStore';
 import { useTemplateStore } from './store/templateStore';
 import { checkNaverCallback, checkKakaoCallback } from './lib/socialAuth';
+import { startDemoSession } from './data/demoSession';
 
 import AppLayout from './components/layout/AppLayout';
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -89,6 +90,8 @@ function AppContent() {
     (async () => {
       // users 시드가 끝나야 missions 등의 외래키 참조가 안전하게 시드됨
       await initAuth();
+      const auth = useAuthStore.getState();
+      if (auth.isDemoMode && auth.currentUser) startDemoSession(auth.currentUser.id);
       await initMissions();
       initGroups();
       initTemplates();

@@ -23,6 +23,7 @@ function FacilitatorHome() {
   if (!currentUser) return null;
 
   const periodMissions = filterMissionsByAnalyticsPeriod(missions, selectedPeriod, customStart, customEnd);
+  const assignedCount = periodMissions.filter((mission) => mission.creatorId === currentUser.id).length;
   const snapshot = buildLeaderSnapshot(users, periodMissions, groups, currentUser.id, getAnalyticsPeriodLabel(selectedPeriod), missions);
   const students = users.filter((user) => user.role === 'CHILD');
   const pendingReviews = periodMissions.filter(
@@ -44,7 +45,7 @@ function FacilitatorHome() {
             {[
               ['검토대기', `${snapshot.pendingReviewCount}건`, 'text-amber-300'],
               ['미제출', `${snapshot.missedCount}건`, 'text-red-300'],
-              ['주간수행률', `${snapshot.weeklyRate}%`, 'text-emerald-300'],
+              ['기간 수행률', assignedCount === 0 ? '—' : `${snapshot.weeklyRate}%`, 'text-emerald-300'],
             ].map(([label, value, color]) => (
               <div key={label} className="rounded-2xl bg-white/10 p-3 text-center">
                 <p className={`text-xl font-black ${color}`}>{value}</p>
@@ -52,7 +53,7 @@ function FacilitatorHome() {
               </div>
             ))}
           </div>
-          {weakestClass && (
+          {weakestClass && assignedCount > 0 && (
             <button onClick={() => navigate('/students?view=analysis')} className="mt-3 flex w-full items-center gap-2 rounded-xl bg-red-500/15 px-3 py-2 text-left">
               <AlertTriangle size={14} className="text-red-300" />
               <span className="flex-1 text-[11px] font-bold text-white/80">{weakestClass.name} 수행률 {weakestClass.weeklyRate}% · 우선 확인 필요</span>
@@ -136,10 +137,10 @@ function FacilitatorHome() {
         <section className="rounded-3xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-4">
           <div className="flex items-center gap-2">
             <Lightbulb size={17} className="text-purple-600" />
-            <h2 className="text-sm font-black text-purple-800">자동 분석 요약</h2>
+            <h2 className="text-sm font-black text-purple-800">활동 요약</h2>
           </div>
-          <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{snapshot.insights[0]}</p>
-          <button onClick={() => navigate('/students?view=analysis')} className="mt-3 flex items-center gap-1 text-xs font-black text-purple-600">전체 분석 보기 <ChevronRight size={13} /></button>
+          <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{assignedCount === 0 ? '선택한 기간에 등록된 미션이 없습니다. 새 미션이 등록되면 진행 현황이 표시됩니다.' : snapshot.insights[0]}</p>
+          <button onClick={() => navigate('/students')} className="mt-3 flex items-center gap-1 text-xs font-black text-purple-600">학생 활동 보기 <ChevronRight size={13} /></button>
         </section>
       </main>
     </div>
