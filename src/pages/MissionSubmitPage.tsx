@@ -1,166 +1,40 @@
-import { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Camera, X, Send } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Camera, CheckCircle2, ImagePlus, Send, X } from 'lucide-react';
 import Header from '../components/layout/Header';
-import Button from '../components/ui/Button';
-import { StatusBadge } from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
+import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
+import { getStudentDemoImage } from '../data/studentDemo';
 
 export default function MissionSubmitPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{id:string}>();
   const navigate = useNavigate();
-  const { currentUser } = useAuthStore();
-  const { getMission, submitMission, getReviewLogs } = useMissionStore();
-
-  const [message, setMessage] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const mission = getMission(id!);
-  const latestRejectLog = mission
-    ? getReviewLogs(mission.id).find((l) => l.action === 'REJECTED')
-    : null;
-
-  if (!mission || !currentUser) {
-    return (
-      <div className="page-container flex items-center justify-center">
-        <p className="text-gray-500">미션을 찾을 수 없습니다.</p>
-      </div>
-    );
-  }
-
-  const needsImage = mission.submissionType === 'IMAGE' || mission.submissionType === 'BOTH';
-  const needsText = mission.submissionType === 'TEXT' || mission.submissionType === 'BOTH';
-  const isValid =
-    (!needsImage || imagePreview) && (!needsText || message.trim());
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
-
-  const handleSubmit = () => {
-    if (!isValid) return;
-    setLoading(true);
-    setTimeout(() => {
-      submitMission(
-        mission.id,
-        currentUser.id,
-        message.trim() || undefined,
-        imagePreview ?? undefined
-      );
-      navigate(`/missions/${mission.id}`, { replace: true });
-    }, 500);
-  };
-
-  return (
-    <div className="page-container">
-      <Header title="미션 제출" showBack showPoints={false} />
-
-      <div className="content-area px-4 py-5 space-y-4">
-        {/* 반려 메시지 */}
-        {latestRejectLog && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-red-50 border border-red-200 rounded-2xl p-4"
-          >
-            <p className="text-red-600 font-bold text-sm mb-1">이전 반려 사유</p>
-            <p className="text-red-500 text-sm">"{latestRejectLog.reason}"</p>
-          </motion.div>
-        )}
-
-        {/* 미션 요약 */}
-        <div className="bg-white rounded-3xl shadow-sm p-4">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h3 className="font-bold text-gray-800 text-base">{mission.title}</h3>
-            <StatusBadge status={mission.status} />
-          </div>
-          <p className="text-gray-500 text-sm mb-3">{mission.description}</p>
-          <div className="flex items-center gap-2">
-            <span className="text-amber-700 font-bold text-sm">
-              제출 후 리더의 확인을 기다려주세요
-            </span>
-          </div>
-        </div>
-
-        {/* 이미지 업로드 */}
-        {needsImage && (
-          <div className="bg-white rounded-3xl shadow-sm p-5">
-            <label className="text-xs font-bold text-gray-500 mb-3 block">
-              이미지 첨부 {mission.submissionType === 'IMAGE' && <span className="text-red-400">*</span>}
-            </label>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleImageChange}
-            />
-            {imagePreview ? (
-              <div className="relative">
-                <img
-                  src={imagePreview}
-                  alt="미리보기"
-                  className="w-full rounded-2xl object-cover max-h-64"
-                />
-                <button
-                  onClick={() => setImagePreview(null)}
-                  className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="w-full border-2 border-dashed border-gray-200 rounded-2xl py-10 flex flex-col items-center gap-2 text-gray-400 hover:border-purple-300 hover:bg-purple-50 transition-all active:scale-98"
-              >
-                <Camera size={28} className="text-gray-300" />
-                <p className="text-sm font-semibold">사진 추가하기</p>
-                <p className="text-xs">탭하여 카메라 또는 갤러리에서 선택</p>
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* 텍스트 입력 */}
-        {needsText && (
-          <div className="bg-white rounded-3xl shadow-sm p-5">
-            <label className="text-xs font-bold text-gray-500 mb-3 block">
-              완료 메시지 {mission.submissionType === 'TEXT' && <span className="text-red-400">*</span>}
-            </label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="미션을 어떻게 완료했는지 알려주세요!&#10;예: 오늘 수학 문제집 3페이지 완료했습니다 😊"
-              rows={5}
-              className="input-field resize-none"
-              maxLength={500}
-            />
-            <p className="text-xs text-gray-400 text-right mt-1">{message.length}/500</p>
-          </div>
-        )}
-
-        <Button
-          fullWidth
-          size="lg"
-          onClick={handleSubmit}
-          disabled={!isValid}
-          loading={loading}
-          className="rounded-3xl"
-        >
-          <Send size={18} />
-          제출하기
-        </Button>
-      </div>
-    </div>
-  );
+  const { currentUser, isDemoMode } = useAuthStore();
+  const { getMission, getLatestSubmission, getReviewLogs, submitMission } = useMissionStore();
+  const mission = id ? getMission(id) : undefined;
+  const [message,setMessage]=useState('');
+  const [image,setImage]=useState<string|null>(null);
+  const [confirmOpen,setConfirmOpen]=useState(false);
+  const [submitting,setSubmitting]=useState(false);
+  const [complete,setComplete]=useState(false);
+  const fileRef=useRef<HTMLInputElement>(null);
+  if(!mission||!currentUser)return <div className="page-container"><Header title="미션 제출" showBack/><main className="content-area p-4"><EmptyState title="미션을 찾을 수 없습니다."/></main></div>;
+  const latest=getLatestSubmission(mission.id);
+  const rejected=getReviewLogs(mission.id).find((log)=>log.action==='REJECTED');
+  const isResubmission=mission.status==='REJECTED'||!!rejected;
+  const needsImage=mission.submissionType==='IMAGE'||mission.submissionType==='BOTH';
+  const needsText=mission.submissionType==='TEXT'||mission.submissionType==='BOTH';
+  const valid=(!needsImage||!!image)&&(!needsText||!!message.trim());
+  const fileChanged=(event:React.ChangeEvent<HTMLInputElement>)=>{const file=event.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>typeof reader.result==='string'&&setImage(reader.result);reader.readAsDataURL(file);};
+  const submit=async()=>{if(!valid||submitting)return;setSubmitting(true);await submitMission(mission.id,currentUser.id,message.trim()||undefined,image||undefined);setConfirmOpen(false);setComplete(true);setSubmitting(false);};
+  if(complete)return <div className="page-container bg-[#F8F5F0]"><main className="content-area flex min-h-[calc(100dvh-4.5rem)] flex-col items-center justify-center px-6 text-center"><span className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#4F8A68] text-[#4F8A68]"><CheckCircle2 size={36}/></span><h1 className="mt-6 text-xl font-bold text-[#14233B]">{isResubmission?'수정 제출이 완료되었습니다.':'제출이 완료되었습니다.'}</h1><p className="mt-2 text-sm leading-6 text-[#687282]">선생님 확인을 기다리고 있습니다.<br/>{isResubmission?'수정 제출 완료 상태로 저장되었습니다.':'미션 상태가 승인 대기로 바뀌었습니다.'}</p><button type="button" onClick={()=>navigate(`/missions/${mission.id}`,{replace:true})} className="mt-8 min-h-12 w-full rounded-[10px] bg-[#14233B] text-sm font-bold text-white">미션 상태 확인</button><button type="button" onClick={()=>navigate('/missions',{replace:true})} className="mt-2 min-h-11 text-xs font-bold text-[#687282]">미션 목록으로</button></main></div>;
+  return <div className="page-container bg-[#F8F5F0]"><Header title={mission.status==='REJECTED'?'수정 후 다시 제출':'미션 제출'} showBack showPoints={false}/><main className="content-area space-y-4 px-4 py-4">
+    {rejected&&mission.status==='REJECTED'&&<section className="rounded-[12px] border border-[#E4B8B4] bg-[#FFF7F6] p-4"><h2 className="text-sm font-bold text-[#9B4E49]">선생님 수정 요청</h2><p className="mt-2 text-sm leading-6 text-[#714B48]">{rejected.reason}</p></section>}
+    <section className="rounded-[14px] border border-[#E7E1D9] bg-[#FFFDFC] p-4"><h1 className="text-lg font-bold text-[#14233B]">{mission.title}</h1><p className="mt-2 text-sm leading-6 text-[#687282]">{mission.description}</p>{latest&&mission.status==='REJECTED'&&<p className="mt-3 text-[11px] font-semibold text-[#B58A4A]">이전 제출물을 참고해 수정해 주세요.</p>}</section>
+    {needsImage&&<section className="rounded-[14px] border border-[#E7E1D9] bg-[#FFFDFC] p-4"><label className="text-sm font-bold text-[#14233B]">사진 첨부</label><input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={fileChanged}/>{image?<div className="relative mt-3"><img src={image} alt="제출 이미지 미리보기" className="max-h-72 w-full rounded-[12px] bg-[#F1EDE7] object-contain"/><button type="button" onClick={()=>setImage(null)} aria-label="첨부 이미지 삭제" className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#14233B]/75 text-white"><X size={16}/></button></div>:<div className="mt-3 grid gap-2"><button type="button" onClick={()=>fileRef.current?.click()} className="flex min-h-20 w-full items-center justify-center gap-2 rounded-[12px] border border-dashed border-[#C8C1B8] text-sm font-semibold text-[#687282]"><Camera size={20}/>사진 선택</button>{isDemoMode&&<button type="button" onClick={()=>setImage(getStudentDemoImage(`${mission.title} 데모 제출`))} className="flex min-h-11 items-center justify-center gap-2 rounded-[10px] bg-[#F1E7D6] text-xs font-bold text-[#8A672F]"><ImagePlus size={16}/>데모 이미지 첨부</button>}</div>}</section>}
+    {needsText&&<section className="rounded-[14px] border border-[#E7E1D9] bg-[#FFFDFC] p-4"><label htmlFor="student-comment" className="text-sm font-bold text-[#14233B]">학생 코멘트</label><textarea id="student-comment" value={message} onChange={(event)=>setMessage(event.target.value)} maxLength={500} rows={5} placeholder="한 일과 느낀 점을 적어주세요." className="mt-3 w-full resize-none rounded-[10px] border border-[#D8D0C5] bg-[#FFFDFC] p-3 text-sm leading-6 outline-none focus:border-[#14233B]"/><p className="mt-1 text-right text-[10px] text-[#9A9FA7]">{message.length}/500</p></section>}
+    <button type="button" onClick={()=>setConfirmOpen(true)} disabled={!valid} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] bg-[#14233B] text-sm font-bold text-white disabled:bg-[#A7ABB2]"><Send size={17}/>제출 내용 확인</button>
+  </main><Modal isOpen={confirmOpen} onClose={()=>setConfirmOpen(false)} title="제출하시겠어요?"><p className="text-sm leading-6 text-[#687282]">제출 후 상태가 승인 대기로 바뀝니다. 수정 요청을 받은 미션은 재제출 기록으로 저장됩니다.</p><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={()=>setConfirmOpen(false)} className="min-h-12 rounded-[10px] border border-[#D8D0C5] text-sm font-bold text-[#687282]">취소</button><button type="button" onClick={submit} disabled={submitting} className="min-h-12 rounded-[10px] bg-[#14233B] text-sm font-bold text-white disabled:opacity-50">{submitting?'제출 중':'제출'}</button></div></Modal></div>;
 }

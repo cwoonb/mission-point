@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AnimatePresence } from 'framer-motion';
@@ -28,6 +28,15 @@ const SubmissionReviewPage = lazy(() => import('./pages/SubmissionReviewPage'));
 const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const MissionClassPage = lazy(() => import('./pages/MissionClassPage'));
 const HomeworkDetailPage = lazy(() => import('./pages/HomeworkDetailPage'));
+const StudentActivityPage = lazy(() => import('./pages/StudentActivityPage'));
+
+function FacilitatorOnly({ children }: { children: ReactElement }) {
+  return useAuthStore((state) => state.viewMode) === 'FACILITATOR' ? children : <Navigate to="/" replace />;
+}
+
+function PerformerOnly({ children }: { children: ReactElement }) {
+  return useAuthStore((state) => state.viewMode) === 'PERFORMER' ? children : <Navigate to="/" replace />;
+}
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -37,21 +46,22 @@ function AuthenticatedRoutes() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="missions" element={<MissionListPage />} />
-        <Route path="missions/create" element={<MissionCreatePage />} />
-        <Route path="missions/class/:classId" element={<MissionClassPage />} />
-        <Route path="missions/homework/:homeworkId" element={<HomeworkDetailPage />} />
-        <Route path="missions/:id/review" element={<SubmissionReviewPage />} />
-        <Route path="missions/:id/edit" element={<MissionEditPage />} />
+        <Route path="missions/create" element={<FacilitatorOnly><MissionCreatePage /></FacilitatorOnly>} />
+        <Route path="missions/class/:classId" element={<FacilitatorOnly><MissionClassPage /></FacilitatorOnly>} />
+        <Route path="missions/homework/:homeworkId" element={<FacilitatorOnly><HomeworkDetailPage /></FacilitatorOnly>} />
+        <Route path="missions/:id/review" element={<FacilitatorOnly><SubmissionReviewPage /></FacilitatorOnly>} />
+        <Route path="missions/:id/edit" element={<FacilitatorOnly><MissionEditPage /></FacilitatorOnly>} />
         <Route path="missions/:id" element={<MissionDetailPage />} />
         <Route path="missions/:id/submit" element={<MissionSubmitPage />} />
-        <Route path="approvals" element={<Navigate to="/missions?tab=pending" replace />} />
-        <Route path="approval" element={<Navigate to="/missions?tab=pending" replace />} />
+        <Route path="approvals" element={<FacilitatorOnly><Navigate to="/missions?tab=pending" replace /></FacilitatorOnly>} />
+        <Route path="approval" element={<FacilitatorOnly><Navigate to="/missions?tab=pending" replace /></FacilitatorOnly>} />
         <Route path="performers" element={<Navigate to="/students" replace />} />
         <Route path="performers/:id" element={<Navigate to="/students" replace />} />
-        <Route path="students/:id" element={<StudentDetailPage />} />
-        <Route path="students" element={<StudentsPage />} />
-        <Route path="students/:id/report" element={<ParentReportPage />} />
-        <Route path="students/:id/report/share" element={<ReportSharePage />} />
+        <Route path="students/:id" element={<FacilitatorOnly><StudentDetailPage /></FacilitatorOnly>} />
+        <Route path="students" element={<FacilitatorOnly><StudentsPage /></FacilitatorOnly>} />
+        <Route path="students/:id/report" element={<FacilitatorOnly><ParentReportPage /></FacilitatorOnly>} />
+        <Route path="students/:id/report/share" element={<FacilitatorOnly><ReportSharePage /></FacilitatorOnly>} />
+        <Route path="activity" element={<PerformerOnly><StudentActivityPage /></PerformerOnly>} />
         <Route path="ranking" element={<Navigate to="/" replace />} />
         <Route path="analytics" element={<Navigate to="/students?view=analysis" replace />} />
         <Route path="analysis" element={<Navigate to="/students?view=analysis" replace />} />
@@ -65,7 +75,7 @@ function AuthenticatedRoutes() {
         <Route path="village" element={<Navigate to="/" replace />} />
         <Route path="points" element={<Navigate to="/profile" replace />} />
         <Route path="profile" element={<ProfilePage />} />
-        <Route path="profile/status-settings" element={<StatusSettingsPage />} />
+        <Route path="profile/status-settings" element={<FacilitatorOnly><StatusSettingsPage /></FacilitatorOnly>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

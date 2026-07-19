@@ -1,69 +1,47 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ChevronRight, ClipboardCheck, Clock3, Target } from 'lucide-react';
-import Modal from '../ui/Modal';
+import { CheckCircle2, ChevronRight, Clock3, MessageCircle, RefreshCw, Target } from 'lucide-react';
+import EmptyState from '../ui/EmptyState';
 import { useAuthStore } from '../../store/authStore';
+import { useGroupStore } from '../../store/groupStore';
 import { useMissionStore } from '../../store/missionStore';
 import type { Mission } from '../../types';
+import { formatDate } from '../../utils/helpers';
 
-const statusLabel: Record<string, string> = {
-  IN_PROGRESS: '진행 중', REVIEWING: '승인 대기', REJECTED: '재제출 필요', SUCCESS: '완료',
+const dayKey = (value: string | Date) => { const date = new Date(value); return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; };
+const statusText = (mission: Mission, attempts: number) => {
+  if (mission.status === 'SUCCESS') return attempts > 1 ? '승인 완료' : '완료';
+  if (mission.status === 'REJECTED') return '수정 요청';
+  if (mission.status === 'REVIEWING') return attempts > 1 ? '수정 제출 완료' : '승인 대기';
+  if (mission.status === 'PENDING' || new Date(mission.startDate) > new Date()) return '시작 전';
+  if (dayKey(mission.endDate) === dayKey(new Date())) return '오늘 마감';
+  return '진행 중';
 };
 
-function MissionRow({ mission, onOpen }: { mission: Mission; onOpen: () => void }) {
-  return (
-    <button type="button" onClick={onOpen} className="flex min-h-16 w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left shadow-sm active:scale-[0.99]">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600"><ClipboardCheck size={19} /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-black text-slate-800">{mission.title}</span>
-        <span className="mt-1 block text-[11px] font-bold text-slate-400">{statusLabel[mission.status] ?? mission.status} · {new Date(mission.endDate).toLocaleDateString('ko-KR')}까지</span>
-      </span>
-      <ChevronRight size={16} className="text-slate-300" />
-    </button>
-  );
+function MissionRow({ mission, attempts, onOpen }: { mission: Mission; attempts: number; onOpen: () => void }) {
+  const status = statusText(mission, attempts);
+  return <button type="button" onClick={onOpen} className="flex min-h-[68px] w-full items-center gap-3 rounded-[12px] border border-[#E7E1D9] bg-[#FFFDFC] px-3 py-2.5 text-left"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-[#E9EDF2] text-[#14233B]"><Target size={18}/></span><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-[#27313F]">{mission.title}</strong><span className="mt-1 block text-[11px] text-[#7D8490]">{status} · {formatDate(mission.endDate)}까지</span></span><ChevronRight size={15} className="text-[#B5B7BC]"/></button>;
 }
 
 export default function PerformerHome() {
   const navigate = useNavigate();
   const currentUser = useAuthStore((state) => state.currentUser);
-  const missions = useMissionStore((state) => state.missions);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const groups = useGroupStore((state) => state.groups);
+  const { missions, submissions, reviewLogs } = useMissionStore();
   if (!currentUser) return null;
-
   const mine = missions.filter((mission) => mission.assigneeId === currentUser.id);
-  const active = mine.filter((mission) => ['IN_PROGRESS', 'REJECTED', 'REVIEWING'].includes(mission.status));
+  const submissionsFor = (missionId: string) => submissions.filter((submission) => submission.missionId === missionId);
+  const actionable = mine.filter((mission) => ['PENDING','IN_PROGRESS','REJECTED'].includes(mission.status));
+  const dueToday = actionable.filter((mission) => dayKey(mission.endDate) === dayKey(new Date()));
   const rejected = mine.filter((mission) => mission.status === 'REJECTED');
-  const reviewing = mine.filter((mission) => mission.status === 'REVIEWING');
-
-  return (
-    <div className="page-container bg-slate-50">
-      <main className="content-area space-y-4 px-4 py-5">
-        <header className="flex items-center gap-3">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-100 text-3xl">{currentUser.avatar}</div>
-          <div className="min-w-0 flex-1"><p className="text-xs font-bold text-slate-400">오늘도 차근차근 진행해요</p><h1 className="truncate text-xl font-black text-slate-900">{currentUser.name}님</h1></div>
-          <button type="button" aria-label="알림" onClick={() => setNotificationsOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm"><Bell size={20} /></button>
-        </header>
-
-        <section className="grid grid-cols-3 gap-2">
-          {[{label:'진행 중',value:active.filter((m) => m.status === 'IN_PROGRESS').length,icon:Target},{label:'승인 대기',value:reviewing.length,icon:Clock3},{label:'재제출',value:rejected.length,icon:ClipboardCheck}].map(({label,value,icon:Icon}) => (
-            <div key={label} className="rounded-2xl bg-white p-3 text-center shadow-sm"><Icon size={17} className="mx-auto text-purple-500" /><p className="mt-1 text-xl font-black text-slate-800">{value}</p><p className="text-[10px] font-bold text-slate-400">{label}</p></div>
-          ))}
-        </section>
-
-        <section>
-          <div className="mb-2 flex items-center justify-between"><h2 className="font-black text-slate-800">내 미션</h2><button type="button" onClick={() => navigate('/missions')} className="min-h-11 px-2 text-xs font-black text-purple-600">전체 보기</button></div>
-          <div className="space-y-2">{active.slice(0, 5).map((mission) => <MissionRow key={mission.id} mission={mission} onOpen={() => navigate(`/missions/${mission.id}`)} />)}</div>
-          {active.length === 0 && <div className="rounded-3xl bg-white px-5 py-12 text-center shadow-sm"><p className="font-black text-slate-700">진행할 미션이 없어요</p></div>}
-        </section>
-      </main>
-
-      <Modal isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} title="알림">
-        <div className="space-y-2">
-          {rejected.length === 0 && reviewing.length === 0 ? <p className="rounded-2xl bg-slate-50 py-8 text-center text-sm text-slate-400">새 알림이 없어요.</p> : null}
-          {rejected.map((mission) => <MissionRow key={mission.id} mission={mission} onOpen={() => { setNotificationsOpen(false); navigate(`/missions/${mission.id}`); }} />)}
-          {reviewing.map((mission) => <MissionRow key={mission.id} mission={mission} onOpen={() => { setNotificationsOpen(false); navigate(`/missions/${mission.id}`); }} />)}
-        </div>
-      </Modal>
-    </div>
-  );
+  const feedback = reviewLogs.filter((log) => mine.some((mission) => mission.id === log.missionId) && !!log.reason);
+  const completed = mine.filter((mission) => mission.status === 'SUCCESS').sort((a,b)=>new Date(b.endDate).getTime()-new Date(a.endDate).getTime());
+  const groupName = groups.find((group) => group.id === currentUser.groupId)?.name ?? '소속 없음';
+  const counts = [{label:'오늘 할 미션',value:actionable.length,icon:Target,to:'/missions?tab=todo'},{label:'오늘 마감',value:dueToday.length,icon:Clock3,to:'/missions?tab=todo'},{label:'선생님 피드백',value:feedback.length,icon:MessageCircle,to:'/activity?view=feedback'},{label:'수정 요청',value:rejected.length,icon:RefreshCw,to:'/missions?tab=rejected'}].filter((item)=>item.value>0);
+  return <div className="page-container bg-[#F8F5F0]"><main className="content-area space-y-6 px-4 pb-6 pt-[max(4.25rem,calc(env(safe-area-inset-top)+3.5rem))]">
+    <header><p className="text-xs font-semibold text-[#B58A4A]">{groupName}</p><h1 className="mt-1 text-[22px] font-bold text-[#14233B]">{currentUser.name} 학생, 오늘도 차근차근 해봐요.</h1></header>
+    {counts.length>0&&<section className="grid grid-cols-2 gap-2">{counts.map(({label,value,icon:Icon,to})=><button type="button" key={label} onClick={()=>navigate(to)} className="flex min-h-[82px] items-center gap-3 rounded-[12px] border border-[#E7E1D9] bg-[#FFFDFC] p-3 text-left"><Icon size={19} className="text-[#B58A4A]"/><span><strong className="text-xl text-[#14233B]">{value}</strong><span className="ml-1 text-[10px] text-[#687282]">건</span><span className="mt-1 block text-[11px] font-semibold text-[#687282]">{label}</span></span></button>)}</section>}
+    <section><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold text-[#14233B]">해야 할 미션</h2><button type="button" onClick={()=>navigate('/missions?tab=todo')} className="flex min-h-11 items-center gap-1 text-xs font-bold text-[#687282]">전체 보기<ChevronRight size={14}/></button></div><div className="space-y-2">{actionable.slice(0,4).map((mission)=><MissionRow key={mission.id} mission={mission} attempts={submissionsFor(mission.id).length} onOpen={()=>navigate(`/missions/${mission.id}`)}/>)}</div>{actionable.length===0&&<EmptyState title="지금 해야 할 미션이 없습니다."/>}</section>
+    {feedback.length>0&&<section><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold text-[#14233B]">선생님 피드백</h2><button type="button" onClick={()=>navigate('/activity?view=feedback')} className="min-h-11 text-xs font-bold text-[#687282]">모두 보기</button></div>{feedback.slice(0,2).map((log)=>{const mission=mine.find((item)=>item.id===log.missionId);return <button type="button" key={log.id} onClick={()=>mission&&navigate(`/missions/${mission.id}`)} className="mb-2 w-full rounded-[12px] border border-[#D8D0C5] bg-[#F3EFE9] p-4 text-left"><strong className="text-sm text-[#14233B]">{mission?.title}</strong><p className="mt-2 line-clamp-2 text-xs leading-5 text-[#687282]">{log.reason}</p></button>;})}</section>}
+    {completed.length>0&&<section><h2 className="mb-3 text-sm font-bold text-[#14233B]">최근 완료</h2>{completed.slice(0,2).map((mission)=><button type="button" key={mission.id} onClick={()=>navigate(`/missions/${mission.id}`)} className="mb-2 flex min-h-14 w-full items-center gap-3 rounded-[12px] border border-[#E7E1D9] bg-[#FFFDFC] px-3 text-left"><CheckCircle2 size={18} className="text-[#4F8A68]"/><span className="flex-1 truncate text-sm font-semibold text-[#27313F]">{mission.title}</span><ChevronRight size={14} className="text-[#B5B7BC]"/></button>)}</section>}
+  </main></div>;
 }

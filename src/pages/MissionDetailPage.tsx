@@ -1,323 +1,45 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Calendar, User, Trash2, Edit3 } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Calendar, CheckCircle2, FileText, Image as ImageIcon, MessageCircle, RefreshCw, UserRound } from 'lucide-react';
 import Header from '../components/layout/Header';
-import { StatusBadge } from '../components/ui/Badge';
-import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
-import SuccessAnimation from '../components/animations/SuccessAnimation';
+import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
+import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
 import { formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
 
 export default function MissionDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{id:string}>();
   const navigate = useNavigate();
-  const { currentUser, viewMode, getUser } = useAuthStore();
-  const { getMission, getLatestSubmission, getReviewLogs, approveMission, rejectMission, deleteMission } = useMissionStore();
+  const { currentUser, viewMode, users } = useAuthStore();
+  const groups = useGroupStore((state)=>state.groups);
+  const { getMission, getLatestSubmission, getReviewLogs, submissions } = useMissionStore();
+  const mission = id ? getMission(id) : undefined;
+  if (!mission || !currentUser) return <div className="page-container"><Header title="미션 상세" showBack/><main className="content-area p-4"><EmptyState title="미션을 찾을 수 없습니다."/></main></div>;
+  const performer = viewMode === 'PERFORMER' && mission.assigneeId === currentUser.id;
+  const assignee = users.find((user)=>user.id===mission.assigneeId);
+  const teacher = users.find((user)=>user.id===mission.creatorId);
+  const groupName = groups.find((group)=>group.id===assignee?.groupId)?.name ?? '소속 없음';
+  const latest = getLatestSubmission(mission.id);
+  const allSubmissions = submissions.filter((submission)=>submission.missionId===mission.id).sort((a,b)=>new Date(b.submittedAt).getTime()-new Date(a.submittedAt).getTime());
+  const logs = getReviewLogs(mission.id);
+  const rejected = logs.find((log)=>log.action==='REJECTED');
+  const approved = logs.find((log)=>log.action==='APPROVED');
+  const canSubmit = performer && ['IN_PROGRESS','REJECTED'].includes(mission.status);
+  const attempts = allSubmissions.length;
+  const today = new Date(); const end = new Date(mission.endDate);
+  const sameDay = today.getFullYear()===end.getFullYear()&&today.getMonth()===end.getMonth()&&today.getDate()===end.getDate();
+  const status = mission.status==='SUCCESS'?'승인 완료':mission.status==='REJECTED'?'수정 요청':mission.status==='REVIEWING'?(attempts>1?'수정 제출 완료':'승인 대기'):mission.status==='PENDING'||new Date(mission.startDate)>today?'시작 전':sameDay?'오늘 마감':'진행 중';
+  return <div className="page-container bg-[#F8F5F0]"><Header title="미션 상세" showBack showPoints={false}/><main className="content-area space-y-4 px-4 py-4">
+    <section className="rounded-[16px] border border-[#E7E1D9] bg-[#FFFDFC] p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-semibold text-[#B58A4A]">{groupName}</p><h1 className="mt-1 text-xl font-bold text-[#14233B]">{mission.title}</h1></div><span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${mission.status==='REJECTED'?'bg-[#F7ECEA] text-[#A65F59]':mission.status==='SUCCESS'?'bg-[#EAF2EC] text-[#52775E]':mission.status==='REVIEWING'?'bg-[#F8EFE3] text-[#A66D32]':'bg-[#EAF0F6] text-[#536D8B]'}`}>{status}</span></div><p className="mt-4 text-sm leading-6 text-[#53606F]">{mission.description}</p><div className="mt-5 grid gap-2 text-xs text-[#687282]"><p className="flex items-center gap-2"><Calendar size={15}/>{formatDate(mission.startDate)} ~ {formatDate(mission.endDate)}</p><p className="flex items-center gap-2"><FileText size={15}/>{submissionTypeLabel[mission.submissionType]}</p><p className="flex items-center gap-2"><UserRound size={15}/>{teacher?.name ?? '선생님'}</p></div></section>
 
-  const [rejectModal, setRejectModal] = useState(false);
-  const [rejectReason, setRejectReason] = useState('');
-  const [deleteModal, setDeleteModal] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successAssigneeName, setSuccessAssigneeName] = useState('');
-  const [successExtra, setSuccessExtra] = useState('');
+    {mission.status==='REJECTED'&&rejected&&<section className="rounded-[14px] border border-[#E4B8B4] bg-[#FFF7F6] p-4"><h2 className="flex items-center gap-2 text-sm font-bold text-[#9B4E49]"><RefreshCw size={17}/>선생님 수정 요청</h2><p className="mt-3 text-sm leading-6 text-[#714B48]">{rejected.reason}</p><p className="mt-2 text-[11px] text-[#9B7774]">{formatDateTime(rejected.createdAt)}</p></section>}
+    {mission.status==='REVIEWING'&&<section className="rounded-[14px] border border-[#E5D0AD] bg-[#FFF9EF] p-4 text-center"><h2 className="font-bold text-[#8A672F]">{attempts>1?'수정 제출 완료':'제출 완료'}</h2><p className="mt-1 text-xs text-[#9A7540]">선생님 확인을 기다리고 있습니다.</p></section>}
+    {mission.status==='SUCCESS'&&<section className="rounded-[14px] border border-[#CFE0D5] bg-[#F1F7F3] p-4"><h2 className="flex items-center gap-2 text-sm font-bold text-[#315E43]"><CheckCircle2 size={17}/>승인 완료</h2>{approved?.reason&&<p className="mt-3 text-sm leading-6 text-[#456650]">{approved.reason}</p>}</section>}
 
-  const mission = getMission(id!);
-  if (!mission || !currentUser) {
-    return (
-      <div className="page-container flex items-center justify-center">
-        <p className="text-gray-500">미션을 찾을 수 없습니다.</p>
-      </div>
-    );
-  }
+    {latest&&<section className="rounded-[14px] border border-[#E7E1D9] bg-[#FFFDFC] p-4"><h2 className="text-sm font-bold text-[#14233B]">{mission.status==='REJECTED'?'이전 제출물':'최근 제출물'}</h2>{latest.imageUrl?<img src={latest.imageUrl} alt="제출 이미지" className="mt-3 max-h-72 w-full rounded-[12px] bg-[#F1EDE7] object-contain"/>:<div className="mt-3 flex min-h-24 items-center justify-center rounded-[12px] bg-[#F5F2ED] text-[#9A9FA7]"><ImageIcon size={22}/></div>}{latest.message&&<p className="mt-3 rounded-[10px] bg-[#F5F2ED] p-3 text-sm leading-6 text-[#53606F]">{latest.message}</p>}<p className="mt-2 text-[11px] text-[#8B929C]">{formatDateTime(latest.submittedAt)} · {latest.attemptNumber}차 제출</p></section>}
 
-  const isFacilitator = viewMode === 'FACILITATOR';
-  const isAssignee = currentUser.id === mission.assigneeId;
-  const isCreator = currentUser.id === mission.creatorId;
-  const latestSubmission = getLatestSubmission(mission.id);
-  const reviewLogs = getReviewLogs(mission.id);
-  const assignee = getUser(mission.assigneeId);
-  const creator = getUser(mission.creatorId);
-
-  const canSubmit =
-    !isFacilitator &&
-    isAssignee &&
-    (mission.status === 'IN_PROGRESS' || mission.status === 'REJECTED');
-
-  const canReview =
-    isFacilitator && isCreator && mission.status === 'REVIEWING';
-
-  const handleApprove = () => {
-    approveMission(mission.id, currentUser.id);
-
-    const assigneeUser = getUser(mission.assigneeId);
-    setSuccessAssigneeName(assigneeUser?.name ?? '실천자');
-    setSuccessExtra("");
-    setShowSuccess(true);
-  };
-
-  const handleReject = () => {
-    if (!rejectReason.trim()) return;
-    rejectMission(mission.id, currentUser.id, rejectReason);
-    setRejectModal(false);
-    setRejectReason('');
-  };
-
-  const handleDelete = () => {
-    deleteMission(mission.id);
-    navigate('/missions', { replace: true });
-  };
-
-  const REJECT_REASONS = [
-    '사진이 흐립니다.',
-    '제출 내용이 부족합니다.',
-    '다시 제출해주세요.',
-    '미션 내용과 다릅니다.',
-  ];
-
-  return (
-    <div className="page-container">
-      <Header
-        title="미션 상세"
-        showBack
-        rightElement={
-          isFacilitator && isCreator && mission.status === 'IN_PROGRESS' ? (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigate(`/missions/${mission.id}/edit`)}
-                aria-label="미션 수정"
-                className="p-1.5 text-purple-400 hover:bg-purple-50 rounded-lg transition-colors"
-              >
-                <Edit3 size={16} />
-              </button>
-              <button
-                onClick={() => setDeleteModal(true)}
-                aria-label="미션 삭제"
-                className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ) : undefined
-        }
-      />
-
-      <SuccessAnimation
-        isVisible={showSuccess}
-        title="승인 완료!"
-        description={`${successAssigneeName}님의 제출을 승인했어요.\n${successExtra}`}
-        onClose={() => setShowSuccess(false)}
-      />
-
-      <div className="content-area px-4 py-5 space-y-4">
-        {/* 미션 정보 카드 */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-3xl shadow-sm p-5 space-y-4"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <h2 className="font-black text-gray-800 text-lg leading-snug flex-1">{mission.title}</h2>
-            <StatusBadge status={mission.status} />
-          </div>
-
-          <p className="text-gray-600 text-sm leading-relaxed">{mission.description}</p>
-
-          <div>
-            <div className="bg-purple-50 rounded-2xl p-3">
-              <p className="text-xs text-purple-600 font-semibold mb-1">제출 방식</p>
-              <p className="font-bold text-purple-700 text-sm">{submissionTypeLabel[mission.submissionType]}</p>
-            </div>
-          </div>
-
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-gray-600">
-              <User size={14} className="text-gray-400" />
-              <span className="text-gray-400">실천자:</span>
-              <span className="font-semibold">{assignee?.avatar} {assignee?.name}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <User size={14} className="text-gray-400" />
-              <span className="text-gray-400">리더:</span>
-              <span className="font-semibold">{creator?.avatar} {creator?.name}</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Calendar size={14} className="text-gray-400" />
-              <span className="text-gray-400">기간:</span>
-              <span className="font-semibold text-xs">
-                {formatDate(mission.startDate)} ~ {formatDate(mission.endDate)}
-              </span>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* 실천자 제출 버튼 */}
-        {canSubmit && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
-            <Button
-              fullWidth
-              size="lg"
-              variant={mission.status === 'REJECTED' ? 'danger' : 'primary'}
-              onClick={() => navigate(`/missions/${mission.id}/submit`)}
-            >
-              {mission.status === 'REJECTED' ? '재제출하기' : '미션 제출하기'}
-            </Button>
-          </motion.div>
-        )}
-
-        {/* 미션 확인중 상태 */}
-        {!isFacilitator && mission.status === 'REVIEWING' && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
-            <p className="text-2xl mb-1">⏳</p>
-            <p className="text-amber-700 font-bold">검토 중입니다</p>
-            <p className="text-amber-600 text-sm mt-0.5">리더가 확인하고 있어요!</p>
-          </div>
-        )}
-
-        {/* 리더 검토 */}
-        {canReview && latestSubmission && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white rounded-3xl shadow-sm p-5 space-y-4"
-          >
-            <h3 className="font-bold text-gray-700 flex items-center gap-2">
-              <Edit3 size={16} className="text-purple-500" /> 제출 내용
-            </h3>
-
-            {latestSubmission.imageUrl && (
-              <div className="bg-gray-100 rounded-2xl aspect-video flex items-center justify-center overflow-hidden">
-                <img
-                  src={latestSubmission.imageUrl}
-                  alt="제출 이미지"
-                  className="w-full h-full object-cover rounded-2xl"
-                />
-              </div>
-            )}
-            {!latestSubmission.imageUrl && (
-              <div className="bg-gray-50 rounded-2xl p-3 flex items-center justify-center h-24">
-                <p className="text-gray-400 text-sm">첨부 이미지 없음</p>
-              </div>
-            )}
-
-            {latestSubmission.message && (
-              <div className="bg-blue-50 rounded-2xl p-3">
-                <p className="text-blue-700 text-sm leading-relaxed">"{latestSubmission.message}"</p>
-              </div>
-            )}
-
-            <p className="text-xs text-gray-400">
-              {formatDateTime(latestSubmission.submittedAt)} · {latestSubmission.attemptNumber}회차 제출
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="success" fullWidth onClick={handleApprove}>
-                승인
-              </Button>
-              <Button variant="danger" fullWidth onClick={() => setRejectModal(true)}>
-                반려
-              </Button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* 최신 제출 내용 (리더 – 검토 외 상태) */}
-        {isFacilitator && !canReview && latestSubmission && (
-          <div className="bg-white rounded-3xl shadow-sm p-5 space-y-3">
-            <h3 className="font-bold text-gray-700">📄 최근 제출 내용</h3>
-            {latestSubmission.imageUrl && (
-              <img src={latestSubmission.imageUrl} alt="제출 이미지" className="w-full rounded-2xl" />
-            )}
-            {latestSubmission.message && (
-              <p className="text-gray-600 text-sm bg-gray-50 rounded-xl p-3">
-                "{latestSubmission.message}"
-              </p>
-            )}
-            <p className="text-xs text-gray-400">{formatDateTime(latestSubmission.submittedAt)}</p>
-          </div>
-        )}
-
-        {/* 반려 로그 */}
-        {reviewLogs.length > 0 && (
-          <div className="bg-white rounded-3xl shadow-sm p-5 space-y-3">
-            <h3 className="font-bold text-gray-700">검토 내역</h3>
-            <div className="space-y-3">
-              {reviewLogs.map((log) => {
-                const reviewer = getUser(log.reviewerId);
-                return (
-                  <div
-                    key={log.id}
-                    className={`rounded-2xl p-3 text-sm ${
-                      log.action === 'APPROVED' ? 'bg-green-50' : 'bg-red-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`font-bold ${log.action === 'APPROVED' ? 'text-green-600' : 'text-red-600'}`}>
-                        {log.action === 'APPROVED' ? '승인' : '반려'}
-                      </span>
-                      <span className="text-gray-400 text-xs">{formatDateTime(log.createdAt)}</span>
-                    </div>
-                    {log.reason && (
-                      <p className="text-gray-600 text-xs">{reviewer?.name}: "{log.reason}"</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 반려 모달 */}
-      <Modal isOpen={rejectModal} onClose={() => setRejectModal(false)} title="반려 사유">
-        <div className="space-y-3">
-          <p className="text-sm text-gray-500">빠른 선택:</p>
-          <div className="flex flex-wrap gap-2">
-            {REJECT_REASONS.map((r) => (
-              <button
-                key={r}
-                onClick={() => setRejectReason(r)}
-                className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
-                  rejectReason === r
-                    ? 'bg-red-100 border-red-400 text-red-700 font-semibold'
-                    : 'bg-gray-50 border-gray-200 text-gray-600'
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-          <textarea
-            value={rejectReason}
-            onChange={(e) => setRejectReason(e.target.value)}
-            placeholder="반려 사유를 입력하세요..."
-            rows={3}
-            className="input-field"
-          />
-          <Button
-            fullWidth
-            variant="danger"
-            onClick={handleReject}
-            disabled={!rejectReason.trim()}
-          >
-            반려하기
-          </Button>
-        </div>
-      </Modal>
-
-      {/* 삭제 확인 모달 */}
-      <Modal isOpen={deleteModal} onClose={() => setDeleteModal(false)} title="미션 삭제">
-        <div className="space-y-4">
-          <p className="text-gray-600 text-sm">이 미션을 삭제하면 복구할 수 없습니다.</p>
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="secondary" onClick={() => setDeleteModal(false)}>취소</Button>
-            <Button variant="danger" onClick={handleDelete}>삭제</Button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
+    {logs.length>0&&<section><h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-[#14233B]"><MessageCircle size={17}/>선생님 피드백</h2><div className="space-y-2">{logs.filter((log)=>log.reason).map((log)=><article key={log.id} className="rounded-[12px] border border-[#E7E1D9] bg-[#FFFDFC] p-4"><div className="flex justify-between gap-2"><strong className={`text-xs ${log.action==='REJECTED'?'text-[#A65F59]':'text-[#4F8A68]'}`}>{log.action==='REJECTED'?'수정 요청':'승인'}</strong><time className="text-[10px] text-[#9A9FA7]">{formatDateTime(log.createdAt)}</time></div><p className="mt-2 text-sm leading-6 text-[#53606F]">{log.reason}</p></article>)}</div></section>}
+    {canSubmit&&<button type="button" onClick={()=>navigate(`/missions/${mission.id}/submit`)} className="min-h-12 w-full rounded-[10px] bg-[#14233B] text-sm font-bold text-white">{mission.status==='REJECTED'?'다시 제출하기':'미션 제출하기'}</button>}
+    {!performer&&mission.status==='REVIEWING'&&<button type="button" onClick={()=>navigate(`/missions/${mission.id}/review`)} className="min-h-12 w-full rounded-[10px] bg-[#14233B] text-sm font-bold text-white">제출물 검토하기</button>}
+  </main></div>;
 }
