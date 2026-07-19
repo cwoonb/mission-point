@@ -8,6 +8,8 @@ describe('student demo fixture', () => {
     expect(seed.missions.every((mission) => mission.assigneeId === STUDENT_DEMO_USER_ID)).toBe(true);
     expect(new Set(seed.missions.map((mission) => mission.title)).size).toBe(8);
     expect(new Set(seed.missions.map((mission) => mission.submissionType))).toEqual(new Set(['TEXT', 'IMAGE', 'BOTH']));
+    expect(seed.users.find((user)=>user.id===STUDENT_DEMO_USER_ID)?.name).toBe('한유진');
+    expect(seed.missions.filter((mission)=>mission.status==='SUCCESS')).toHaveLength(3);
   });
 
   it('covers pending, active, review, rejection, resubmission, and approval', () => {

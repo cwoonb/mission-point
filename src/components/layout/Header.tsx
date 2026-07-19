@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 interface HeaderProps {
   title?: string;
@@ -15,6 +16,7 @@ export default function Header({
   rightElement,
 }: HeaderProps) {
   const navigate = useNavigate();
+  const isDemoMode = useAuthStore((state) => state.isDemoMode);
 
   return (
     <header className="sticky top-0 z-40 flex-shrink-0 border-b border-[#E7E1D9] bg-[#F8F5F0]/95 backdrop-blur-md">
@@ -32,7 +34,7 @@ export default function Header({
           )}
           <h1 className="truncate text-[17px] font-bold tracking-[-0.02em] text-[#14233B]">{title}</h1>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-1.5">{rightElement}</div>
+        <div className="flex flex-shrink-0 items-center gap-1.5">{isDemoMode&&<button type="button" onClick={()=>navigate('/profile')} className="min-h-8 rounded-full border border-[#D8C39D] bg-[#FFF9EF] px-2.5 text-[9px] font-bold tracking-wider text-[#9A7138]">DEMO</button>}{rightElement}</div>
       </div>
     </header>
   );

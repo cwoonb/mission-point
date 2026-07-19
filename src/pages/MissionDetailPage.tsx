@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Calendar, CheckCircle2, FileText, Image as ImageIcon, MessageCircle, RefreshCw, UserRound } from 'lucide-react';
 import Header from '../components/layout/Header';
 import EmptyState from '../components/ui/EmptyState';
@@ -6,16 +6,21 @@ import { useAuthStore } from '../store/authStore';
 import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
 import { formatDate, formatDateTime, submissionTypeLabel } from '../utils/helpers';
+import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
 
 export default function MissionDetailPage() {
   const { id } = useParams<{id:string}>();
   const navigate = useNavigate();
-  const { currentUser, viewMode, users } = useAuthStore();
+  const { currentUser, users } = useAuthStore();
+  const active = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
   const groups = useGroupStore((state)=>state.groups);
   const { getMission, getLatestSubmission, getReviewLogs, submissions } = useMissionStore();
   const mission = id ? getMission(id) : undefined;
   if (!mission || !currentUser) return <div className="page-container"><Header title="미션 상세" showBack/><main className="content-area p-4"><EmptyState title="미션을 찾을 수 없습니다."/></main></div>;
-  const performer = viewMode === 'PERFORMER' && mission.assigneeId === currentUser.id;
+  if(!missionInOrganization(mission,active?.organizationId))return <Navigate to="/" replace/>;
+  if(active?.role==='STUDENT'&&mission.assigneeId!==currentUser.id)return <Navigate to="/" replace/>;
+  const performer = active?.role === 'STUDENT' && mission.assigneeId === currentUser.id;
   const assignee = users.find((user)=>user.id===mission.assigneeId);
   const teacher = users.find((user)=>user.id===mission.creatorId);
   const groupName = groups.find((group)=>group.id===assignee?.groupId)?.name ?? '소속 없음';
@@ -36,7 +41,7 @@ export default function MissionDetailPage() {
     {mission.status==='REVIEWING'&&<section className="rounded-[14px] border border-[#E5D0AD] bg-[#FFF9EF] p-4 text-center"><h2 className="font-bold text-[#8A672F]">{attempts>1?'수정 제출 완료':'제출 완료'}</h2><p className="mt-1 text-xs text-[#9A7540]">선생님 확인을 기다리고 있습니다.</p></section>}
     {mission.status==='SUCCESS'&&<section className="rounded-[14px] border border-[#CFE0D5] bg-[#F1F7F3] p-4"><h2 className="flex items-center gap-2 text-sm font-bold text-[#315E43]"><CheckCircle2 size={17}/>승인 완료</h2>{approved?.reason&&<p className="mt-3 text-sm leading-6 text-[#456650]">{approved.reason}</p>}</section>}
 
-    {latest&&<section className="rounded-[14px] border border-[#E7E1D9] bg-[#FFFDFC] p-4"><h2 className="text-sm font-bold text-[#14233B]">{mission.status==='REJECTED'?'이전 제출물':'최근 제출물'}</h2>{latest.imageUrl?<img src={latest.imageUrl} alt="제출 이미지" className="mt-3 max-h-72 w-full rounded-[12px] bg-[#F1EDE7] object-contain"/>:<div className="mt-3 flex min-h-24 items-center justify-center rounded-[12px] bg-[#F5F2ED] text-[#9A9FA7]"><ImageIcon size={22}/></div>}{latest.message&&<p className="mt-3 rounded-[10px] bg-[#F5F2ED] p-3 text-sm leading-6 text-[#53606F]">{latest.message}</p>}<p className="mt-2 text-[11px] text-[#8B929C]">{formatDateTime(latest.submittedAt)} · {latest.attemptNumber}차 제출</p></section>}
+    {latest&&<section className="rounded-[14px] border border-[#E7E1D9] bg-[#FFFDFC] p-4"><h2 className="text-sm font-bold text-[#14233B]">{mission.status==='REJECTED'?'이전 제출물':'최근 제출물'}</h2>{(latest.imageUrls?.length||latest.imageUrl)?<div className="mt-3 grid grid-cols-3 gap-2">{(latest.imageUrls?.length?latest.imageUrls:[latest.imageUrl!]).map((image,index)=><img key={`${image.slice(0,20)}-${index}`} src={image} alt={`제출 이미지 ${index+1}`} className="aspect-square w-full rounded-[10px] bg-[#F1EDE7] object-cover"/>)}</div>:<div className="mt-3 flex min-h-24 items-center justify-center rounded-[12px] bg-[#F5F2ED] text-[#9A9FA7]"><ImageIcon size={22}/></div>}{latest.message&&<><h3 className="mt-4 text-xs font-bold text-[#14233B]">내가 작성한 코멘트</h3><p className="mt-2 rounded-[10px] bg-[#F5F2ED] p-3 text-sm leading-6 text-[#53606F]">{latest.message}</p></>}<p className="mt-2 text-[11px] text-[#8B929C]">{formatDateTime(latest.submittedAt)} · {latest.attemptNumber}차 제출</p></section>}
 
     {logs.length>0&&<section><h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-[#14233B]"><MessageCircle size={17}/>선생님 피드백</h2><div className="space-y-2">{logs.filter((log)=>log.reason).map((log)=><article key={log.id} className="rounded-[12px] border border-[#E7E1D9] bg-[#FFFDFC] p-4"><div className="flex justify-between gap-2"><strong className={`text-xs ${log.action==='REJECTED'?'text-[#A65F59]':'text-[#4F8A68]'}`}>{log.action==='REJECTED'?'수정 요청':'승인'}</strong><time className="text-[10px] text-[#9A9FA7]">{formatDateTime(log.createdAt)}</time></div><p className="mt-2 text-sm leading-6 text-[#53606F]">{log.reason}</p></article>)}</div></section>}
     {canSubmit&&<button type="button" onClick={()=>navigate(`/missions/${mission.id}/submit`)} className="min-h-12 w-full rounded-[10px] bg-[#14233B] text-sm font-bold text-white">{mission.status==='REJECTED'?'다시 제출하기':'미션 제출하기'}</button>}

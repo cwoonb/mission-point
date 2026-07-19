@@ -23,10 +23,10 @@ describe('student demo flow', () => {
     ]);
 
     startStudentDemo(true);
-    const mission = useMissionStore.getState().missions.find((item) => item.title === '수채화 채색 과정');
+    const mission = useMissionStore.getState().missions.find((item) => item.title.startsWith('수채화 채색 과정'));
     expect(mission).toBeDefined();
 
-    await useMissionStore.getState().submitMission(mission!.id, STUDENT_DEMO_USER_ID, '데모 글 제출', undefined);
+    await useMissionStore.getState().submitMission(mission!.id, STUDENT_DEMO_USER_ID, '데모 글 제출', 'demo-one', ['demo-one','demo-two']);
     expect(useMissionStore.getState().missions.find((item) => item.id === mission!.id)?.status).toBe('REVIEWING');
     const savedSnapshot = localStorage.getItem('mp-student-demo-state');
     expect(savedSnapshot).toContain('데모 글 제출');
@@ -36,6 +36,7 @@ describe('student demo flow', () => {
     startStudentDemo();
     expect(useMissionStore.getState().missions.find((item) => item.id === mission!.id)?.status).toBe('REVIEWING');
     expect(useMissionStore.getState().submissions.some((item) => item.message === '데모 글 제출')).toBe(true);
+    expect(useMissionStore.getState().submissions.find((item) => item.message === '데모 글 제출')?.imageUrls).toHaveLength(2);
 
     startStudentDemo(true);
     expect(useMissionStore.getState().missions.find((item) => item.id === mission!.id)?.status).toBe('IN_PROGRESS');

@@ -5,7 +5,9 @@ export type RepeatType = 'ONCE' | 'DAILY' | 'WEEKLY' | 'WEEKDAYS';
 export type ParentShareType = 'NONE' | 'ON_COMPLETE' | 'WEEKLY_REPORT';
 export type StudentStatus = 'EXCELLENT' | 'CAUTION' | 'UNSUBMITTED' | 'COUNSELING' | 'NOT_STARTED';
 export type ViewMode = 'FACILITATOR' | 'PERFORMER';
-export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER';
+export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER' | 'EMAIL';
+export type MembershipRole = 'OWNER' | 'TEACHER' | 'STUDENT';
+export type MembershipStatus = 'ACTIVE' | 'INVITED' | 'INACTIVE';
 
 export type MissionStatus =
   | 'PENDING'
@@ -55,6 +57,25 @@ export interface User {
   statusThresholds?: StatusThresholds;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  type: string;
+  ownerUserId: string;
+  inviteCode?: string;
+  createdAt: string;
+}
+
+export interface Membership {
+  id: string;
+  userId: string;
+  organizationId: string;
+  role: MembershipRole;
+  groupId?: string;
+  status: MembershipStatus;
+  createdAt: string;
+}
+
 export interface PendingSocialProfile {
   socialId: string;
   socialProvider: SocialProvider;
@@ -79,6 +100,7 @@ export interface Mission {
   missionGoal?: MissionGoal;
   repeatType?: RepeatType;
   parentShare?: ParentShareType;
+  organizationId?: string;
 }
 
 export interface MissionSubmission {
@@ -87,6 +109,7 @@ export interface MissionSubmission {
   userId: string;
   message?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   attemptNumber: number;
   submittedAt: string;
 }

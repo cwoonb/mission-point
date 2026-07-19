@@ -8,6 +8,8 @@ import { useGroupStore } from './store/groupStore';
 import { useTemplateStore } from './store/templateStore';
 import { checkNaverCallback, checkKakaoCallback } from './lib/socialAuth';
 import { startDemoSession } from './data/demoSession';
+import { useMembershipStore } from './store/membershipStore';
+import { isFacilitatorMembership, isStudentMembership, membershipEntry } from './utils/membershipAccess';
 
 import AppLayout from './components/layout/AppLayout';
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -29,20 +31,38 @@ const StudentsPage = lazy(() => import('./pages/StudentsPage'));
 const MissionClassPage = lazy(() => import('./pages/MissionClassPage'));
 const HomeworkDetailPage = lazy(() => import('./pages/HomeworkDetailPage'));
 const StudentActivityPage = lazy(() => import('./pages/StudentActivityPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const DemoPage = lazy(() => import('./pages/DemoPage'));
+const MembershipSelectionPage = lazy(() => import('./pages/MembershipSelectionPage'));
+const MembershipSetupPage = lazy(() => import('./pages/MembershipSetupPage'));
 
 function FacilitatorOnly({ children }: { children: ReactElement }) {
-  return useAuthStore((state) => state.viewMode) === 'FACILITATOR' ? children : <Navigate to="/" replace />;
+  const active = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId));
+  return isFacilitatorMembership(active?.role) ? children : <Navigate to="/" replace />;
 }
 
 function PerformerOnly({ children }: { children: ReactElement }) {
-  return useAuthStore((state) => state.viewMode) === 'PERFORMER' ? children : <Navigate to="/" replace />;
+  const active = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId));
+  return isStudentMembership(active?.role) ? children : <Navigate to="/" replace />;
 }
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 function AuthenticatedRoutes() {
+  const currentUser = useAuthStore((state) => state.currentUser);
+  const { memberships, activeMembershipId, selectMembership, initializeData: initializeMemberships } = useMembershipStore();
+  const mine = memberships.filter((membership) => membership.userId === currentUser?.id && membership.status === 'ACTIVE');
+  const active = mine.find((membership) => membership.id === activeMembershipId);
+  const entry = membershipEntry(mine, activeMembershipId);
+  useEffect(() => {
+    if (entry.kind === 'AUTO') selectMembership(entry.membership.id);
+  }, [activeMembershipId, currentUser?.id, entry.kind]);
+  useEffect(()=>{if(currentUser&&!currentUser.id.startsWith('demo-'))void initializeMemberships(currentUser.id);},[currentUser?.id]);
+  if (!active) return <Routes><Route path="/memberships" element={<MembershipSelectionPage/>}/><Route path="/onboarding" element={<MembershipSetupPage/>}/><Route path="*" element={<Navigate to={mine.length?'/memberships':'/onboarding'} replace/>}/></Routes>;
   return (
     <Routes>
+      <Route path="memberships" element={<MembershipSelectionPage />} />
+      <Route path="onboarding" element={<MembershipSetupPage />} />
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="missions" element={<MissionListPage />} />
@@ -52,7 +72,7 @@ function AuthenticatedRoutes() {
         <Route path="missions/:id/review" element={<FacilitatorOnly><SubmissionReviewPage /></FacilitatorOnly>} />
         <Route path="missions/:id/edit" element={<FacilitatorOnly><MissionEditPage /></FacilitatorOnly>} />
         <Route path="missions/:id" element={<MissionDetailPage />} />
-        <Route path="missions/:id/submit" element={<MissionSubmitPage />} />
+        <Route path="missions/:id/submit" element={<PerformerOnly><MissionSubmitPage /></PerformerOnly>} />
         <Route path="approvals" element={<FacilitatorOnly><Navigate to="/missions?tab=pending" replace /></FacilitatorOnly>} />
         <Route path="approval" element={<FacilitatorOnly><Navigate to="/missions?tab=pending" replace /></FacilitatorOnly>} />
         <Route path="performers" element={<Navigate to="/students" replace />} />
@@ -85,10 +105,13 @@ function AuthenticatedRoutes() {
 function PublicRoutes() {
   return (
     <Routes>
-      <Route path="/splash" element={<SplashPage />} />
+      <Route path="/" element={<SplashPage />} />
+      <Route path="/start" element={<SplashPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
       <Route path="/register" element={<RoleSelectionPage />} />
-      <Route path="*" element={<Navigate to="/splash" replace />} />
+      <Route path="/demo" element={<DemoPage />} />
+      <Route path="*" element={<Navigate to="/start" replace />} />
     </Routes>
   );
 }
@@ -107,6 +130,7 @@ function AppContent() {
       if (auth.isDemoMode && auth.currentUser) startDemoSession(auth.currentUser.id);
       await initMissions();
       initGroups();
+      useMembershipStore.getState().ensureLegacyMemberships(useAuthStore.getState().users, useGroupStore.getState().groups);
       initTemplates();
       autoGenerateRepeatMissions();
     })();

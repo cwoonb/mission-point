@@ -6,6 +6,8 @@ import SegmentTabs from '../components/ui/SegmentTabs';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { formatDate, formatDateTime } from '../utils/helpers';
+import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
 
 type Event = { id:string; missionId:string; title:string; detail:string; at:string; tone:string; icon:typeof Send };
 
@@ -14,12 +16,13 @@ export default function StudentActivityPage(){
   const [params,setParams]=useSearchParams();
   const currentUser=useAuthStore((state)=>state.currentUser);
   const {missions,submissions,reviewLogs}=useMissionStore();
+  const activeOrganizationId=useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId)?.organizationId);
   if(!currentUser)return null;
-  const mine=missions.filter((mission)=>mission.assigneeId===currentUser.id);
+  const mine=missions.filter((mission)=>mission.assigneeId===currentUser.id&&missionInOrganization(mission,activeOrganizationId));
   const ids=new Set(mine.map((mission)=>mission.id));
   const title=(missionId:string)=>mine.find((mission)=>mission.id===missionId)?.title??'미션';
   const events:Event[]=[
-    ...submissions.filter((submission)=>ids.has(submission.missionId)).map((submission)=>({id:submission.id,missionId:submission.missionId,title:title(submission.missionId),detail:submission.attemptNumber>1?'수정 후 재제출 완료':'제출 완료',at:submission.submittedAt,tone:'bg-[#EAF0F6] text-[#536D8B]',icon:Send})),
+    ...submissions.filter((submission)=>ids.has(submission.missionId)).map((submission)=>({id:submission.id,missionId:submission.missionId,title:title(submission.missionId),detail:submission.attemptNumber>1?'재제출 완료':'제출 완료',at:submission.submittedAt,tone:submission.attemptNumber>1?'bg-[#F8EFE3] text-[#A66D32]':'bg-[#EAF0F6] text-[#536D8B]',icon:Send})),
     ...reviewLogs.filter((log)=>ids.has(log.missionId)).map((log)=>({id:log.id,missionId:log.missionId,title:title(log.missionId),detail:log.action==='REJECTED'?'선생님 수정 요청':'선생님 승인 완료',at:log.createdAt,tone:log.action==='REJECTED'?'bg-[#F7ECEA] text-[#A65F59]':'bg-[#EAF2EC] text-[#52775E]',icon:log.action==='REJECTED'?RefreshCw:CheckCircle2})),
   ].sort((a,b)=>new Date(b.at).getTime()-new Date(a.at).getTime());
   const feedback=reviewLogs.filter((log)=>ids.has(log.missionId)&&!!log.reason).sort((a,b)=>new Date(b.createdAt).getTime()-new Date(a.createdAt).getTime());

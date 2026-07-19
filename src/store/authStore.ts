@@ -69,7 +69,7 @@ const userToInsertRow = (u: User) => ({
   role: u.role,
   point: u.point,
   avatar: u.avatar,
-  social_provider: u.socialProvider ?? null,
+  social_provider: u.socialProvider === 'EMAIL' ? null : u.socialProvider ?? null,
   social_id: u.socialId ?? null,
   email: u.email ?? null,
   profile_image: u.profileImage ?? null,
@@ -109,6 +109,8 @@ interface AuthState {
   clearPendingProfile: () => void;
 
   connectByCode: (code: string) => Promise<ConnectByCodeResult>;
+  loginWithEmail: (email: string, password: string) => Promise<string | null>;
+  signupWithEmail: (name: string, email: string, password: string) => Promise<string | null>;
 }
 
 // users 테이블에 로컬 상태를 반영하는 헬퍼 (실패해도 로컬 상태는 이미 갱신된 상태로 둠)
@@ -236,7 +238,10 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => set({ currentUser: null, isDemoMode: false }),
+      logout: () => {
+        if (!get().isDemoMode) void supabase.auth.signOut();
+        set({ currentUser: null, isDemoMode: false, viewMode: 'FACILITATOR' });
+      },
 
       switchViewMode: () => {
         const { viewMode, currentUser } = get();
@@ -383,6 +388,24 @@ export const useAuthStore = create<AuthState>()(
 
         set({ pendingSocialProfile: profile });
         return 'REGISTER';
+      },
+
+      loginWithEmail: async (email, password) => {
+        const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (authError) return authError.message;
+        const { data, error } = await supabase.from('users').select('*').eq('email', email.trim()).maybeSingle();
+        if (error || !data) return '가입 정보를 찾을 수 없습니다. 회원가입을 완료해 주세요.';
+        const user = rowToUser(data as UserRow);
+        set((state) => ({ users: state.users.some((item) => item.id === user.id) ? state.users.map((item) => item.id === user.id ? user : item) : [...state.users, user], currentUser: user, viewMode: user.role === 'CHILD' ? 'PERFORMER' : 'FACILITATOR', isDemoMode: false }));
+        return null;
+      },
+
+      signupWithEmail: async (name, email, password) => {
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() } } });
+        if (error) return error.message;
+        if (!data.user) return '계정을 만들지 못했습니다.';
+        set({ pendingSocialProfile: { socialId: data.user.id, socialProvider: 'EMAIL', name: name.trim(), email: email.trim() } });
+        return null;
       },
 
       completeSocialRegistration: async (role, facilitatorId) => {

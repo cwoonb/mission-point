@@ -1,8 +1,9 @@
 import { useAuthStore } from '../store/authStore';
 import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
+import { useMembershipStore } from '../store/membershipStore';
 import { buildDemoScenario, getDemoScenario, type DemoScenarioId } from './demoScenarios';
-import { buildStudentDemo, STUDENT_DEMO_USER_ID } from './studentDemo';
+import { buildStudentDemo, STUDENT_DEMO_TEACHER_ID, STUDENT_DEMO_USER_ID } from './studentDemo';
 
 const SCENARIO_KEY = 'mp-demo-scenario';
 const DEMO_KIND_KEY = 'mp-demo-kind';
@@ -46,6 +47,13 @@ export function startDemoScenario(id: DemoScenarioId) {
     reviewLogs: seed.reviewLogs,
     demoMode: true,
   });
+  const organizationId = `demo-org-${id}`;
+  const membershipId = `demo-membership-${id}-operator`;
+  useMembershipStore.getState().replaceDemoMemberships(
+    [{ id: organizationId, name: seed.config.name, type: 'EDUCATION', ownerUserId: facilitator.id, inviteCode: facilitator.code, createdAt: facilitator.createdAt }],
+    [{ id: membershipId, userId: facilitator.id, organizationId, role: seed.config.facilitatorRole === 'PARENT' ? 'OWNER' : 'TEACHER', status: 'ACTIVE', createdAt: facilitator.createdAt }],
+    membershipId,
+  );
   return seed;
 }
 
@@ -79,11 +87,21 @@ export function startStudentDemo(reset = false) {
       if (stored) seed = JSON.parse(stored) as StudentDemoSnapshot;
     } catch { localStorage.removeItem(STUDENT_STATE_KEY); }
   }
-  if (typeof localStorage !== 'undefined') localStorage.setItem(DEMO_KIND_KEY, 'student');
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(DEMO_KIND_KEY, 'student');
+    localStorage.setItem(SCENARIO_KEY, 'art');
+  }
   const student = seed.users.find((user) => user.id === STUDENT_DEMO_USER_ID)!;
   useAuthStore.setState({ users: seed.users, currentUser: student, viewMode: 'PERFORMER', isDemoMode: true, teacherNotes: {} });
   useGroupStore.setState({ groups: seed.groups, demoMode: true });
   useMissionStore.setState({ missions: seed.missions, submissions: seed.submissions, reviewLogs: seed.reviewLogs, demoMode: true });
+  const organizationId = 'demo-org-art-student';
+  const membershipId = 'demo-membership-art-student';
+  useMembershipStore.getState().replaceDemoMemberships(
+    [{ id: organizationId, name: '미술 학원', type: 'ACADEMY', ownerUserId: STUDENT_DEMO_TEACHER_ID, inviteCode: 'ART100', createdAt: seed.users[0].createdAt }],
+    [{ id: membershipId, userId: student.id, organizationId, role: 'STUDENT', groupId: student.groupId, status: 'ACTIVE', createdAt: student.createdAt }],
+    membershipId,
+  );
   saveStudentDemoState();
   return seed;
 }

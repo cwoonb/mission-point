@@ -8,15 +8,18 @@ import { useMissionStore } from '../store/missionStore';
 import { useGroupStore } from '../store/groupStore';
 import { calculateHomeworkStats, groupMissionsByHomework } from '../utils/missionStats';
 import { formatDateTime } from '../utils/helpers';
+import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
 
 function FacilitatorHome() {
   const navigate = useNavigate();
   const { currentUser, users } = useAuthStore();
   const { missions, submissions } = useMissionStore();
   const groups = useGroupStore((state) => state.groups);
+  const activeOrganizationId=useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId)?.organizationId);
   if (!currentUser) return null;
 
-  const created = missions.filter((mission) => mission.creatorId === currentUser.id);
+  const created = missions.filter((mission) => mission.creatorId === currentUser.id&&missionInOrganization(mission,activeOrganizationId));
   const pending = created.filter((mission) => mission.status === 'REVIEWING');
   const missingStudentIds = new Set(created.filter((mission) => ['EXPIRED', 'FAILED'].includes(mission.status)).map((mission) => mission.assigneeId));
   const today = new Date();
@@ -70,7 +73,8 @@ function FacilitatorHome() {
 }
 
 export default function HomePage() {
-  const { currentUser, viewMode } = useAuthStore();
+  const currentUser = useAuthStore((state)=>state.currentUser);
+  const active = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
   if (!currentUser) return null;
-  return viewMode === 'FACILITATOR' ? <FacilitatorHome/> : <PerformerHome/>;
+  return active?.role === 'STUDENT' ? <PerformerHome/> : <FacilitatorHome/>;
 }

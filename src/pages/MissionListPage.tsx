@@ -1,4 +1,4 @@
-import { CalendarX2, ChevronRight, Plus } from 'lucide-react';
+import { CalendarX2, FileText, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import EmptyState from '../components/ui/EmptyState';
@@ -11,6 +11,8 @@ import { calculateHomeworkStats, groupMissionsByHomework } from '../utils/missio
 import type { Mission } from '../types';
 import ApprovalPage from './ApprovalPage';
 import { formatDate, submissionTypeLabel } from '../utils/helpers';
+import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
 
 type LeaderTab = 'all' | 'active' | 'due' | 'pending' | 'completed';
 type PerformerTab = 'all' | 'todo' | 'pending' | 'rejected' | 'completed';
@@ -37,12 +39,13 @@ function LeaderMissionList() {
   const users = useAuthStore((state) => state.users);
   const groups = useGroupStore((state) => state.groups);
   const { missions, submissions } = useMissionStore();
+  const activeOrganizationId=useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId)?.organizationId);
   if (!currentUser) return null;
 
   const rawTab = params.get('tab');
   const tab: LeaderTab = rawTab === 'history' ? 'completed' : ['all', 'active', 'due', 'pending', 'completed'].includes(rawTab ?? '') ? rawTab as LeaderTab : 'active';
   const query = params.get('q') ?? '';
-  const created = missions.filter((mission) => mission.creatorId === currentUser.id);
+  const created = missions.filter((mission) => mission.creatorId === currentUser.id&&missionInOrganization(mission,activeOrganizationId));
   const homework = groupMissionsByHomework(created).sort((a, b) => new Date(a[0].endDate).getTime() - new Date(b[0].endDate).getTime());
   const todayKey = localDateKey(new Date());
   const groupRows = homework.map((items) => {
@@ -120,10 +123,11 @@ function PerformerMissionList() {
   const { missions, submissions, reviewLogs } = useMissionStore();
   const groups = useGroupStore((state) => state.groups);
   const [params, setParams] = useSearchParams();
+  const activeOrganizationId=useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId)?.organizationId);
   if (!currentUser) return null;
   const tab = (['all', 'todo', 'pending', 'rejected', 'completed'].includes(params.get('tab') ?? '') ? params.get('tab') : 'todo') as PerformerTab;
   const query = params.get('q') ?? '';
-  const mine = missions.filter((mission) => mission.assigneeId === currentUser.id);
+  const mine = missions.filter((mission) => mission.assigneeId === currentUser.id&&missionInOrganization(mission,activeOrganizationId));
   const attempts = (missionId: string) => submissions.filter((submission) => submission.missionId === missionId).length;
   const matchesTab = (mission: Mission) => tab === 'all' || (tab === 'todo' && ['PENDING','IN_PROGRESS'].includes(mission.status)) || (tab === 'pending' && mission.status === 'REVIEWING') || (tab === 'rejected' && mission.status === 'REJECTED') || (tab === 'completed' && mission.status === 'SUCCESS');
   const shown = mine.filter((mission) => matchesTab(mission) && mission.title.toLowerCase().includes(query.toLowerCase())).sort((a,b)=>new Date(a.endDate).getTime()-new Date(b.endDate).getTime());
@@ -132,10 +136,10 @@ function PerformerMissionList() {
   const today = localDateKey(new Date());
   const status = (mission: Mission) => { const count=attempts(mission.id); if(mission.status==='SUCCESS')return count>1?'승인 완료':'승인 완료'; if(mission.status==='REJECTED')return '수정 요청'; if(mission.status==='REVIEWING')return count>1?'재제출 완료':'승인 대기'; if(mission.status==='PENDING'||new Date(mission.startDate)>new Date())return '시작 전'; if(localDateKey(new Date(mission.endDate))===today)return '오늘 마감'; return '진행 중'; };
   const groupName = groups.find((group)=>group.id===currentUser.groupId)?.name ?? '소속 없음';
-  return <div className="page-container bg-[#F8F5F0]"><Header title="미션" showBack={false} showPoints={false}/><main className="content-area px-4 pt-3"><SearchInput value={query} onChange={(value) => update('q', value)} placeholder="미션 검색"/><div className="mt-3"><SegmentTabs tabs={tabs} value={tab} onChange={(value) => update('tab', value)} ariaLabel="미션 상태"/></div><section className="mt-3 space-y-2 pb-6">{shown.map((mission) => { const hasFeedback=reviewLogs.some((log)=>log.missionId===mission.id&&!!log.reason); return <button type="button" key={mission.id} onClick={()=>navigate(`/missions/${mission.id}`)} className="w-full rounded-[13px] border border-[#E7E1D9] bg-[#FFFDFC] p-4 text-left"><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><h2 className="truncate text-[15px] font-semibold text-[#14233B]">{mission.title}</h2><p className="mt-1 text-[11px] text-[#737B86]">{groupName} · {formatDate(mission.endDate)}까지</p><p className="mt-2 text-[11px] text-[#53606F]">{submissionTypeLabel[mission.submissionType]}{hasFeedback?' · 선생님 피드백 있음':''}</p></div><span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${mission.status==='REJECTED'?'bg-[#F7ECEA] text-[#A65F59]':mission.status==='SUCCESS'?'bg-[#EAF2EC] text-[#52775E]':mission.status==='REVIEWING'?'bg-[#F8EFE3] text-[#A66D32]':'bg-[#EAF0F6] text-[#536D8B]'}`}>{status(mission)}</span></div></button>;})}{shown.length===0&&<EmptyState title="조건에 맞는 미션이 없습니다."/>}</section></main></div>;
+  return <div className="page-container bg-[#F8F5F0]"><Header title="미션" showBack={false} showPoints={false}/><main className="content-area px-4 pt-3"><SearchInput value={query} onChange={(value) => update('q', value)} placeholder="미션 검색"/><div className="mt-3"><SegmentTabs tabs={tabs} value={tab} onChange={(value) => update('tab', value)} ariaLabel="미션 상태"/></div><section className="mt-3 space-y-2 pb-6">{shown.map((mission) => { const hasFeedback=reviewLogs.some((log)=>log.missionId===mission.id&&!!log.reason); const latest=[...submissions].filter(item=>item.missionId===mission.id).sort((a,b)=>new Date(b.submittedAt).getTime()-new Date(a.submittedAt).getTime())[0]; return <button type="button" key={mission.id} onClick={()=>navigate(`/missions/${mission.id}`)} className="flex min-h-[78px] w-full items-center gap-3 rounded-[13px] border border-[#E7E1D9] bg-[#FFFDFC] p-3 text-left"><span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-[#EEE9E2] text-[#8A7350]">{latest?.imageUrl?<img src={latest.imageUrl} alt="" className="h-full w-full object-cover"/>:<FileText size={18}/>}</span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="truncate text-[14px] text-[#14233B]">{mission.title}</strong><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${mission.status==='REJECTED'?'bg-[#F7ECEA] text-[#A65F59]':mission.status==='SUCCESS'?'bg-[#EAF2EC] text-[#52775E]':mission.status==='REVIEWING'?'bg-[#F8EFE3] text-[#A66D32]':'bg-[#EAF0F6] text-[#536D8B]'}`}>{status(mission)}</span></span><span className="mt-1 block text-[11px] text-[#737B86]">{groupName} · {formatDate(mission.endDate)}까지</span><span className="mt-1 block text-[10px] text-[#8B929C]">{submissionTypeLabel[mission.submissionType]}{hasFeedback?' · 피드백 있음':''}</span></span></button>;})}{shown.length===0&&<EmptyState title={tab==='all'?'현재 진행할 미션이 없습니다.':'조건에 맞는 미션이 없습니다.'} description={tab==='all'?'새로운 미션이 등록되면 여기에 표시됩니다.':undefined}/>}</section></main></div>;
 }
 
 export default function MissionListPage() {
-  const viewMode = useAuthStore((state) => state.viewMode);
-  return viewMode === 'FACILITATOR' ? <LeaderMissionList /> : <PerformerMissionList />;
+  const active = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
+  return active?.role === 'STUDENT' ? <PerformerMissionList /> : <LeaderMissionList />;
 }

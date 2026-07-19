@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Mission, MissionSubmission, MissionReviewLog, MissionStatus, MissionType, MissionGoal, RepeatType, ParentShareType, SubmissionType, ReviewAction } from '../types';
 import { initialMissions } from '../data/mockData';
 import { supabase } from '../lib/supabase';
+import { useMembershipStore } from './membershipStore';
 
 const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
@@ -49,6 +50,7 @@ interface MissionRow {
   mission_goal: MissionGoal | null;
   repeat_type: RepeatType | null;
   parent_share: ParentShareType | null;
+  organization_id?: string | null;
   created_at: string;
 }
 interface SubmissionRow {
@@ -86,6 +88,7 @@ const rowToMission = (r: MissionRow): Mission => ({
   missionGoal: r.mission_goal ?? undefined,
   repeatType: r.repeat_type ?? undefined,
   parentShare: r.parent_share ?? undefined,
+  organizationId: r.organization_id ?? undefined,
 });
 
 const missionToRow = (m: Mission) => ({
@@ -103,6 +106,7 @@ const missionToRow = (m: Mission) => ({
   mission_goal: m.missionGoal ?? null,
   repeat_type: m.repeatType ?? null,
   parent_share: m.parentShare ?? null,
+  ...(m.organizationId ? { organization_id: m.organizationId } : {}),
   created_at: m.createdAt,
 });
 
@@ -148,7 +152,8 @@ interface MissionState {
     missionId: string,
     userId: string,
     message?: string,
-    imageUrl?: string
+    imageUrl?: string,
+    imageUrls?: string[]
   ) => Promise<MissionSubmission>;
   approveMission: (missionId: string, reviewerId: string) => void;
   rejectMission: (missionId: string, reviewerId: string, reason: string) => void;
@@ -269,8 +274,10 @@ export const useMissionStore = create<MissionState>()(
       },
 
       createMission: async (data) => {
+        const activeMembership=useMembershipStore.getState().getActiveMembership();
         const mission: Mission = {
           ...data,
+          organizationId: activeMembership?.organizationId,
           id: genId(),
           status: 'IN_PROGRESS',
           createdAt: new Date().toISOString(),
@@ -279,7 +286,8 @@ export const useMissionStore = create<MissionState>()(
           set((s) => ({ missions: [...s.missions, mission] }));
           return mission;
         }
-        const { data: created, error } = await supabase.from('missions').insert(missionToRow(mission)).select('*').single();
+        let { data: created, error } = await supabase.from('missions').insert(missionToRow(mission)).select('*').single();
+        if(error&&mission.organizationId){const legacyRow=missionToRow({...mission,organizationId:undefined});const retry=await supabase.from('missions').insert(legacyRow).select('*').single();created=retry.data;error=retry.error;}
         if (error) {
           console.error('Failed to create mission in Supabase:', error.message);
           return mission;
@@ -326,7 +334,7 @@ export const useMissionStore = create<MissionState>()(
         });
       },
 
-      submitMission: async (missionId, userId, message, imageUrl) => {
+      submitMission: async (missionId, userId, message, imageUrl, imageUrls) => {
         const existing = get().submissions.filter(
           (s) => s.missionId === missionId && s.userId === userId
         );
@@ -336,6 +344,7 @@ export const useMissionStore = create<MissionState>()(
           userId,
           message,
           imageUrl,
+          imageUrls: imageUrls?.length ? imageUrls : imageUrl ? [imageUrl] : undefined,
           attemptNumber: existing.length + 1,
           submittedAt: new Date().toISOString(),
         };
