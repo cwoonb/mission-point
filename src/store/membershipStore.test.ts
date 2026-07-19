@@ -7,7 +7,7 @@ class MemoryStorage implements Storage {
 
 describe('membership store',()=>{
   beforeAll(()=>Object.defineProperty(globalThis,'localStorage',{value:new MemoryStorage(),configurable:true}));
-  it('stores active membership and switches role without changing account id',async()=>{
+  it('switches role without changing account id or persisting operational memberships',async()=>{
     const [{useMembershipStore},{useAuthStore}]=await Promise.all([import('./membershipStore'),import('./authStore')]);
     const user={id:'multi-user',name:'조원배',role:'TEACHER' as const,point:0,avatar:'조',createdAt:'2026-01-01T00:00:00.000Z'};
     useAuthStore.setState({users:[user],currentUser:user,viewMode:'FACILITATOR',isDemoMode:true});
@@ -17,7 +17,7 @@ describe('membership store',()=>{
     expect(useMembershipStore.getState().selectMembership('student')).toBe(true);
     expect(useAuthStore.getState().currentUser?.id).toBe(user.id);
     expect(useAuthStore.getState().viewMode).toBe('PERFORMER');
-    expect(localStorage.getItem('mp-memberships')).toContain('student');
+    expect(localStorage.getItem('mp-memberships')).not.toContain('"id":"student"');
     useMembershipStore.getState().clearActiveMembership();
     expect(useMembershipStore.getState().activeMembershipId).toBeNull();
   });

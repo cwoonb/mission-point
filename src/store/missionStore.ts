@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Mission, MissionSubmission, MissionReviewLog, MissionStatus, MissionType, MissionGoal, RepeatType, ParentShareType, SubmissionType, ReviewAction } from '../types';
-import { supabase } from '../lib/supabase';
+import { secureBackendEnabled, supabase } from '../lib/supabase';
 import { useMembershipStore } from './membershipStore';
 
 const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const missingRpc = (error: { code?: string; message?: string } | null) =>
+  !!error && (error.code === 'PGRST202' || error.message?.includes('Could not find the function'));
 
 function calcNextRepeatDates(repeatType: RepeatType): { startDate: string; endDate: string } {
   const start = new Date();
@@ -337,6 +339,21 @@ export const useMissionStore = create<MissionState>()(
         };
 
         if (!get().demoMode) {
+          const { data: atomicRow, error: atomicError } = secureBackendEnabled ? await supabase.rpc('submit_mission_atomic', {
+            target_mission: missionId,
+            submission_id: submission.id,
+            submission_message: submission.message ?? null,
+            submission_image_url: submission.imageUrl ?? null,
+          }) : { data: null, error: { code: 'PGRST202', message: 'secure backend disabled' } };
+          if (!atomicError) {
+            const persisted = rowToSubmission(atomicRow as SubmissionRow);
+            set((s) => ({
+              submissions: [...s.submissions, persisted],
+              missions: s.missions.map((m) => m.id === missionId ? { ...m, status: 'REVIEWING' } : m),
+            }));
+            return persisted;
+          }
+          if (!missingRpc(atomicError)) throw new Error(atomicError.message);
           const { error: subError } = await supabase.from('mission_submissions').insert({
             id: submission.id,
             mission_id: submission.missionId,
@@ -376,6 +393,21 @@ export const useMissionStore = create<MissionState>()(
         } : null;
         if (!get().demoMode) {
           if (!log) throw new Error('승인할 제출물을 찾을 수 없습니다.');
+          const { data: atomicLog, error: atomicError } = secureBackendEnabled ? await supabase.rpc('review_mission_atomic', {
+            target_mission: missionId,
+            target_action: 'APPROVED',
+            review_reason: log.reason ?? null,
+            review_id: log.id,
+          }) : { data: null, error: { code: 'PGRST202', message: 'secure backend disabled' } };
+          if (!atomicError) {
+            const persisted = rowToReviewLog(atomicLog as ReviewLogRow);
+            set((s) => ({
+              reviewLogs: [...s.reviewLogs, persisted],
+              missions: s.missions.map((m) => m.id === missionId ? { ...m, status: 'SUCCESS' } : m),
+            }));
+            return;
+          }
+          if (!missingRpc(atomicError)) throw new Error(atomicError.message);
           const { error: logError } = await supabase.from('mission_review_logs').insert({
             id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
             reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
@@ -408,6 +440,21 @@ export const useMissionStore = create<MissionState>()(
         } : null;
         if (!get().demoMode) {
           if (!log) throw new Error('반려할 제출물을 찾을 수 없습니다.');
+          const { data: atomicLog, error: atomicError } = secureBackendEnabled ? await supabase.rpc('review_mission_atomic', {
+            target_mission: missionId,
+            target_action: 'REJECTED',
+            review_reason: reason,
+            review_id: log.id,
+          }) : { data: null, error: { code: 'PGRST202', message: 'secure backend disabled' } };
+          if (!atomicError) {
+            const persisted = rowToReviewLog(atomicLog as ReviewLogRow);
+            set((s) => ({
+              reviewLogs: [...s.reviewLogs, persisted],
+              missions: s.missions.map((m) => m.id === missionId ? { ...m, status: 'REJECTED' } : m),
+            }));
+            return;
+          }
+          if (!missingRpc(atomicError)) throw new Error(atomicError.message);
           const { error: logError } = await supabase.from('mission_review_logs').insert({
             id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
             reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
@@ -445,6 +492,14 @@ export const useMissionStore = create<MissionState>()(
       getMission: (missionId) =>
         get().missions.find((m) => m.id === missionId),
     }),
-    { name: 'mp-missions' }
+    {
+      name: 'mp-missions',
+      partialize: (state) => state.demoMode ? state : {
+        missions: [],
+        submissions: [],
+        reviewLogs: [],
+        demoMode: false,
+      },
+    }
   )
 );

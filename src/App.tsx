@@ -1,12 +1,10 @@
 import { lazy, Suspense, useEffect, type ReactElement } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './store/authStore';
 import { useMissionStore } from './store/missionStore';
 import { useGroupStore } from './store/groupStore';
 import { useTemplateStore } from './store/templateStore';
-import { checkNaverCallback, checkKakaoCallback } from './lib/socialAuth';
 import { startDemoSession } from './data/demoSession';
 import { useMembershipStore } from './store/membershipStore';
 import { isFacilitatorMembership, isStudentMembership, membershipEntry } from './utils/membershipAccess';
@@ -35,6 +33,7 @@ const SignupPage = lazy(() => import('./pages/SignupPage'));
 const DemoPage = lazy(() => import('./pages/DemoPage'));
 const MembershipSelectionPage = lazy(() => import('./pages/MembershipSelectionPage'));
 const MembershipSetupPage = lazy(() => import('./pages/MembershipSetupPage'));
+const PublicReportPage = lazy(() => import('./pages/PublicReportPage'));
 
 function FacilitatorOnly({ children }: { children: ReactElement }) {
   const active = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId));
@@ -45,8 +44,6 @@ function PerformerOnly({ children }: { children: ReactElement }) {
   const active = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId));
   return isStudentMembership(active?.role) ? children : <Navigate to="/" replace />;
 }
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 function AuthenticatedRoutes() {
   const currentUser = useAuthStore((state) => state.currentUser);
@@ -61,6 +58,7 @@ function AuthenticatedRoutes() {
   if (!active) return <Routes><Route path="/memberships" element={<MembershipSelectionPage/>}/><Route path="/onboarding" element={<MembershipSetupPage/>}/><Route path="*" element={<Navigate to={mine.length?'/memberships':'/onboarding'} replace/>}/></Routes>;
   return (
     <Routes>
+      <Route path="r/:token" element={<PublicReportPage />} />
       <Route path="memberships" element={<MembershipSelectionPage />} />
       <Route path="onboarding" element={<MembershipSetupPage />} />
       <Route element={<AppLayout />}>
@@ -105,6 +103,7 @@ function AuthenticatedRoutes() {
 function PublicRoutes() {
   return (
     <Routes>
+      <Route path="/r/:token" element={<PublicReportPage />} />
       <Route path="/" element={<SplashPage />} />
       <Route path="/start" element={<SplashPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -117,7 +116,7 @@ function PublicRoutes() {
 }
 
 function AppContent() {
-  const { currentUser, pendingSocialProfile, socialLogin, initializeData: initAuth, isDemoMode } = useAuthStore();
+  const { currentUser, pendingSocialProfile, initializeData: initAuth, isDemoMode } = useAuthStore();
   const { initializeData: initMissions, autoGenerateRepeatMissions } = useMissionStore();
   const { initializeData: initGroups } = useGroupStore();
   const { initializeData: initTemplates } = useTemplateStore();
@@ -129,23 +128,12 @@ function AppContent() {
       const auth = useAuthStore.getState();
       if (auth.isDemoMode && auth.currentUser) startDemoSession(auth.currentUser.id);
       await initMissions();
-      initGroups();
+      await initGroups();
       useMembershipStore.getState().ensureLegacyMemberships(useAuthStore.getState().users, useGroupStore.getState().groups);
       initTemplates();
       autoGenerateRepeatMissions();
     })();
 
-    // Handle Kakao OAuth callback (access_token in URL hash)
-    checkKakaoCallback().then((profile) => {
-      if (!profile) return;
-      socialLogin(profile);
-    });
-
-    // Handle Naver OAuth callback (token in URL hash)
-    checkNaverCallback().then((profile) => {
-      if (!profile) return;
-      socialLogin(profile);
-    });
   }, []);
 
   useEffect(() => {
@@ -153,7 +141,7 @@ function AppContent() {
     useMissionStore.setState({ missions: [], submissions: [], reviewLogs: [], demoMode: false });
     useGroupStore.setState({ groups: [], demoMode: false });
     void initMissions();
-    initGroups();
+    void initGroups();
   }, [currentUser?.id, isDemoMode]);
 
   const showRegister = !currentUser && !!pendingSocialProfile;
@@ -177,12 +165,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID ?? 'placeholder-client-id'}>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center text-sm font-semibold text-[#14233B]">화면을 불러오는 중...</div>}>
-          <AppContent />
-        </Suspense>
-      </BrowserRouter>
-    </GoogleOAuthProvider>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center text-sm font-semibold text-[#14233B]">화면을 불러오는 중...</div>}>
+        <AppContent />
+      </Suspense>
+    </BrowserRouter>
   );
 }

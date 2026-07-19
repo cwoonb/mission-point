@@ -3,12 +3,23 @@ import { persist } from 'zustand/middleware';
 import type { Membership, MembershipRole, Organization, PerformerGroup, User } from '../types';
 import { useAuthStore } from './authStore';
 import { useGroupStore } from './groupStore';
-import { supabase } from '../lib/supabase';
+import { secureBackendEnabled, supabase } from '../lib/supabase';
 
 const now = () => new Date().toISOString();
 const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 const legacyRole = (role: User['role']): MembershipRole => role === 'CHILD' ? 'STUDENT' : role === 'PARENT' ? 'OWNER' : 'TEACHER';
 const userRole = (role: MembershipRole): User['role'] => role === 'STUDENT' ? 'CHILD' : 'TEACHER';
+const missingRpc = (error: { code?: string; message?: string } | null) =>
+  !!error && (error.code === 'PGRST202' || error.message?.includes('Could not find the function'));
+const rowToMembership = (row: Record<string, unknown>): Membership => ({
+  id: row.id as string,
+  userId: row.user_id as string,
+  organizationId: row.organization_id as string,
+  role: row.role as MembershipRole,
+  groupId: (row.group_id as string | null) ?? undefined,
+  status: row.status as Membership['status'],
+  createdAt: row.created_at as string,
+});
 
 interface MembershipState {
   organizations: Organization[];
@@ -84,6 +95,18 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
     const organization: Organization = { id: id('org'), name: name.trim(), type: 'EDUCATION', ownerUserId: userId, inviteCode: Math.random().toString(36).slice(2, 8).toUpperCase(), createdAt: now() };
     const membership: Membership = { id: id('membership'), userId, organizationId: organization.id, role, status: 'ACTIVE', createdAt: now() };
     if (!userId.startsWith('demo-')) {
+      const { data: rpcRow, error: rpcError } = secureBackendEnabled ? await supabase.rpc('create_organization', {
+        org_id: organization.id,
+        org_name: organization.name,
+        invite_code: organization.inviteCode!,
+      }) : { data: null, error: { code: 'PGRST202', message: 'secure backend disabled' } };
+      if (!rpcError && rpcRow) {
+        const persisted = rowToMembership(rpcRow as Record<string, unknown>);
+        set((state) => ({ organizations: [...state.organizations, organization], memberships: [...state.memberships, persisted] }));
+        if (groupName?.trim()) void useGroupStore.getState().createGroup({ name: groupName.trim(), emoji: '', facilitatorId: userId, organizationId: organization.id });
+        return persisted;
+      }
+      if (!missingRpc(rpcError)) throw new Error(rpcError?.message ?? '소속을 만들지 못했습니다.');
       const { error: organizationError } = await supabase.from('organizations').insert({ id: organization.id, name: organization.name, type: organization.type, owner_user_id: organization.ownerUserId, invite_code: organization.inviteCode, created_at: organization.createdAt });
       if (organizationError) throw new Error(organizationError.message);
       const { error: membershipError } = await supabase.from('memberships').insert({ id: membership.id, user_id: membership.userId, organization_id: membership.organizationId, role: membership.role, group_id: null, status: membership.status, created_at: membership.createdAt });
@@ -93,7 +116,7 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
       }
     }
     set((state) => ({ organizations: [...state.organizations, organization], memberships: [...state.memberships, membership] }));
-    if (groupName?.trim()) useGroupStore.getState().createGroup({ name: groupName.trim(), emoji: '', facilitatorId: userId });
+    if (groupName?.trim()) void useGroupStore.getState().createGroup({ name: groupName.trim(), emoji: '', facilitatorId: userId, organizationId: organization.id });
     return membership;
   },
 
@@ -101,6 +124,19 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
     const normalized = inviteCode.trim().toUpperCase();
     let organization = get().organizations.find((item) => item.inviteCode?.toUpperCase() === normalized);
     if (!organization && !userId.startsWith('demo-')) {
+      const { data: rpcRow, error: rpcError } = secureBackendEnabled ? await supabase.rpc('join_organization', { provided_invite_code: normalized }) : { data: null, error: { code: 'PGRST202', message: 'secure backend disabled' } };
+      if (!rpcError && rpcRow) {
+        const persisted = rowToMembership(rpcRow as Record<string, unknown>);
+        const { data: organizationRow, error: organizationError } = await supabase.from('organizations').select('*').eq('id', persisted.organizationId).single();
+        if (organizationError) throw new Error(organizationError.message);
+        const remoteOrganization: Organization = { id: organizationRow.id, name: organizationRow.name, type: organizationRow.type, ownerUserId: organizationRow.owner_user_id, inviteCode: organizationRow.invite_code ?? undefined, createdAt: organizationRow.created_at };
+        set((state) => ({
+          organizations: state.organizations.some((item) => item.id === remoteOrganization.id) ? state.organizations : [...state.organizations, remoteOrganization],
+          memberships: state.memberships.some((item) => item.id === persisted.id) ? state.memberships : [...state.memberships, persisted],
+        }));
+        return persisted;
+      }
+      if (!missingRpc(rpcError)) throw new Error(rpcError?.message ?? '초대 코드를 확인하지 못했습니다.');
       const { data, error } = await supabase.from('organizations').select('*').eq('invite_code', normalized).maybeSingle();
       if (error) throw new Error(error.message);
       if (data) organization = { id: data.id, name: data.name, type: data.type, ownerUserId: data.owner_user_id, inviteCode: data.invite_code ?? undefined, createdAt: data.created_at };
@@ -118,6 +154,13 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
   },
 
   getActiveMembership: () => get().memberships.find((membership) => membership.id === get().activeMembershipId),
-}), { name: 'mp-memberships' }));
+}), {
+  name: 'mp-memberships',
+  partialize: (state) => ({
+    organizations: state.organizations.filter((item) => item.id.startsWith('demo-org-')),
+    memberships: state.memberships.filter((item) => item.id.startsWith('demo-membership-')),
+    activeMembershipId: state.activeMembershipId?.startsWith('demo-membership-') ? state.activeMembershipId : null,
+  }),
+}));
 
 export const membershipViewMode = (role?: MembershipRole) => role === 'STUDENT' ? 'PERFORMER' : 'FACILITATOR';

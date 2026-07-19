@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, ViewMode, PendingSocialProfile, SocialProvider, UserRole, StatusThresholds } from '../types';
-import { supabase } from '../lib/supabase';
+import { secureBackendEnabled, supabase } from '../lib/supabase';
 import { isDemoUserId } from '../utils/demoMode';
 
 const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -25,11 +25,13 @@ export interface TeacherNote {
   id: string;
   text: string;
   createdAt: string;
+  organizationId?: string;
 }
 
 // ── Supabase <-> App 모델 변환 ──────────────────────────────
 interface UserRow {
   id: string;
+  auth_user_id?: string | null;
   name: string;
   role: UserRole;
   point: number;
@@ -47,6 +49,7 @@ interface UserRow {
 
 const rowToUser = (row: UserRow): User => ({
   id: row.id,
+  authUserId: row.auth_user_id ?? undefined,
   name: row.name,
   role: row.role,
   point: row.point,
@@ -64,6 +67,7 @@ const rowToUser = (row: UserRow): User => ({
 
 const userToInsertRow = (u: User) => ({
   id: u.id,
+  ...(u.authUserId ? { auth_user_id: u.authUserId } : {}),
   name: u.name,
   role: u.role,
   point: u.point,
@@ -99,8 +103,8 @@ interface AuthState {
   updateProfileImage: (userId: string, imageDataUrl: string) => void;
   updateUserName: (userId: string, name: string) => void;
   updateStatusThresholds: (userId: string, thresholds: StatusThresholds) => void;
-  addTeacherNote: (studentId: string, text: string) => void;
-  deleteTeacherNote: (studentId: string, noteId: string) => void;
+  addTeacherNote: (studentId: string, text: string, organizationId?: string) => Promise<void>;
+  deleteTeacherNote: (studentId: string, noteId: string) => Promise<void>;
 
   // Social login
   socialLogin: (profile: PendingSocialProfile) => Promise<'LOGIN' | 'REGISTER'>;
@@ -134,7 +138,17 @@ export const useAuthStore = create<AuthState>()(
         if (get().isDemoMode && get().currentUser && isDemoUserId(get().currentUser?.id)) {
           return;
         }
-        const { data, error } = await supabase.from('users').select('*');
+        const { data: sessionData } = typeof supabase.auth.getSession === 'function'
+          ? await supabase.auth.getSession()
+          : { data: { session: null } };
+        let query = supabase.from('users').select('*');
+        if (secureBackendEnabled && sessionData.session?.user.id) query = query.eq('auth_user_id', sessionData.session.user.id);
+        let { data, error } = await query;
+        if (error && sessionData.session?.user.id && (error.code === '42703' || error.code === 'PGRST204')) {
+          const legacy = await supabase.from('users').select('*');
+          data = legacy.data;
+          error = legacy.error;
+        }
         if (error) {
           console.error('Failed to load users from Supabase:', error.message);
           return;
@@ -167,9 +181,22 @@ export const useAuthStore = create<AuthState>()(
           }
         }
 
+        const noteResult = sessionData.session ? await supabase.from('teacher_notes').select('*') : { data: [] };
+        const nextNotes: Record<string, TeacherNote[]> = {};
+        for (const row of noteResult.data ?? []) {
+          const studentId = row.student_id as string;
+          (nextNotes[studentId] ??= []).push({ id: row.id, text: row.text, createdAt: row.created_at, organizationId: row.organization_id ?? undefined });
+        }
         set((s) => ({
           users: nextUsers,
-          currentUser: s.currentUser ? nextUsers.find((u) => u.id === s.currentUser!.id) ?? s.currentUser : s.currentUser,
+          teacherNotes: nextNotes,
+          currentUser: s.currentUser
+            ? nextUsers.find((u) => u.id === s.currentUser!.id) ?? s.currentUser
+            : sessionData.session?.user.id
+              ? nextUsers.find((u) => secureBackendEnabled
+                ? u.authUserId === sessionData.session!.user.id
+                : !!sessionData.session!.user.email && u.email?.toLowerCase() === sessionData.session!.user.email!.toLowerCase()) ?? null
+              : null,
         }));
       },
 
@@ -220,8 +247,13 @@ export const useAuthStore = create<AuthState>()(
         pushUserUpdate(userId, { group_id: groupId ?? null });
       },
 
-      addTeacherNote: (studentId, text) => {
-        const note: TeacherNote = { id: genId(), text: text.trim(), createdAt: new Date().toISOString() };
+      addTeacherNote: async (studentId, text, organizationId) => {
+        const note: TeacherNote = { id: genId(), text: text.trim(), createdAt: new Date().toISOString(), organizationId };
+        if (!get().isDemoMode) {
+          if (!organizationId || !get().currentUser) throw new Error('소속 정보를 확인할 수 없습니다.');
+          const { error } = await supabase.from('teacher_notes').insert({ id: note.id, student_id: studentId, author_id: get().currentUser!.id, organization_id: organizationId, text: note.text, created_at: note.createdAt });
+          if (error) throw new Error(error.message);
+        }
         set((s) => ({
           teacherNotes: {
             ...s.teacherNotes,
@@ -230,7 +262,11 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
 
-      deleteTeacherNote: (studentId, noteId) => {
+      deleteTeacherNote: async (studentId, noteId) => {
+        if (!get().isDemoMode) {
+          const { error } = await supabase.from('teacher_notes').delete().eq('id', noteId);
+          if (error) throw new Error(error.message);
+        }
         set((s) => ({
           teacherNotes: {
             ...s.teacherNotes,
@@ -337,9 +373,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loginWithEmail: async (email, password) => {
-        const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) return authError.message;
-        const { data, error } = await supabase.from('users').select('*').eq('email', email.trim()).maybeSingle();
+        let { data, error } = secureBackendEnabled
+          ? await supabase.from('users').select('*').eq('auth_user_id', authData.user.id).maybeSingle()
+          : await supabase.from('users').select('*').eq('email', email.trim()).maybeSingle();
+        if (secureBackendEnabled && error && (error.code === '42703' || error.code === 'PGRST204')) {
+          const legacy = await supabase.from('users').select('*').eq('email', email.trim()).maybeSingle();
+          data = legacy.data;
+          error = legacy.error;
+        }
         if (error || !data) return '가입 정보를 찾을 수 없습니다. 회원가입을 완료해 주세요.';
         const user = rowToUser(data as UserRow);
         set((state) => ({ users: state.users.some((item) => item.id === user.id) ? state.users.map((item) => item.id === user.id ? user : item) : [...state.users, user], currentUser: user, viewMode: user.role === 'CHILD' ? 'PERFORMER' : 'FACILITATOR', isDemoMode: false }));
@@ -365,7 +408,8 @@ export const useAuthStore = create<AuthState>()(
         };
 
         const newUser: User = {
-          id: genId(),
+          id: pendingSocialProfile.socialProvider === 'EMAIL' ? pendingSocialProfile.socialId : genId(),
+          authUserId: pendingSocialProfile.socialProvider === 'EMAIL' ? pendingSocialProfile.socialId : undefined,
           name: pendingSocialProfile.name,
           role,
           point: role === 'CHILD' ? 0 : 10000,
@@ -379,7 +423,16 @@ export const useAuthStore = create<AuthState>()(
           ...(role === 'CHILD' && facilitatorId ? { facilitatorId } : {}),
         };
 
-        const { data, error } = await supabase.from('users').insert(userToInsertRow(newUser)).select('*').single();
+        const request = pendingSocialProfile.socialProvider === 'EMAIL' && secureBackendEnabled
+          ? supabase.from('users').update(userToInsertRow(newUser)).eq('id', newUser.id).select('*').single()
+          : supabase.from('users').insert(userToInsertRow(newUser)).select('*').single();
+        let { data, error } = await request;
+        if (pendingSocialProfile.socialProvider === 'EMAIL' && error && ['42703', 'PGRST116', 'PGRST204'].includes(error.code)) {
+          const legacyUser = { ...newUser, authUserId: undefined };
+          const legacy = await supabase.from('users').insert(userToInsertRow(legacyUser)).select('*').single();
+          data = legacy.data;
+          error = legacy.error;
+        }
         if (error) {
           console.error('Failed to register user in Supabase:', error.message);
           return;
@@ -448,6 +501,23 @@ export const useAuthStore = create<AuthState>()(
         return 'INVALID_ROLE';
       },
     }),
-    { name: 'mp-auth' }
+    {
+      name: 'mp-auth',
+      partialize: (state) => state.isDemoMode ? {
+        currentUser: state.currentUser,
+        users: state.users,
+        viewMode: state.viewMode,
+        pendingSocialProfile: null,
+        teacherNotes: state.teacherNotes,
+        isDemoMode: true,
+      } : {
+        currentUser: null,
+        users: [],
+        viewMode: 'FACILITATOR' as ViewMode,
+        pendingSocialProfile: null,
+        teacherNotes: {},
+        isDemoMode: false,
+      },
+    }
   )
 );

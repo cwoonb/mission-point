@@ -1,7 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { describe, expect, it } from 'vitest';
 import SplashPage from './SplashPage';
 import DemoPage from './DemoPage';
@@ -23,7 +22,7 @@ describe('public entry screen',()=>{
     expect(html).not.toContain('PT 센터'); expect(html).not.toContain('대형 학원'); expect(html).not.toContain('회사 교육');
   });
   it('keeps demo cards out of login screen',()=>{
-    const html=renderToStaticMarkup(<GoogleOAuthProvider clientId="test"><MemoryRouter><LoginPage/></MemoryRouter></GoogleOAuthProvider>);
+    const html=renderToStaticMarkup(<MemoryRouter><LoginPage/></MemoryRouter>);
     expect(html).toContain('이메일 주소'); expect(html).toContain('비밀번호'); expect(html).toContain('로그인 상태 유지');
     expect(html).not.toContain('운영자 데모'); expect(html).not.toContain('학생 데모'); expect(html).not.toContain('소형 공부방');
   });

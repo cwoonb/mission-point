@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore';
 import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
 import { formatDateTime } from '../utils/helpers';
+import { useMembershipStore } from '../store/membershipStore';
 
 export default function SubmissionReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +16,7 @@ export default function SubmissionReviewPage() {
   const { currentUser, users, addTeacherNote } = useAuthStore();
   const groups = useGroupStore((state) => state.groups);
   const { missions, getLatestSubmission, approveMission, rejectMission } = useMissionStore();
+  const activeOrganizationId = useMembershipStore((state)=>state.memberships.find((item)=>item.id===state.activeMembershipId)?.organizationId);
   const [feedback, setFeedback] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -33,7 +35,7 @@ export default function SubmissionReviewPage() {
 
   const saveFeedback = () => {
     const value = feedback.trim();
-    if (value) addTeacherNote(student.id, `${mission.title}: ${value}`);
+    if (value) void addTeacherNote(student.id, `${mission.title}: ${value}`, activeOrganizationId);
   };
 
   const approve = async () => {

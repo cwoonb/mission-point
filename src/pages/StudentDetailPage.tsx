@@ -11,6 +11,7 @@ import type { MissionStatus } from '../types';
 import { formatDate, formatDateTime } from '../utils/helpers';
 import { getActiveDemoScenario } from '../data/demoSession';
 import { calculateClassStats } from '../utils/missionStats';
+import { useMembershipStore } from '../store/membershipStore';
 
 type DetailTab = 'overview' | 'missions' | 'feedback' | 'report' | 'memo';
 const TABS = [
@@ -35,6 +36,7 @@ export default function StudentDetailPage() {
   const { users, currentUser, teacherNotes, addTeacherNote, deleteTeacherNote } = useAuthStore();
   const groups = useGroupStore((state) => state.groups);
   const { missions, submissions, reviewLogs } = useMissionStore();
+  const activeOrganizationId = useMembershipStore((state)=>state.memberships.find((item)=>item.id===state.activeMembershipId)?.organizationId);
   const [noteInput, setNoteInput] = useState('');
   const student = users.find((user) => user.id === id);
   const scenario = currentUser?.id.startsWith('demo-') ? getActiveDemoScenario() : null;
@@ -63,7 +65,7 @@ export default function StudentDetailPage() {
   const currentStatus = periodStats.pending > 0 ? '승인 대기' : periodStats.missing > 0 ? '미제출' : periodStats.completed > 0 ? '제출 완료' : periodStats.inProgress > 0 ? '진행 중' : '활동 없음';
   const statusTone = periodStats.pending > 0 ? STATUS.REVIEWING.tone : periodStats.missing > 0 ? 'bg-[#F7ECEA] text-[#A65F59]' : periodStats.completed > 0 ? STATUS.SUCCESS.tone : periodStats.inProgress > 0 ? STATUS.IN_PROGRESS.tone : STATUS.PENDING.tone;
   const setTab = (nextTab: DetailTab) => { const next = new URLSearchParams(params); next.set('tab', nextTab); setParams(next, { replace: true }); };
-  const saveNote = () => { if (!noteInput.trim()) return; addTeacherNote(student.id, noteInput.trim()); setNoteInput(''); };
+  const saveNote = () => { if (!noteInput.trim()) return; void addTeacherNote(student.id, noteInput.trim(), activeOrganizationId); setNoteInput(''); };
 
   return <div className="page-container bg-[#F8F5F0]">
     <Header title="" showBack showPoints={false} />

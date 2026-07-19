@@ -42,6 +42,7 @@ export interface StatusThresholds {
 
 export interface User {
   id: string;
+  authUserId?: string;
   name: string;
   role: UserRole;
   point: number;
@@ -147,6 +148,7 @@ export interface Coupon {
 
 export interface PerformerGroup {
   id: string;
+  organizationId?: string;
   name: string;
   emoji: string;
   facilitatorId: string;

@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 const database = vi.hoisted(() => ({ responses: new Map<string, Promise<unknown>>() }));
 
 vi.mock('../lib/supabase', () => ({
+  secureBackendEnabled: false,
   supabase: {
     from: (table: string) => ({ select: () => database.responses.get(table) }),
     auth: { signOut: vi.fn() },
