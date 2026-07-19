@@ -19,8 +19,8 @@ interface MembershipState {
   replaceDemoMemberships: (organizations: Organization[], memberships: Membership[], activeId: string) => void;
   selectMembership: (membershipId: string) => boolean;
   clearActiveMembership: () => void;
-  createOrganization: (userId: string, name: string, role?: MembershipRole, groupName?: string) => Membership;
-  joinOrganization: (userId: string, inviteCode: string) => Membership | null;
+  createOrganization: (userId: string, name: string, role?: MembershipRole, groupName?: string) => Promise<Membership>;
+  joinOrganization: (userId: string, inviteCode: string) => Promise<Membership | null>;
   getActiveMembership: () => Membership | undefined;
 }
 
@@ -80,23 +80,40 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
 
   clearActiveMembership: () => set({ activeMembershipId: null }),
 
-  createOrganization: (userId, name, role = 'OWNER', groupName) => {
+  createOrganization: async (userId, name, role = 'OWNER', groupName) => {
     const organization: Organization = { id: id('org'), name: name.trim(), type: 'EDUCATION', ownerUserId: userId, inviteCode: Math.random().toString(36).slice(2, 8).toUpperCase(), createdAt: now() };
     const membership: Membership = { id: id('membership'), userId, organizationId: organization.id, role, status: 'ACTIVE', createdAt: now() };
+    if (!userId.startsWith('demo-')) {
+      const { error: organizationError } = await supabase.from('organizations').insert({ id: organization.id, name: organization.name, type: organization.type, owner_user_id: organization.ownerUserId, invite_code: organization.inviteCode, created_at: organization.createdAt });
+      if (organizationError) throw new Error(organizationError.message);
+      const { error: membershipError } = await supabase.from('memberships').insert({ id: membership.id, user_id: membership.userId, organization_id: membership.organizationId, role: membership.role, group_id: null, status: membership.status, created_at: membership.createdAt });
+      if (membershipError) {
+        await supabase.from('organizations').delete().eq('id', organization.id);
+        throw new Error(membershipError.message);
+      }
+    }
     set((state) => ({ organizations: [...state.organizations, organization], memberships: [...state.memberships, membership] }));
     if (groupName?.trim()) useGroupStore.getState().createGroup({ name: groupName.trim(), emoji: '', facilitatorId: userId });
-    if (!userId.startsWith('demo-')) {
-      void (async()=>{const {error}=await supabase.from('organizations').insert({ id: organization.id, name: organization.name, type: organization.type, owner_user_id: organization.ownerUserId, invite_code: organization.inviteCode, created_at: organization.createdAt });if(!error)await supabase.from('memberships').insert({ id: membership.id, user_id: membership.userId, organization_id: membership.organizationId, role: membership.role, group_id: null, status: membership.status, created_at: membership.createdAt });})();
-    }
     return membership;
   },
 
-  joinOrganization: (userId, inviteCode) => {
-    const organization = get().organizations.find((item) => item.inviteCode?.toUpperCase() === inviteCode.trim().toUpperCase());
+  joinOrganization: async (userId, inviteCode) => {
+    const normalized = inviteCode.trim().toUpperCase();
+    let organization = get().organizations.find((item) => item.inviteCode?.toUpperCase() === normalized);
+    if (!organization && !userId.startsWith('demo-')) {
+      const { data, error } = await supabase.from('organizations').select('*').eq('invite_code', normalized).maybeSingle();
+      if (error) throw new Error(error.message);
+      if (data) organization = { id: data.id, name: data.name, type: data.type, ownerUserId: data.owner_user_id, inviteCode: data.invite_code ?? undefined, createdAt: data.created_at };
+    }
     if (!organization) return null;
+    const existing = get().memberships.find((item) => item.userId === userId && item.organizationId === organization!.id && item.role === 'STUDENT' && item.status === 'ACTIVE');
+    if (existing) return existing;
     const membership: Membership = { id: id('membership'), userId, organizationId: organization.id, role: 'STUDENT', status: 'ACTIVE', createdAt: now() };
-    set((state) => ({ memberships: [...state.memberships, membership] }));
-    if (!userId.startsWith('demo-')) void supabase.from('memberships').insert({ id: membership.id, user_id: membership.userId, organization_id: membership.organizationId, role: membership.role, group_id: null, status: membership.status, created_at: membership.createdAt });
+    if (!userId.startsWith('demo-')) {
+      const { error } = await supabase.from('memberships').insert({ id: membership.id, user_id: membership.userId, organization_id: membership.organizationId, role: membership.role, group_id: null, status: membership.status, created_at: membership.createdAt });
+      if (error) throw new Error(error.message);
+    }
+    set((state) => ({ organizations: state.organizations.some((item)=>item.id===organization!.id) ? state.organizations : [...state.organizations, organization!], memberships: [...state.memberships, membership] }));
     return membership;
   },
 

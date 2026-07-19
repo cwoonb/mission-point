@@ -42,4 +42,19 @@ describe('student demo flow', () => {
     expect(useMissionStore.getState().missions.find((item) => item.id === mission!.id)?.status).toBe('IN_PROGRESS');
     expect(useMissionStore.getState().submissions.some((item) => item.message === '데모 글 제출')).toBe(false);
   });
+
+  it('keeps demo data organization-scoped and exposes approval feedback to the student', async () => {
+    const [{ startStudentDemo }, { useMissionStore }, { STUDENT_DEMO_TEACHER_ID }] = await Promise.all([
+      import('./demoSession'),
+      import('../store/missionStore'),
+      import('./studentDemo'),
+    ]);
+
+    startStudentDemo(true);
+    const reviewing = useMissionStore.getState().missions.find((mission) => mission.status === 'REVIEWING');
+    expect(reviewing?.organizationId).toBe('demo-org-art-student');
+    await useMissionStore.getState().approveMission(reviewing!.id, STUDENT_DEMO_TEACHER_ID, '명암 단계가 자연스럽게 연결되었습니다.');
+    expect(useMissionStore.getState().getMission(reviewing!.id)?.status).toBe('SUCCESS');
+    expect(useMissionStore.getState().getReviewLogs(reviewing!.id)[0]?.reason).toBe('명암 단계가 자연스럽게 연결되었습니다.');
+  });
 });

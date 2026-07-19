@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -11,11 +11,17 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children, hideClose }: ModalProps) {
+  const titleId = useId();
+  const sheetRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (isOpen) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
+    if (!isOpen) { document.body.style.overflow = ''; return; }
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', onKeyDown);
+    requestAnimationFrame(() => sheetRef.current?.querySelector<HTMLElement>('button, input, textarea, select, [tabindex]:not([tabindex="-1"])')?.focus());
+    return () => { document.body.style.overflow = ''; document.removeEventListener('keydown', onKeyDown); previous?.focus(); };
+  }, [isOpen, onClose]);
 
   return (
     <AnimatePresence>
@@ -23,6 +29,10 @@ export default function Modal({ isOpen, onClose, title, children, hideClose }: M
         <>
           {/* 배경 오버레이 */}
           <motion.div
+            ref={sheetRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -40,7 +50,7 @@ export default function Modal({ isOpen, onClose, title, children, hideClose }: M
           >
             {(title || !hideClose) && (
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
-                {title && <h3 className="font-bold text-gray-800 text-base">{title}</h3>}
+                {title && <h3 id={titleId} className="font-bold text-gray-800 text-base">{title}</h3>}
                 {!hideClose && (
                   <button
                     onClick={onClose}

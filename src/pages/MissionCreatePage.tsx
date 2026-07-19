@@ -47,8 +47,13 @@ export default function MissionCreatePage() {
     if (!valid || !currentUser || saving) { setError('제목, 설명, 대상, 기간을 모두 확인해 주세요.'); return; }
     setSaving(true); setError('');
     const base = { title: title.trim(), description: description.trim(), rewardPoint: 0, creatorId: currentUser.id, submissionType, startDate: new Date(`${startDate}T00:00:00`).toISOString(), endDate: new Date(`${endDate}T23:59:59`).toISOString(), missionType, missionGoal: 'STUDY_HABIT' as const, repeatType, parentShare };
-    await Promise.all(targetIds.map((assigneeId) => createMission({ ...base, assigneeId })));
-    navigate('/missions', { replace: true });
+    try {
+      await Promise.all(targetIds.map((assigneeId) => createMission({ ...base, assigneeId })));
+      navigate('/missions', { replace: true });
+    } catch (cause) {
+      setError(cause instanceof Error && cause.message === 'MISSION_SCHEMA_UPDATE_REQUIRED' ? '소속별 미션 저장을 위한 운영 데이터 설정이 필요합니다. 관리자에게 문의해 주세요.' : '미션을 저장하지 못했습니다. 입력 내용은 유지됩니다. 네트워크 연결을 확인하고 다시 시도해 주세요.');
+      setSaving(false);
+    }
   };
 
   const applyTemplate = (id: string) => {

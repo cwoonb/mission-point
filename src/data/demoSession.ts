@@ -28,6 +28,7 @@ export function getActiveDemoScenario() {
 
 export function startDemoScenario(id: DemoScenarioId) {
   const seed = buildDemoScenario(id);
+  const organizationId = `demo-org-${id}`;
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem(SCENARIO_KEY, id);
     localStorage.setItem(DEMO_KIND_KEY, 'facilitator');
@@ -42,12 +43,11 @@ export function startDemoScenario(id: DemoScenarioId) {
   });
   useGroupStore.setState({ groups: seed.groups, demoMode: true });
   useMissionStore.setState({
-    missions: seed.missions,
+    missions: seed.missions.map((mission)=>({ ...mission, organizationId })),
     submissions: seed.submissions,
     reviewLogs: seed.reviewLogs,
     demoMode: true,
   });
-  const organizationId = `demo-org-${id}`;
   const membershipId = `demo-membership-${id}-operator`;
   useMembershipStore.getState().replaceDemoMemberships(
     [{ id: organizationId, name: seed.config.name, type: 'EDUCATION', ownerUserId: facilitator.id, inviteCode: facilitator.code, createdAt: facilitator.createdAt }],
@@ -92,10 +92,10 @@ export function startStudentDemo(reset = false) {
     localStorage.setItem(SCENARIO_KEY, 'art');
   }
   const student = seed.users.find((user) => user.id === STUDENT_DEMO_USER_ID)!;
+  const organizationId = 'demo-org-art-student';
   useAuthStore.setState({ users: seed.users, currentUser: student, viewMode: 'PERFORMER', isDemoMode: true, teacherNotes: {} });
   useGroupStore.setState({ groups: seed.groups, demoMode: true });
-  useMissionStore.setState({ missions: seed.missions, submissions: seed.submissions, reviewLogs: seed.reviewLogs, demoMode: true });
-  const organizationId = 'demo-org-art-student';
+  useMissionStore.setState({ missions: seed.missions.map((mission)=>({ ...mission, organizationId })), submissions: seed.submissions, reviewLogs: seed.reviewLogs, demoMode: true });
   const membershipId = 'demo-membership-art-student';
   useMembershipStore.getState().replaceDemoMemberships(
     [{ id: organizationId, name: '미술 학원', type: 'ACADEMY', ownerUserId: STUDENT_DEMO_TEACHER_ID, inviteCode: 'ART100', createdAt: seed.users[0].createdAt }],

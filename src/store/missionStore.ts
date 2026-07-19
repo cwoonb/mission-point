@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Mission, MissionSubmission, MissionReviewLog, MissionStatus, MissionType, MissionGoal, RepeatType, ParentShareType, SubmissionType, ReviewAction } from '../types';
-import { initialMissions } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { useMembershipStore } from './membershipStore';
 
@@ -155,8 +154,8 @@ interface MissionState {
     imageUrl?: string,
     imageUrls?: string[]
   ) => Promise<MissionSubmission>;
-  approveMission: (missionId: string, reviewerId: string) => void;
-  rejectMission: (missionId: string, reviewerId: string, reason: string) => void;
+  approveMission: (missionId: string, reviewerId: string, feedback?: string) => Promise<void>;
+  rejectMission: (missionId: string, reviewerId: string, reason: string) => Promise<void>;
   getLatestSubmission: (missionId: string) => MissionSubmission | undefined;
   getReviewLogs: (missionId: string) => MissionReviewLog[];
   getMission: (missionId: string) => Mission | undefined;
@@ -181,28 +180,10 @@ export const useMissionStore = create<MissionState>()(
           console.error('Failed to load mission data:', mErr?.message ?? sErr?.message ?? lErr?.message);
           return;
         }
-
-        let missions = (missionRows ?? []).map(rowToMission);
-
-        if (missions.length === 0) {
-          const { data: inserted, error: insertError } = await supabase
-            .from('missions')
-            .insert(initialMissions.map(missionToRow))
-            .select('*');
-          if (insertError) {
-            if (insertError.code === '23505') {
-              const { data: refetched } = await supabase.from('missions').select('*');
-              missions = (refetched ?? []).map(rowToMission);
-            } else {
-              console.error('Failed to seed missions in Supabase:', insertError.message);
-            }
-          } else {
-            missions = (inserted ?? []).map(rowToMission);
-          }
-        }
+        if (get().demoMode) return;
 
         set({
-          missions,
+          missions: (missionRows ?? []).map(rowToMission),
           submissions: (subRows ?? []).map(rowToSubmission),
           reviewLogs: (logRows ?? []).map(rowToReviewLog),
         });
@@ -275,6 +256,7 @@ export const useMissionStore = create<MissionState>()(
 
       createMission: async (data) => {
         const activeMembership=useMembershipStore.getState().getActiveMembership();
+        if (!get().demoMode && !activeMembership?.organizationId) throw new Error('소속을 선택한 뒤 다시 시도해 주세요.');
         const mission: Mission = {
           ...data,
           organizationId: activeMembership?.organizationId,
@@ -287,10 +269,15 @@ export const useMissionStore = create<MissionState>()(
           return mission;
         }
         let { data: created, error } = await supabase.from('missions').insert(missionToRow(mission)).select('*').single();
-        if(error&&mission.organizationId){const legacyRow=missionToRow({...mission,organizationId:undefined});const retry=await supabase.from('missions').insert(legacyRow).select('*').single();created=retry.data;error=retry.error;}
+        const legacySchema = error && mission.organizationId?.startsWith('legacy-org-') && (error.code === 'PGRST204' || error.code === '42703' || error.message.includes('organization_id'));
+        if (legacySchema) {
+          const fallback = await supabase.from('missions').insert(missionToRow({ ...mission, organizationId: undefined })).select('*').single();
+          created = fallback.data;
+          error = fallback.error;
+        }
         if (error) {
-          console.error('Failed to create mission in Supabase:', error.message);
-          return mission;
+          if (error.code === 'PGRST204' || error.code === '42703' || error.message.includes('organization_id')) throw new Error('MISSION_SCHEMA_UPDATE_REQUIRED');
+          throw new Error(error.message);
         }
         const result = rowToMission(created as MissionRow);
         set((s) => ({ missions: [...s.missions, result] }));
@@ -359,7 +346,12 @@ export const useMissionStore = create<MissionState>()(
             attempt_number: submission.attemptNumber,
             submitted_at: submission.submittedAt,
           });
-          if (subError) console.error('Failed to save submission in Supabase:', subError.message);
+          if (subError) throw new Error(subError.message);
+          const { error: missionError } = await supabase.from('missions').update({ status: 'REVIEWING' }).eq('id', missionId);
+          if (missionError) {
+            await supabase.from('mission_submissions').delete().eq('id', submission.id);
+            throw new Error(missionError.message);
+          }
         }
 
         set((s) => ({
@@ -368,11 +360,10 @@ export const useMissionStore = create<MissionState>()(
             m.id === missionId ? { ...m, status: 'REVIEWING' } : m
           ),
         }));
-        if (!get().demoMode) pushMissionUpdate(missionId, { status: 'REVIEWING' });
         return submission;
       },
 
-      approveMission: (missionId, reviewerId) => {
+      approveMission: async (missionId, reviewerId, feedback) => {
         const latestSub = get().getLatestSubmission(missionId);
         const log: MissionReviewLog | null = latestSub ? {
           id: genId(),
@@ -380,24 +371,31 @@ export const useMissionStore = create<MissionState>()(
           submissionId: latestSub.id,
           reviewerId,
           action: 'APPROVED',
+          reason: feedback?.trim() || undefined,
           createdAt: new Date().toISOString(),
         } : null;
+        if (!get().demoMode) {
+          if (!log) throw new Error('승인할 제출물을 찾을 수 없습니다.');
+          const { error: logError } = await supabase.from('mission_review_logs').insert({
+            id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
+            reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
+          });
+          if (logError) throw new Error(logError.message);
+          const { error: missionError } = await supabase.from('missions').update({ status: 'SUCCESS' }).eq('id', missionId);
+          if (missionError) {
+            await supabase.from('mission_review_logs').delete().eq('id', log.id);
+            throw new Error(missionError.message);
+          }
+        }
         set((s) => ({
           reviewLogs: log ? [...s.reviewLogs, log] : s.reviewLogs,
           missions: s.missions.map((m) =>
             m.id === missionId ? { ...m, status: 'SUCCESS' } : m
           ),
         }));
-        if (!get().demoMode) pushMissionUpdate(missionId, { status: 'SUCCESS' });
-        if (log && !get().demoMode) supabase.from('mission_review_logs').insert({
-          id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
-          reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
-        }).then(({ error }) => {
-          if (error) console.error('Failed to save review log in Supabase:', error.message);
-        });
       },
 
-      rejectMission: (missionId, reviewerId, reason) => {
+      rejectMission: async (missionId, reviewerId, reason) => {
         const latestSub = get().getLatestSubmission(missionId);
         const log: MissionReviewLog | null = latestSub ? {
           id: genId(),
@@ -408,19 +406,25 @@ export const useMissionStore = create<MissionState>()(
           reason,
           createdAt: new Date().toISOString(),
         } : null;
+        if (!get().demoMode) {
+          if (!log) throw new Error('반려할 제출물을 찾을 수 없습니다.');
+          const { error: logError } = await supabase.from('mission_review_logs').insert({
+            id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
+            reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
+          });
+          if (logError) throw new Error(logError.message);
+          const { error: missionError } = await supabase.from('missions').update({ status: 'REJECTED' }).eq('id', missionId);
+          if (missionError) {
+            await supabase.from('mission_review_logs').delete().eq('id', log.id);
+            throw new Error(missionError.message);
+          }
+        }
         set((s) => ({
           reviewLogs: log ? [...s.reviewLogs, log] : s.reviewLogs,
           missions: s.missions.map((m) =>
             m.id === missionId ? { ...m, status: 'REJECTED' } : m
           ),
         }));
-        if (!get().demoMode) pushMissionUpdate(missionId, { status: 'REJECTED' });
-        if (log && !get().demoMode) supabase.from('mission_review_logs').insert({
-          id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
-          reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
-        }).then(({ error }) => {
-          if (error) console.error('Failed to save review log in Supabase:', error.message);
-        });
       },
 
       getLatestSubmission: (missionId) => {

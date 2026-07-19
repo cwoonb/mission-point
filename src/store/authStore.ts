@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, ViewMode, PendingSocialProfile, SocialProvider, UserRole, StatusThresholds } from '../types';
-import { initialUsers, initialGroups } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { isDemoUserId } from '../utils/demoMode';
 
@@ -140,62 +139,9 @@ export const useAuthStore = create<AuthState>()(
           console.error('Failed to load users from Supabase:', error.message);
           return;
         }
+        if (get().isDemoMode && get().currentUser && isDemoUserId(get().currentUser?.id)) return;
 
-        let rows = (data ?? []) as UserRow[];
-
-        if (rows.length === 0) {
-          // 최초 1회: 데모 계정을 Supabase에 시드
-          // (users.group_id <-> performer_groups.facilitator_id 가 서로 참조하므로
-          //  1) group_id 없이 사용자 생성 → 2) 그룹 생성 → 3) group_id 채우기 순서로 진행)
-          const usedCodes = new Set<string>();
-          const seeded = initialUsers.map((u) => ({ ...u, code: u.code ?? genUserCode(usedCodes) }));
-          const { data: inserted, error: insertError } = await supabase
-            .from('users')
-            .insert(seeded.map((u) => userToInsertRow({ ...u, groupId: undefined })))
-            .select('*');
-          if (insertError) {
-            if (insertError.code === '23505') {
-              // 동시에 다른 클라이언트가 이미 시드를 완료한 경우 — 그 결과를 그대로 사용
-              const { data: refetched, error: refetchError } = await supabase.from('users').select('*');
-              if (refetchError) {
-                console.error('Failed to reload users after seed conflict:', refetchError.message);
-                return;
-              }
-              set((s) => {
-                const nextUsers = (refetched ?? []).map(rowToUser);
-                return {
-                  users: nextUsers,
-                  currentUser: s.currentUser ? nextUsers.find((u) => u.id === s.currentUser!.id) ?? s.currentUser : s.currentUser,
-                };
-              });
-              return;
-            }
-            console.error('Failed to seed users in Supabase:', insertError.message);
-            return;
-          }
-          rows = (inserted ?? []) as UserRow[];
-
-          const { error: groupError } = await supabase.from('performer_groups').insert(
-            initialGroups.map((g) => ({
-              id: g.id,
-              name: g.name,
-              emoji: g.emoji,
-              facilitator_id: g.facilitatorId,
-              created_at: g.createdAt,
-            }))
-          );
-          if (groupError) {
-            console.error('Failed to seed groups in Supabase:', groupError.message);
-          } else {
-            for (const u of seeded) {
-              if (!u.groupId) continue;
-              const { error: gidError } = await supabase.from('users').update({ group_id: u.groupId }).eq('id', u.id);
-              if (gidError) console.error('Failed to backfill group_id:', gidError.message);
-            }
-            const { data: refetched } = await supabase.from('users').select('*');
-            if (refetched) rows = refetched as UserRow[];
-          }
-        }
+        const rows = (data ?? []) as UserRow[];
 
         const nextUsers = rows.map(rowToUser);
 

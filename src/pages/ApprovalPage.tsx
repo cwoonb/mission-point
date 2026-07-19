@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/authStore';
 import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
 import { formatDateTime } from '../utils/helpers';
+import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
 
 interface ApprovalPageProps { embedded?: boolean }
 
@@ -13,8 +15,9 @@ export default function ApprovalPage({ embedded = false }: ApprovalPageProps) {
   const { currentUser, users } = useAuthStore();
   const groups = useGroupStore((state) => state.groups);
   const { missions, getLatestSubmission } = useMissionStore();
+  const activeOrganizationId=useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId)?.organizationId);
   const pending = missions
-    .filter((mission) => mission.creatorId === currentUser?.id && mission.status === 'REVIEWING')
+    .filter((mission) => mission.creatorId === currentUser?.id && mission.status === 'REVIEWING' && missionInOrganization(mission, activeOrganizationId))
     .sort((a, b) => {
       const aDate = getLatestSubmission(a.id)?.submittedAt ?? a.createdAt;
       const bDate = getLatestSubmission(b.id)?.submittedAt ?? b.createdAt;

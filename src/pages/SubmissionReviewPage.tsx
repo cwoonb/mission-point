@@ -20,6 +20,7 @@ export default function SubmissionReviewPage() {
   const [rejectReason, setRejectReason] = useState('');
   const [processing, setProcessing] = useState(false);
   const [imageOpen, setImageOpen] = useState(false);
+  const [error, setError] = useState('');
 
   const mission = missions.find((item) => item.id === id);
   const submission = mission ? getLatestSubmission(mission.id) : undefined;
@@ -35,21 +36,32 @@ export default function SubmissionReviewPage() {
     if (value) addTeacherNote(student.id, `${mission.title}: ${value}`);
   };
 
-  const approve = () => {
+  const approve = async () => {
     if (!currentUser || processing) return;
-    setProcessing(true);
-    saveFeedback();
-    approveMission(mission.id, currentUser.id);
-    navigate('/missions?tab=pending', { replace: true, state: { notice: `${student.name} 학생의 제출물을 승인했습니다.` } });
+    setProcessing(true); setError('');
+    try {
+      await approveMission(mission.id, currentUser.id, feedback);
+      saveFeedback();
+      navigate('/missions?tab=pending', { replace: true, state: { notice: `${student.name} 학생의 제출물을 승인했습니다.` } });
+    } catch {
+      setError('승인 처리에 실패했습니다. 피드백은 유지됩니다. 네트워크 연결을 확인하고 다시 시도해 주세요.');
+      setProcessing(false);
+    }
   };
 
-  const reject = () => {
+  const reject = async () => {
     if (!currentUser || processing || !rejectReason.trim()) return;
-    setProcessing(true);
+    setProcessing(true); setError('');
     const reason = rejectReason.trim();
-    if (feedback.trim()) saveFeedback();
-    rejectMission(mission.id, currentUser.id, reason);
-    navigate('/missions?tab=pending', { replace: true, state: { notice: `${student.name} 학생에게 보완 요청을 보냈습니다.` } });
+    try {
+      await rejectMission(mission.id, currentUser.id, reason);
+      if (feedback.trim()) saveFeedback();
+      navigate('/missions?tab=pending', { replace: true, state: { notice: `${student.name} 학생에게 보완 요청을 보냈습니다.` } });
+    } catch {
+      setRejectOpen(false);
+      setError('반려 처리에 실패했습니다. 입력 내용은 유지됩니다. 네트워크 연결을 확인하고 다시 시도해 주세요.');
+      setProcessing(false);
+    }
   };
 
   return (
@@ -80,6 +92,7 @@ export default function SubmissionReviewPage() {
               )}
               {submission.message && <p className="mt-3 rounded-xl border border-[#E7E1D9] bg-[#FFFDFC] p-4 text-sm leading-6 text-[#53606F]">{submission.message}</p>}
             </section>
+            {error && <p role="alert" className="rounded-[10px] bg-[#F8EAE8] px-3 py-2 text-xs font-bold text-[#A14E49]">{error}</p>}
 
             <section>
               <label htmlFor="review-feedback" className="text-sm font-bold text-[#14233B]">선생님 피드백</label>

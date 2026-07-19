@@ -25,7 +25,7 @@ export default function ReportSharePage() {
 
   const copy = async () => {
     try { await navigator.clipboard.writeText(reportUrl); } catch { fallbackCopy(reportUrl); }
-    setNotice('리포트 링크를 복사했습니다.');
+    setNotice('로그인 사용자용 리포트 링크를 복사했습니다.');
   };
 
   const share = async () => {
@@ -36,11 +36,11 @@ export default function ReportSharePage() {
 
   return (
     <div className="page-container bg-[#F8F5F0]">
-      <Header title="공유 완료" showBack showPoints={false}/>
+      <Header title="리포트 공유" showBack showPoints={false}/>
       <main className="content-area flex min-h-[calc(100dvh-9rem)] flex-col items-center justify-center px-6 py-10 text-center">
         <span className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-[#14233B] text-[#14233B]"><Check size={34}/></span>
-        <h1 className="mt-6 text-xl font-bold text-[#14233B]">리포트가 준비되었습니다.</h1>
-        <p className="mt-2 text-sm leading-6 text-[#687282]">원하는 공유 방법을 선택하세요.</p>
+        <h1 className="mt-6 text-xl font-bold text-[#14233B]">공유 방법을 선택하세요.</h1>
+        <p className="mt-2 text-sm leading-6 text-[#687282]">현재 링크는 서비스 로그인 사용자만 열 수 있습니다.</p>
 
         <div className="mt-8 w-full space-y-2">
           <button type="button" onClick={copy} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] border border-[#D8D0C5] bg-[#FFFDFC] text-sm font-bold text-[#14233B]"><Copy size={17}/>링크 복사</button>

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { PerformerGroup } from '../types';
-import { initialGroups } from '../data/mockData';
 
 const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
@@ -23,14 +22,6 @@ export const useGroupStore = create<GroupState>()(
 
       initializeData: () => {
         if (get().demoMode) return;
-        const existing = get().groups;
-        if (existing.length === 0) {
-          set({ groups: initialGroups });
-          return;
-        }
-        const existingIds = new Set(existing.map((g) => g.id));
-        const missing = initialGroups.filter((g) => !existingIds.has(g.id));
-        if (missing.length > 0) set({ groups: [...existing, ...missing] });
       },
 
       createGroup: ({ name, emoji, facilitatorId }) => {
