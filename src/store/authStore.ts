@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, ViewMode, PendingSocialProfile, SocialProvider, UserRole, StatusThresholds } from '../types';
-import { secureBackendEnabled, supabase } from '../lib/supabase';
+import { authRedirectUrl, secureBackendEnabled, supabase } from '../lib/supabase';
 import { isDemoUserId } from '../utils/demoMode';
+import type { User as SupabaseAuthUser } from '@supabase/supabase-js';
 
 const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 
@@ -83,6 +84,59 @@ const userToInsertRow = (u: User) => ({
   created_at: u.createdAt,
 });
 
+const authProvider = (authUser: SupabaseAuthUser): SocialProvider => {
+  const provider = String(authUser.app_metadata.provider ?? 'email').toUpperCase();
+  return provider === 'GOOGLE' || provider === 'KAKAO' ? provider : 'EMAIL';
+};
+
+const authIdentityId = (authUser: SupabaseAuthUser) => {
+  const provider = String(authUser.app_metadata.provider ?? 'email');
+  const identity = authUser.identities?.find((item) => item.provider === provider) ?? authUser.identities?.[0];
+  return identity?.identity_id ?? identity?.id ?? authUser.id;
+};
+
+const profileFromAuthUser = (authUser: SupabaseAuthUser, usedCodes: Set<string>): User => {
+  const provider = authProvider(authUser);
+  const metadata = authUser.user_metadata ?? {};
+  const name = String(metadata.name ?? metadata.full_name ?? metadata.user_name ?? authUser.email?.split('@')[0] ?? '사용자');
+  return {
+    id: authUser.id,
+    authUserId: secureBackendEnabled ? authUser.id : undefined,
+    name,
+    role: 'TEACHER',
+    point: 0,
+    avatar: provider === 'GOOGLE' ? 'G' : provider === 'KAKAO' ? 'K' : name.slice(0, 1),
+    createdAt: authUser.created_at ?? new Date().toISOString(),
+    code: genUserCode(usedCodes),
+    socialProvider: provider,
+    socialId: authIdentityId(authUser),
+    email: authUser.email,
+    profileImage: metadata.avatar_url ?? metadata.picture ?? metadata.profile_image_url,
+  };
+};
+
+export interface EmailSignupResult {
+  error?: string;
+  confirmationRequired: boolean;
+}
+
+export const authErrorMessage = (message: string) => {
+  const normalized = message.toLowerCase();
+  if (normalized.includes('invalid login credentials')) return '이메일 또는 비밀번호가 올바르지 않습니다.';
+  if (normalized.includes('email not confirmed')) return '이메일 인증을 완료한 뒤 로그인해 주세요.';
+  if (normalized.includes('user already registered')) return '이미 가입된 이메일입니다.';
+  if (normalized.includes('password should be')) return '비밀번호는 8자 이상 입력해 주세요.';
+  if (
+    normalized.includes('rate limit') ||
+    normalized.includes('security purposes') ||
+    /request this after \d+ seconds?/.test(normalized)
+  ) {
+    return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
+  }
+  if (normalized.includes('provider is not enabled') || normalized.includes('unsupported provider')) return '소셜 로그인 설정을 확인하지 못했습니다. 관리자에게 문의해 주세요.';
+  return message;
+};
+
 interface AuthState {
   currentUser: User | null;
   users: User[];
@@ -90,10 +144,11 @@ interface AuthState {
   pendingSocialProfile: PendingSocialProfile | null;
   teacherNotes: Record<string, TeacherNote[]>;
   isDemoMode: boolean;
+  authInitialized: boolean;
 
   initializeData: () => Promise<void>;
   login: (userId: string) => void;
-  logout: () => void;
+  logout: () => Promise<string | null>;
   switchViewMode: () => void;
   updateUserPoint: (userId: string, delta: number) => void;
   getUser: (userId: string) => User | undefined;
@@ -113,7 +168,7 @@ interface AuthState {
 
   connectByCode: (code: string) => Promise<ConnectByCodeResult>;
   loginWithEmail: (email: string, password: string) => Promise<string | null>;
-  signupWithEmail: (name: string, email: string, password: string) => Promise<string | null>;
+  signupWithEmail: (name: string, email: string, password: string) => Promise<EmailSignupResult>;
 }
 
 // users 테이블에 로컬 상태를 반영하는 헬퍼 (실패해도 로컬 상태는 이미 갱신된 상태로 둠)
@@ -133,71 +188,75 @@ export const useAuthStore = create<AuthState>()(
       pendingSocialProfile: null,
       teacherNotes: {},
       isDemoMode: false,
+      authInitialized: false,
 
       initializeData: async () => {
         if (get().isDemoMode && get().currentUser && isDemoUserId(get().currentUser?.id)) {
+          set({ authInitialized: true });
           return;
         }
-        const { data: sessionData } = typeof supabase.auth.getSession === 'function'
-          ? await supabase.auth.getSession()
-          : { data: { session: null } };
-        let query = supabase.from('users').select('*');
-        if (secureBackendEnabled && sessionData.session?.user.id) query = query.eq('auth_user_id', sessionData.session.user.id);
-        let { data, error } = await query;
-        if (error && sessionData.session?.user.id && (error.code === '42703' || error.code === 'PGRST204')) {
-          const legacy = await supabase.from('users').select('*');
-          data = legacy.data;
-          error = legacy.error;
-        }
-        if (error) {
-          console.error('Failed to load users from Supabase:', error.message);
-          return;
-        }
-        if (get().isDemoMode && get().currentUser && isDemoUserId(get().currentUser?.id)) return;
-
-        const rows = (data ?? []) as UserRow[];
-
-        const nextUsers = rows.map(rowToUser);
-
-        // 레거시 계정 마이그레이션: Supabase 도입 전에 소셜 로그인으로 생성되어
-        // 로컬에만 존재하던 계정을 발견하면 그대로 Supabase에 등록한다.
-        // (facilitatorId/groupId는 상대측 레코드가 아직 없을 수 있으므로 제외하고 등록)
-        const legacyCurrent = get().currentUser;
-        if (legacyCurrent?.socialProvider && !nextUsers.some((u) => u.id === legacyCurrent.id)) {
-          const usedCodes = new Set(nextUsers.filter((u) => u.code).map((u) => u.code!));
-          const code = legacyCurrent.code && !usedCodes.has(legacyCurrent.code) ? legacyCurrent.code : genUserCode(usedCodes);
-          const { data: migratedRow, error: migrateError } = await supabase
-            .from('users')
-            .insert(userToInsertRow({ ...legacyCurrent, code, facilitatorId: undefined, groupId: undefined }))
-            .select('*')
-            .maybeSingle();
-          if (migrateError) {
-            console.error('Failed to migrate legacy account to Supabase:', migrateError.message);
-          } else if (migratedRow) {
-            const migrated = rowToUser(migratedRow as UserRow);
-            const merged = [...nextUsers, migrated];
-            set({ users: merged, currentUser: migrated });
+        try {
+          const { data: sessionData, error: sessionError } = typeof supabase.auth.getSession === 'function'
+            ? await supabase.auth.getSession()
+            : { data: { session: null }, error: null };
+          if (sessionError) throw sessionError;
+          const authUser = sessionData.session?.user ?? null;
+          if (!authUser) {
+            set({ currentUser: null, users: [], teacherNotes: {}, isDemoMode: false });
             return;
           }
-        }
 
-        const noteResult = sessionData.session ? await supabase.from('teacher_notes').select('*') : { data: [] };
-        const nextNotes: Record<string, TeacherNote[]> = {};
-        for (const row of noteResult.data ?? []) {
-          const studentId = row.student_id as string;
-          (nextNotes[studentId] ??= []).push({ id: row.id, text: row.text, createdAt: row.created_at, organizationId: row.organization_id ?? undefined });
+          let query = supabase.from('users').select('*');
+          if (secureBackendEnabled) query = query.eq('auth_user_id', authUser.id);
+          let { data, error } = await query;
+          if (error && secureBackendEnabled && (error.code === '42703' || error.code === 'PGRST204')) {
+            const legacy = await supabase.from('users').select('*');
+            data = legacy.data;
+            error = legacy.error;
+          }
+          if (error) throw error;
+
+          let nextUsers = ((data ?? []) as UserRow[]).map(rowToUser);
+          let current = nextUsers.find((user) => secureBackendEnabled
+            ? user.authUserId === authUser.id
+            : user.id === authUser.id || (!!authUser.email && user.email?.toLowerCase() === authUser.email.toLowerCase()));
+
+          if (!current) {
+            const profile = profileFromAuthUser(authUser, new Set(nextUsers.flatMap((user) => user.code ? [user.code] : [])));
+            const { data: createdRow, error: createError } = await supabase.from('users').insert(userToInsertRow(profile)).select('*').single();
+            if (createError) {
+              if (secureBackendEnabled && createError.code === '23505') {
+                const retry = await supabase.from('users').select('*').eq('auth_user_id', authUser.id).maybeSingle();
+                if (retry.error || !retry.data) throw retry.error ?? new Error('PROFILE_NOT_FOUND');
+                current = rowToUser(retry.data as UserRow);
+              } else {
+                throw createError;
+              }
+            } else {
+              current = rowToUser(createdRow as UserRow);
+            }
+            nextUsers = nextUsers.some((user)=>user.id===current!.id) ? nextUsers : [...nextUsers,current!];
+          }
+
+          const noteResult = secureBackendEnabled ? await supabase.from('teacher_notes').select('*') : { data: [] };
+          const nextNotes: Record<string, TeacherNote[]> = {};
+          for (const row of noteResult.data ?? []) {
+            const studentId = row.student_id as string;
+            (nextNotes[studentId] ??= []).push({ id: row.id, text: row.text, createdAt: row.created_at, organizationId: row.organization_id ?? undefined });
+          }
+          set({
+            users: nextUsers,
+            teacherNotes: nextNotes,
+            currentUser: current,
+            viewMode: current.role === 'CHILD' ? 'PERFORMER' : 'FACILITATOR',
+            isDemoMode: false,
+          });
+        } catch (error) {
+          console.error('Failed to restore authenticated profile:', error instanceof Error ? error.message : error);
+          set({ currentUser: null, users: [], teacherNotes: {}, isDemoMode: false });
+        } finally {
+          set({ authInitialized: true });
         }
-        set((s) => ({
-          users: nextUsers,
-          teacherNotes: nextNotes,
-          currentUser: s.currentUser
-            ? nextUsers.find((u) => u.id === s.currentUser!.id) ?? s.currentUser
-            : sessionData.session?.user.id
-              ? nextUsers.find((u) => secureBackendEnabled
-                ? u.authUserId === sessionData.session!.user.id
-                : !!sessionData.session!.user.email && u.email?.toLowerCase() === sessionData.session!.user.email!.toLowerCase()) ?? null
-              : null,
-        }));
       },
 
       login: (userId) => {
@@ -211,9 +270,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => {
-        if (!get().isDemoMode) void supabase.auth.signOut();
-        set({ currentUser: null, isDemoMode: false, viewMode: 'FACILITATOR' });
+      logout: async () => {
+        if (!get().isDemoMode) {
+          const { error } = await supabase.auth.signOut();
+          if (error) return error.message;
+        }
+        set({ currentUser: null, users: [], teacherNotes: {}, isDemoMode: false, viewMode: 'FACILITATOR', authInitialized: true });
+        return null;
       },
 
       switchViewMode: () => {
@@ -373,28 +436,35 @@ export const useAuthStore = create<AuthState>()(
       },
 
       loginWithEmail: async (email, password) => {
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (authError) return authError.message;
-        let { data, error } = secureBackendEnabled
-          ? await supabase.from('users').select('*').eq('auth_user_id', authData.user.id).maybeSingle()
-          : await supabase.from('users').select('*').eq('email', email.trim()).maybeSingle();
-        if (secureBackendEnabled && error && (error.code === '42703' || error.code === 'PGRST204')) {
-          const legacy = await supabase.from('users').select('*').eq('email', email.trim()).maybeSingle();
-          data = legacy.data;
-          error = legacy.error;
+        const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+        if (authError) return authErrorMessage(authError.message);
+        set({ authInitialized: false });
+        await get().initializeData();
+        if (!get().currentUser) {
+          await supabase.auth.signOut();
+          return '계정 프로필을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
         }
-        if (error || !data) return '가입 정보를 찾을 수 없습니다. 회원가입을 완료해 주세요.';
-        const user = rowToUser(data as UserRow);
-        set((state) => ({ users: state.users.some((item) => item.id === user.id) ? state.users.map((item) => item.id === user.id ? user : item) : [...state.users, user], currentUser: user, viewMode: user.role === 'CHILD' ? 'PERFORMER' : 'FACILITATOR', isDemoMode: false }));
         return null;
       },
 
       signupWithEmail: async (name, email, password) => {
-        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password, options: { data: { name: name.trim() } } });
-        if (error) return error.message;
-        if (!data.user) return '계정을 만들지 못했습니다.';
-        set({ pendingSocialProfile: { socialId: data.user.id, socialProvider: 'EMAIL', name: name.trim(), email: email.trim() } });
-        return null;
+        const normalizedEmail = email.trim().toLowerCase();
+        const { data, error } = await supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: {
+            data: { name: name.trim() },
+            emailRedirectTo: authRedirectUrl('/register'),
+          },
+        });
+        if (error) return { error: authErrorMessage(error.message), confirmationRequired: false };
+        if (!data.user) return { error: '계정을 만들지 못했습니다.', confirmationRequired: false };
+        if (data.user.identities?.length === 0) return { error: '이미 가입된 이메일입니다. 로그인하거나 비밀번호를 재설정해 주세요.', confirmationRequired: false };
+        if (!data.session) return { confirmationRequired: true };
+        set({ authInitialized: false });
+        await get().initializeData();
+        if (!get().currentUser) return { error: '계정 프로필을 만들지 못했습니다.', confirmationRequired: false };
+        return { confirmationRequired: false };
       },
 
       completeSocialRegistration: async (role, facilitatorId) => {
@@ -510,6 +580,7 @@ export const useAuthStore = create<AuthState>()(
         pendingSocialProfile: null,
         teacherNotes: state.teacherNotes,
         isDemoMode: true,
+        authInitialized: true,
       } : {
         currentUser: null,
         users: [],
@@ -517,6 +588,7 @@ export const useAuthStore = create<AuthState>()(
         pendingSocialProfile: null,
         teacherNotes: {},
         isDemoMode: false,
+        authInitialized: false,
       },
     }
   )

@@ -8,6 +8,7 @@ import { useTemplateStore } from './store/templateStore';
 import { startDemoSession } from './data/demoSession';
 import { useMembershipStore } from './store/membershipStore';
 import { isFacilitatorMembership, isStudentMembership, membershipEntry } from './utils/membershipAccess';
+import { supabase } from './lib/supabase';
 
 import AppLayout from './components/layout/AppLayout';
 const SplashPage = lazy(() => import('./pages/SplashPage'));
@@ -34,6 +35,8 @@ const DemoPage = lazy(() => import('./pages/DemoPage'));
 const MembershipSelectionPage = lazy(() => import('./pages/MembershipSelectionPage'));
 const MembershipSetupPage = lazy(() => import('./pages/MembershipSetupPage'));
 const PublicReportPage = lazy(() => import('./pages/PublicReportPage'));
+const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
 function FacilitatorOnly({ children }: { children: ReactElement }) {
   const active = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId));
@@ -59,6 +62,8 @@ function AuthenticatedRoutes() {
   return (
     <Routes>
       <Route path="r/:token" element={<PublicReportPage />} />
+      <Route path="auth/callback" element={<AuthCallbackPage />} />
+      <Route path="reset-password" element={<ResetPasswordPage />} />
       <Route path="memberships" element={<MembershipSelectionPage />} />
       <Route path="onboarding" element={<MembershipSetupPage />} />
       <Route element={<AppLayout />}>
@@ -104,6 +109,7 @@ function PublicRoutes() {
   return (
     <Routes>
       <Route path="/r/:token" element={<PublicReportPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route path="/" element={<SplashPage />} />
       <Route path="/start" element={<SplashPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -116,7 +122,7 @@ function PublicRoutes() {
 }
 
 function AppContent() {
-  const { currentUser, pendingSocialProfile, initializeData: initAuth, isDemoMode } = useAuthStore();
+  const { currentUser, pendingSocialProfile, initializeData: initAuth, isDemoMode, authInitialized } = useAuthStore();
   const { initializeData: initMissions, autoGenerateRepeatMissions } = useMissionStore();
   const { initializeData: initGroups } = useGroupStore();
   const { initializeData: initTemplates } = useTemplateStore();
@@ -127,6 +133,7 @@ function AppContent() {
       await initAuth();
       const auth = useAuthStore.getState();
       if (auth.isDemoMode && auth.currentUser) startDemoSession(auth.currentUser.id);
+      if (!auth.currentUser) return;
       await initMissions();
       await initGroups();
       useMembershipStore.getState().ensureLegacyMemberships(useAuthStore.getState().users, useGroupStore.getState().groups);
@@ -134,6 +141,16 @@ function AppContent() {
       autoGenerateRepeatMissions();
     })();
 
+  }, []);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        useAuthStore.setState({ currentUser: null, users: [], teacherNotes: {}, isDemoMode: false, authInitialized: true });
+        useMembershipStore.getState().clearActiveMembership();
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -145,6 +162,8 @@ function AppContent() {
   }, [currentUser?.id, isDemoMode]);
 
   const showRegister = !currentUser && !!pendingSocialProfile;
+
+  if (!authInitialized) return <div className="flex min-h-screen w-full items-center justify-center text-sm font-semibold text-[#14233B]">로그인 상태를 확인하는 중...</div>;
 
   return (
     <div className="min-h-screen flex justify-center bg-[#F3EFE9]">
