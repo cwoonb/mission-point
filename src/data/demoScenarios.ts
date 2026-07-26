@@ -270,7 +270,8 @@ export function buildDemoScenario(id: DemoScenarioId): DemoScenarioSeed {
     return {
       id: `demo-${config.id}-review-${padded(index + 1)}`, missionId: mission.id, submissionId: submission.id,
       reviewerId: facilitatorId, action: mission.status === 'REJECTED' ? 'REJECTED' : 'APPROVED',
-      reason: config.feedbacks[index % config.feedbacks.length], createdAt: iso(-OFFSETS[(index * 7) % OFFSETS.length], 11 + (index % 8)),
+      reason: mission.status === 'REJECTED' ? config.feedbacks[index % config.feedbacks.length] : undefined,
+      createdAt: iso(-OFFSETS[(index * 7) % OFFSETS.length], 11 + (index % 8)),
       publicFeedback: mission.status === 'REJECTED' ? undefined : config.feedbacks[index % config.feedbacks.length],
     };
   });

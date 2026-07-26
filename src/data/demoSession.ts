@@ -123,6 +123,14 @@ export function startDemoSession(userId: string, force = false) {
   const matchesSelectedScenario = userId.startsWith(`demo-${selectedScenarioId}-`)
     && missions.missions.every((mission) => mission.id.startsWith(`demo-${selectedScenarioId}-`));
   if (!force && matchesSelectedScenario && auth.isDemoMode && missions.demoMode && missions.missions.length > 0 && existingUser) {
+    const seed = buildDemoScenario(selectedScenarioId);
+    const organizationId = `demo-org-${selectedScenarioId}`;
+    useReportContentStore.getState().seedDemoMemos(organizationId, seed.reportMemos);
+    useMissionStore.setState({
+      reviewLogs: missions.reviewLogs.map((log) => log.action === 'APPROVED' && !log.publicFeedback && log.reason
+        ? { ...log, publicFeedback: log.reason, reason: undefined }
+        : log),
+    });
     useAuthStore.setState({
       currentUser: existingUser,
       viewMode: existingUser.role === 'CHILD' ? 'PERFORMER' : 'FACILITATOR',
