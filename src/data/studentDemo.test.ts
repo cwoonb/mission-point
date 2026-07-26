@@ -17,6 +17,6 @@ describe('student demo fixture', () => {
     expect(new Set(seed.missions.map((mission) => mission.status))).toEqual(new Set(['PENDING', 'IN_PROGRESS', 'REVIEWING', 'REJECTED', 'SUCCESS']));
     expect(seed.submissions.some((submission) => submission.attemptNumber > 1)).toBe(true);
     expect(seed.reviewLogs.some((log) => log.action === 'REJECTED' && !!log.reason)).toBe(true);
-    expect(seed.reviewLogs.some((log) => log.action === 'APPROVED' && !!log.reason)).toBe(true);
+    expect(seed.reviewLogs.some((log) => log.action === 'APPROVED' && !!log.publicFeedback)).toBe(true);
   });
 });

@@ -54,7 +54,7 @@ export default function StudentsPage() {
   const selectedRange = range(period, params.get('start'), params.get('end'));
   const myGroups = groups.filter((group) => group.facilitatorId === currentUser.id);
   const groupIds = new Set(myGroups.map((group) => group.id));
-  const feedbackMissionIds = new Set(reviewLogs.map((log) => log.missionId));
+  const feedbackMissionIds = new Set(reviewLogs.filter((log) => log.reason || log.publicFeedback).map((log) => log.missionId));
   const update = (key: string, value?: string) => { const next = new URLSearchParams(params); value ? next.set(key, value) : next.delete(key); setParams(next, { replace: true }); };
 
   const rows = users.filter((user) => user.role === 'CHILD' && user.groupId && groupIds.has(user.groupId)).map((user) => {

@@ -4,6 +4,7 @@ import { useMissionStore } from '../store/missionStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { buildDemoScenario, getDemoScenario, type DemoScenarioId } from './demoScenarios';
 import { buildStudentDemo, STUDENT_DEMO_TEACHER_ID, STUDENT_DEMO_USER_ID } from './studentDemo';
+import { useReportContentStore } from '../store/reportContentStore';
 
 const SCENARIO_KEY = 'mp-demo-scenario';
 const DEMO_KIND_KEY = 'mp-demo-kind';
@@ -48,6 +49,7 @@ export function startDemoScenario(id: DemoScenarioId) {
     reviewLogs: seed.reviewLogs,
     demoMode: true,
   });
+  useReportContentStore.getState().seedDemoMemos(organizationId, seed.reportMemos);
   const membershipId = `demo-membership-${id}-operator`;
   useMembershipStore.getState().replaceDemoMemberships(
     [{ id: organizationId, name: seed.config.name, type: 'EDUCATION', ownerUserId: facilitator.id, inviteCode: facilitator.code, createdAt: facilitator.createdAt }],
@@ -134,5 +136,9 @@ export function startDemoSession(userId: string, force = false) {
 
 export function resetDemoSession() {
   if (getDemoKind() === 'student') startStudentDemo(true);
-  else startDemoScenario(getSelectedDemoScenarioId());
+  else {
+    const id = getSelectedDemoScenarioId();
+    useReportContentStore.getState().resetDemo(`demo-org-${id}`);
+    startDemoScenario(id);
+  }
 }

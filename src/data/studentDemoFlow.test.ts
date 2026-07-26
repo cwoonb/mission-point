@@ -55,6 +55,6 @@ describe('student demo flow', () => {
     expect(reviewing?.organizationId).toBe('demo-org-art-student');
     await useMissionStore.getState().approveMission(reviewing!.id, STUDENT_DEMO_TEACHER_ID, '명암 단계가 자연스럽게 연결되었습니다.');
     expect(useMissionStore.getState().getMission(reviewing!.id)?.status).toBe('SUCCESS');
-    expect(useMissionStore.getState().getReviewLogs(reviewing!.id)[0]?.reason).toBe('명암 단계가 자연스럽게 연결되었습니다.');
+    expect(useMissionStore.getState().getReviewLogs(reviewing!.id)[0]?.publicFeedback).toBe('명암 단계가 자연스럽게 연결되었습니다.');
   });
 });

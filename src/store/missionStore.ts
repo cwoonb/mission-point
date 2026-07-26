@@ -70,6 +70,7 @@ interface ReviewLogRow {
   reviewer_id: string;
   action: ReviewAction;
   reason: string | null;
+  public_feedback?: string | null;
   created_at: string;
 }
 
@@ -128,6 +129,7 @@ const rowToReviewLog = (r: ReviewLogRow): MissionReviewLog => ({
   reviewerId: r.reviewer_id,
   action: r.action,
   reason: r.reason ?? undefined,
+  publicFeedback: r.public_feedback ?? undefined,
   createdAt: r.created_at,
 });
 
@@ -157,7 +159,8 @@ interface MissionState {
     imageUrls?: string[]
   ) => Promise<MissionSubmission>;
   approveMission: (missionId: string, reviewerId: string, feedback?: string) => Promise<void>;
-  rejectMission: (missionId: string, reviewerId: string, reason: string) => Promise<void>;
+  rejectMission: (missionId: string, reviewerId: string, reason: string, publicFeedback?: string) => Promise<void>;
+  updateReviewFeedback: (reviewId: string, feedback: string) => Promise<void>;
   getLatestSubmission: (missionId: string) => MissionSubmission | undefined;
   getReviewLogs: (missionId: string) => MissionReviewLog[];
   getMission: (missionId: string) => Mission | undefined;
@@ -388,7 +391,7 @@ export const useMissionStore = create<MissionState>()(
           submissionId: latestSub.id,
           reviewerId,
           action: 'APPROVED',
-          reason: feedback?.trim() || undefined,
+          publicFeedback: feedback?.trim() || undefined,
           createdAt: new Date().toISOString(),
         } : null;
         if (!get().demoMode) {
@@ -396,8 +399,9 @@ export const useMissionStore = create<MissionState>()(
           const { data: atomicLog, error: atomicError } = secureBackendEnabled ? await supabase.rpc('review_mission_atomic', {
             target_mission: missionId,
             target_action: 'APPROVED',
-            review_reason: log.reason ?? null,
+            review_reason: null,
             review_id: log.id,
+            review_public_feedback: log.publicFeedback ?? null,
           }) : { data: null, error: { code: 'PGRST202', message: 'secure backend disabled' } };
           if (!atomicError) {
             const persisted = rowToReviewLog(atomicLog as ReviewLogRow);
@@ -410,7 +414,7 @@ export const useMissionStore = create<MissionState>()(
           if (!missingRpc(atomicError)) throw new Error(atomicError.message);
           const { error: logError } = await supabase.from('mission_review_logs').insert({
             id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
-            reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
+            reviewer_id: log.reviewerId, action: log.action, reason: null, public_feedback: log.publicFeedback ?? null, created_at: log.createdAt,
           });
           if (logError) throw new Error(logError.message);
           const { error: missionError } = await supabase.from('missions').update({ status: 'SUCCESS' }).eq('id', missionId);
@@ -427,7 +431,7 @@ export const useMissionStore = create<MissionState>()(
         }));
       },
 
-      rejectMission: async (missionId, reviewerId, reason) => {
+      rejectMission: async (missionId, reviewerId, reason, publicFeedback) => {
         const latestSub = get().getLatestSubmission(missionId);
         const log: MissionReviewLog | null = latestSub ? {
           id: genId(),
@@ -436,6 +440,7 @@ export const useMissionStore = create<MissionState>()(
           reviewerId,
           action: 'REJECTED',
           reason,
+          publicFeedback: publicFeedback?.trim() || undefined,
           createdAt: new Date().toISOString(),
         } : null;
         if (!get().demoMode) {
@@ -445,6 +450,7 @@ export const useMissionStore = create<MissionState>()(
             target_action: 'REJECTED',
             review_reason: reason,
             review_id: log.id,
+            review_public_feedback: log.publicFeedback ?? null,
           }) : { data: null, error: { code: 'PGRST202', message: 'secure backend disabled' } };
           if (!atomicError) {
             const persisted = rowToReviewLog(atomicLog as ReviewLogRow);
@@ -457,7 +463,7 @@ export const useMissionStore = create<MissionState>()(
           if (!missingRpc(atomicError)) throw new Error(atomicError.message);
           const { error: logError } = await supabase.from('mission_review_logs').insert({
             id: log.id, mission_id: log.missionId, submission_id: log.submissionId,
-            reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, created_at: log.createdAt,
+            reviewer_id: log.reviewerId, action: log.action, reason: log.reason ?? null, public_feedback: log.publicFeedback ?? null, created_at: log.createdAt,
           });
           if (logError) throw new Error(logError.message);
           const { error: missionError } = await supabase.from('missions').update({ status: 'REJECTED' }).eq('id', missionId);
@@ -472,6 +478,25 @@ export const useMissionStore = create<MissionState>()(
             m.id === missionId ? { ...m, status: 'REJECTED' } : m
           ),
         }));
+      },
+
+      updateReviewFeedback: async (reviewId, feedback) => {
+        const value = feedback.trim();
+        if (value.length > 300) throw new Error('FEEDBACK_TOO_LONG');
+        const existing = get().reviewLogs.find((item) => item.id === reviewId);
+        if (!existing) throw new Error('REVIEW_NOT_FOUND');
+        if (!get().demoMode) {
+          if (!secureBackendEnabled) throw new Error('REVIEW_BACKEND_REQUIRED');
+          const { data, error } = await supabase.rpc('update_review_public_feedback', {
+            target_review: reviewId,
+            new_feedback: value,
+          });
+          if (error) throw new Error(error.code === 'PGRST202' ? 'REPORT_CONTENT_MIGRATION_REQUIRED' : error.message);
+          const persisted = rowToReviewLog(data as ReviewLogRow);
+          set((state) => ({ reviewLogs: state.reviewLogs.map((item) => item.id === reviewId ? persisted : item) }));
+          return;
+        }
+        set((state) => ({ reviewLogs: state.reviewLogs.map((item) => item.id === reviewId ? { ...item, publicFeedback: value || undefined } : item) }));
       },
 
       getLatestSubmission: (missionId) => {

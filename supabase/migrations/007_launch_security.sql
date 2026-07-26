@@ -4,6 +4,7 @@
 create extension if not exists pgcrypto;
 
 alter table public.users add column if not exists auth_user_id uuid unique references auth.users(id) on delete set null;
+alter table public.users add column if not exists status_thresholds jsonb;
 create index if not exists users_auth_user_id_idx on public.users(auth_user_id);
 
 alter table public.performer_groups add column if not exists organization_id text references public.organizations(id) on delete cascade;
@@ -349,7 +350,7 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare app_user text := public.current_app_user_id(); raw_token text := encode(gen_random_bytes(24), 'hex');
+declare app_user text := public.current_app_user_id(); raw_token text := encode(extensions.gen_random_bytes(24), 'hex');
 begin
   if not public.is_org_facilitator(target_org) then raise exception 'REPORT_FORBIDDEN'; end if;
   if not exists (select 1 from public.memberships where organization_id = target_org and user_id = target_student and status = 'ACTIVE') then raise exception 'STUDENT_OUTSIDE_ORG'; end if;
@@ -357,7 +358,7 @@ begin
   values(report_id, target_org, target_student, app_user, report_snapshot)
   on conflict(id) do update set snapshot = excluded.snapshot, updated_at = now();
   insert into public.public_report_tokens(report_id, token_hash, expires_at, created_by)
-  values(report_id, encode(digest(raw_token, 'sha256'), 'hex'), now() + make_interval(days => greatest(1, least(valid_days, 30))), app_user);
+  values(report_id, encode(extensions.digest(raw_token, 'sha256'), 'hex'), now() + make_interval(days => greatest(1, least(valid_days, 30))), app_user);
   return raw_token;
 end;
 $$;
@@ -372,7 +373,7 @@ as $$
   select r.snapshot
   from public.public_report_tokens t
   join public.reports r on r.id = t.report_id
-  where t.token_hash = encode(digest(raw_token, 'sha256'), 'hex')
+  where t.token_hash = encode(extensions.digest(raw_token, 'sha256'), 'hex')
     and t.revoked_at is null and t.expires_at > now()
   limit 1
 $$;

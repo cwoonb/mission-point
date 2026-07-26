@@ -122,7 +122,15 @@ export interface MissionReviewLog {
   reviewerId: string;
   action: ReviewAction;
   reason?: string;
+  publicFeedback?: string;
   createdAt: string;
+}
+
+export interface ReportTeacherContent {
+  organizationId: string;
+  studentId: string;
+  teacherOneLineMemo: string;
+  updatedAt: string;
 }
 
 export interface PointTransaction {

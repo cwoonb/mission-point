@@ -51,11 +51,11 @@ export function buildStudentDemo(): StudentDemoSeed {
     { id: id('sub-description-2'), missionId: id('art-description'), userId: student.id, message: '배경 색을 정리하고 작품 의도를 더 자세히 적었습니다.', imageUrl: getStudentDemoImage('수정한 완성 작품'), attemptNumber: 2, submittedAt: at(-6, 18) },
   ];
   const reviewLogs: MissionReviewLog[] = [
-    { id: id('review-value'), missionId: id('value-study'), submissionId: id('sub-value'), reviewerId: teacher.id, action: 'APPROVED', reason: '명암 단계의 연결이 자연스럽고 관찰한 내용을 잘 반영했습니다.', createdAt: at(-6, 14) },
+    { id: id('review-value'), missionId: id('value-study'), submissionId: id('sub-value'), reviewerId: teacher.id, action: 'APPROVED', publicFeedback: '명암 단계의 연결이 자연스럽고 관찰한 내용을 잘 반영했습니다.', createdAt: at(-6, 14) },
     { id: id('review-material'), missionId: id('material-check'), submissionId: id('sub-material'), reviewerId: teacher.id, action: 'APPROVED', createdAt: at(-9, 14) },
     { id: id('review-portrait'), missionId: id('portrait-fix'), submissionId: id('sub-portrait'), reviewerId: teacher.id, action: 'REJECTED', reason: '인물의 중심선과 눈 위치를 다시 확인해 주세요. 수정한 스케치 사진을 다시 제출해 주세요.', createdAt: at(-3, 14) },
     { id: id('review-description-reject'), missionId: id('art-description'), submissionId: id('sub-description-1'), reviewerId: teacher.id, action: 'REJECTED', reason: '배경과 중심 소재의 관계를 한 문장 더 설명해 주세요.', createdAt: at(-8, 13) },
-    { id: id('review-description-approve'), missionId: id('art-description'), submissionId: id('sub-description-2'), reviewerId: teacher.id, action: 'APPROVED', reason: '수정한 설명이 작품의 분위기를 잘 전달합니다. 색의 선택도 좋습니다.', createdAt: at(-5, 15) },
+    { id: id('review-description-approve'), missionId: id('art-description'), submissionId: id('sub-description-2'), reviewerId: teacher.id, action: 'APPROVED', publicFeedback: '수정한 설명이 작품의 분위기를 잘 전달합니다. 색의 선택도 좋습니다.', createdAt: at(-5, 15) },
   ];
   return { users: [teacher, student], groups: [group], missions, submissions, reviewLogs, teacherNotes: {} };
 }

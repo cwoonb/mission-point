@@ -64,6 +64,7 @@ export interface DemoScenarioSeed {
   submissions: MissionSubmission[];
   reviewLogs: MissionReviewLog[];
   teacherNotes: Record<string, Array<{ id: string; text: string; createdAt: string }>>;
+  reportMemos: Record<string, string>;
   stats: DemoScenarioStats;
 }
 
@@ -270,14 +271,17 @@ export function buildDemoScenario(id: DemoScenarioId): DemoScenarioSeed {
       id: `demo-${config.id}-review-${padded(index + 1)}`, missionId: mission.id, submissionId: submission.id,
       reviewerId: facilitatorId, action: mission.status === 'REJECTED' ? 'REJECTED' : 'APPROVED',
       reason: config.feedbacks[index % config.feedbacks.length], createdAt: iso(-OFFSETS[(index * 7) % OFFSETS.length], 11 + (index % 8)),
+      publicFeedback: mission.status === 'REJECTED' ? undefined : config.feedbacks[index % config.feedbacks.length],
     };
   });
 
   const teacherNotes: DemoScenarioSeed['teacherNotes'] = {};
+  const reportMemos: Record<string, string> = {};
   Array.from({ length: config.noteCount }, (_, index) => {
     const member = members[index % members.length];
     const note = { id: `demo-${config.id}-note-${padded(index + 1)}`, text: config.notes[index % config.notes.length], createdAt: iso(-OFFSETS[(index * 3) % OFFSETS.length], 14) };
     teacherNotes[member.id] = [...(teacherNotes[member.id] ?? []), note];
+    if (!reportMemos[member.id]) reportMemos[member.id] = `${member.name}님은 최근 활동에 꾸준히 참여하며 자신의 과정을 차근차근 만들어가고 있습니다.`;
   });
 
   const stats: DemoScenarioStats = {
@@ -287,5 +291,5 @@ export function buildDemoScenario(id: DemoScenarioId): DemoScenarioSeed {
     missing: missions.filter((mission) => ['FAILED', 'EXPIRED'].includes(mission.status)).length,
     completed: missions.filter((mission) => mission.status === 'SUCCESS').length,
   };
-  return { config, users: [facilitator, ...members], groups, missions, submissions, reviewLogs, teacherNotes, stats };
+  return { config, users: [facilitator, ...members], groups, missions, submissions, reviewLogs, teacherNotes, reportMemos, stats };
 }
