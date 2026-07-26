@@ -8,6 +8,7 @@ import { useGroupStore } from '../store/groupStore';
 import { useMembershipStore } from '../store/membershipStore';
 import { useMissionStore } from '../store/missionStore';
 import { useReportContentStore } from '../store/reportContentStore';
+import { saveDemoReportSnapshot } from '../utils/demoReportSnapshot';
 
 function fallbackCopy(text: string) {
   const area = document.createElement('textarea');
@@ -23,7 +24,7 @@ function fallbackCopy(text: string) {
 export default function ReportSharePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { users } = useAuthStore();
+  const { users, isDemoMode } = useAuthStore();
   const groups = useGroupStore((state) => state.groups);
   const active = useMembershipStore((state) => state.memberships.find((item) => item.id === state.activeMembershipId));
   const { missions, submissions, reviewLogs } = useMissionStore();
@@ -64,6 +65,12 @@ export default function ReportSharePage() {
 
   const createLink = async () => {
     if (!student || !snapshot || !active?.organizationId || creating) return;
+    if (isDemoMode) {
+      const token = saveDemoReportSnapshot(snapshot);
+      setReportUrl(`${window.location.origin}/r/${token}`);
+      setNotice('현재 브라우저에서 7일 동안 열리는 데모 보호자 링크를 만들었습니다.');
+      return;
+    }
     if (!secureBackendEnabled) { setNotice('공개 리포트 보안 설정이 아직 서버에 적용되지 않았습니다.'); return; }
     setCreating(true);
     setNotice('');
