@@ -63,7 +63,7 @@
 - 실천자별 미션 수행 리포트를 텍스트로 생성해 카카오톡 등으로 공유
 
 ### 로그인 / 온보딩
-- Google, Kakao, Naver 소셜 로그인 (REST API 리다이렉트 방식)
+- Google, Kakao 소셜 로그인 (Supabase Auth OAuth)
 - 최초 로그인 시 역할(리더/실천자) 선택 및 리더-실천자 연결
 - API 키 없이 체험 가능한 **데모 계정** 제공
 
@@ -95,7 +95,7 @@
 - **상태 관리**: Zustand (persist 미들웨어)
 - **스타일**: Tailwind CSS, Framer Motion (애니메이션), lucide-react (아이콘)
 - **백엔드**: Supabase (PostgreSQL) — 사용자, 미션, 제출물, 포인트, 그룹, 쿠폰 등 영속 데이터 저장
-- **소셜 로그인**: Google OAuth (`@react-oauth/google`), Kakao / Naver (REST API 리다이렉트)
+- **소셜 로그인**: Supabase Auth OAuth (Google, Kakao)
 - **배포**: Vercel (Git 연동 자동 배포)
 
 ## 6. 프로젝트 구조
@@ -132,9 +132,10 @@ cp .env.example .env.local
 ```
 
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — Supabase 프로젝트 URL/anon key
-- `VITE_GOOGLE_CLIENT_ID` — Google OAuth 클라이언트 ID
-- `VITE_KAKAO_JS_KEY`, `VITE_KAKAO_REST_KEY` — 카카오 로그인/공유 키
-- `VITE_NAVER_CLIENT_ID`, `VITE_NAVER_CALLBACK_URL` — 네이버 로그인 키/콜백 URL
+- `VITE_KAKAO_JS_KEY` — 선택 사항. 카카오톡 리포트 공유용 JavaScript 키이며 로그인에는 사용하지 않음
+
+Google/Kakao OAuth Client ID와 Client Secret은 프론트 환경변수가 아니라
+Supabase Dashboard의 Auth Provider 설정에서 관리합니다.
 
 소셜 로그인 키 없이도 **데모 체험하기**로 앱의 모든 기능을 둘러볼 수 있습니다.
 

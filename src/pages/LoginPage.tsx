@@ -2,7 +2,24 @@ import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { authErrorMessage, useAuthStore } from '../store/authStore';
-import { authRedirectUrl, isAuthProviderEnabled, supabase } from '../lib/supabase';
+import { authRedirectUrl, isAuthProviderEnabled, kakaoOAuthOptions, supabase } from '../lib/supabase';
+
+const KAKAO_LOGIN_ERROR = '카카오 로그인 설정을 확인하는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+
+function logOAuthError(
+  provider: 'google' | 'kakao',
+  error: { code?: string; message: string },
+  redirectTo: string,
+) {
+  if (!import.meta.env.DEV) return;
+  console.error('OAuth sign-in failed', {
+    provider,
+    code: error.code ?? 'unknown',
+    message: error.message,
+    redirectTo,
+    pathname: window.location.pathname,
+  });
+}
 
 export default function LoginPage() {
   const navigate=useNavigate();
@@ -10,7 +27,22 @@ export default function LoginPage() {
   const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [show,setShow]=useState(false); const [remember,setRemember]=useState(true); const [error,setError]=useState(''); const [loading,setLoading]=useState(false);
   const submit=async(event:React.FormEvent)=>{event.preventDefault();if(!email||!password){setError('이메일과 비밀번호를 입력해 주세요.');return;}setLoading(true);const message=await loginWithEmail(email,password);setLoading(false);if(message){setError(message);return;}if(!remember)sessionStorage.setItem('missionapp-session-only','1');navigate('/memberships',{replace:true});};
   const forgot=async()=>{if(!email){setError('이메일 주소를 먼저 입력해 주세요.');return;}const {error:resetError}=await supabase.auth.resetPasswordForEmail(email,{redirectTo:authRedirectUrl('/reset-password')});setError(resetError?authErrorMessage(resetError.message):'비밀번호 재설정 메일을 보냈습니다.');};
-  const oauth=async(provider:'google'|'kakao')=>{setError('');if(!await isAuthProviderEnabled(provider)){setError(`${provider==='google'?'Google':'Kakao'} 로그인 Provider가 서버에서 비활성화되어 있습니다.`);return;}const {error:oauthError}=await supabase.auth.signInWithOAuth({provider,options:{redirectTo:authRedirectUrl('/memberships')}});if(oauthError)setError(authErrorMessage(oauthError.message));};
+  const oauth=async(provider:'google'|'kakao')=>{
+    setError('');
+    const redirectTo=provider==='kakao'
+      ? kakaoOAuthOptions().redirectTo
+      : authRedirectUrl('/memberships');
+    if(!await isAuthProviderEnabled(provider)){
+      setError(provider==='kakao'?KAKAO_LOGIN_ERROR:'Google 로그인 Provider가 서버에서 비활성화되어 있습니다.');
+      return;
+    }
+    const options=provider==='kakao'?kakaoOAuthOptions():{redirectTo};
+    const {error:oauthError}=await supabase.auth.signInWithOAuth({provider,options});
+    if(oauthError){
+      logOAuthError(provider,oauthError,redirectTo);
+      setError(provider==='kakao'?KAKAO_LOGIN_ERROR:authErrorMessage(oauthError.message));
+    }
+  };
   return <div className="page-container bg-[#F8F5F0]"><main className="flex min-h-[100dvh] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
     <button type="button" onClick={()=>navigate('/start')} className="w-fit text-left"><div className="serif-brand text-[44px] leading-none">M</div><div className="mt-2 h-px w-10 bg-[#B58A4A]"/></button>
     <section className="mt-12"><h1 className="text-2xl font-bold text-[#14233B]">로그인</h1><p className="mt-2 text-sm text-[#687282]">계정으로 로그인하여 서비스를 이용하세요.</p></section>
