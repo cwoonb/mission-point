@@ -50,7 +50,7 @@ function PerformerOnly({ children }: { children: ReactElement }) {
 
 function AuthenticatedRoutes() {
   const currentUser = useAuthStore((state) => state.currentUser);
-  const { memberships, activeMembershipId, selectMembership, initializeData: initializeMemberships } = useMembershipStore();
+  const { memberships, activeMembershipId, initializedUserId, selectMembership, initializeData: initializeMemberships } = useMembershipStore();
   const mine = memberships.filter((membership) => membership.userId === currentUser?.id && membership.status === 'ACTIVE');
   const active = mine.find((membership) => membership.id === activeMembershipId);
   const entry = membershipEntry(mine, activeMembershipId);
@@ -58,6 +58,13 @@ function AuthenticatedRoutes() {
     if (entry.kind === 'AUTO') selectMembership(entry.membership.id);
   }, [activeMembershipId, currentUser?.id, entry.kind]);
   useEffect(()=>{if(currentUser&&!currentUser.id.startsWith('demo-'))void initializeMemberships(currentUser.id);},[currentUser?.id]);
+  if (!currentUser) return null;
+  if (!currentUser.id.startsWith('demo-') && initializedUserId !== currentUser.id) {
+    return <div className="page-container flex min-h-[100dvh] items-center justify-center bg-[#F8F5F0] text-sm font-semibold text-[#687282]">소속을 확인하고 있습니다.</div>;
+  }
+  if (!active && entry.kind === 'AUTO') {
+    return <div className="page-container flex min-h-[100dvh] items-center justify-center bg-[#F8F5F0] text-sm font-semibold text-[#687282]">소속을 불러오고 있습니다.</div>;
+  }
   if (!active) return <Routes><Route path="/memberships" element={<MembershipSelectionPage/>}/><Route path="/onboarding" element={<MembershipSetupPage/>}/><Route path="*" element={<Navigate to={mine.length?'/memberships':'/onboarding'} replace/>}/></Routes>;
   return (
     <Routes>

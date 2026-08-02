@@ -25,6 +25,7 @@ interface MembershipState {
   organizations: Organization[];
   memberships: Membership[];
   activeMembershipId: string | null;
+  initializedUserId: string | null;
   initializeData: (userId: string) => Promise<void>;
   ensureLegacyMemberships: (users: User[], groups: PerformerGroup[]) => void;
   replaceDemoMemberships: (organizations: Organization[], memberships: Membership[], activeId: string) => void;
@@ -39,15 +40,16 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
   organizations: [],
   memberships: [],
   activeMembershipId: null,
+  initializedUserId: null,
 
   initializeData: async (userId) => {
     const { data: membershipRows, error } = await supabase.from('memberships').select('*').eq('user_id', userId);
-    if (error || !membershipRows?.length) return;
+    if (error || !membershipRows?.length) { set({ initializedUserId: userId }); return; }
     const organizationIds=[...new Set(membershipRows.map((row)=>row.organization_id as string))];
     const { data: organizationRows }=await supabase.from('organizations').select('*').in('id',organizationIds);
     const remoteMemberships:Membership[]=membershipRows.map((row)=>({id:row.id,userId:row.user_id,organizationId:row.organization_id,role:row.role,groupId:row.group_id??undefined,status:row.status,createdAt:row.created_at}));
     const remoteOrganizations:Organization[]=(organizationRows??[]).map((row)=>({id:row.id,name:row.name,type:row.type,ownerUserId:row.owner_user_id,inviteCode:row.invite_code??undefined,createdAt:row.created_at}));
-    set((state)=>({organizations:[...state.organizations.filter((item)=>!remoteOrganizations.some((remote)=>remote.id===item.id)),...remoteOrganizations],memberships:[...state.memberships.filter((item)=>item.userId!==userId),...remoteMemberships]}));
+    set((state)=>({organizations:[...state.organizations.filter((item)=>!remoteOrganizations.some((remote)=>remote.id===item.id)),...remoteOrganizations],memberships:[...state.memberships.filter((item)=>item.userId!==userId),...remoteMemberships],initializedUserId:userId}));
   },
 
   ensureLegacyMemberships: (users, groups) => set((state) => {
