@@ -1,26 +1,28 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, ClipboardCheck, FileText, Plus } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Circle, ClipboardCheck, FileText, Plus } from 'lucide-react';
 import PerformerHome from '../components/home/PerformerHome';
-import PersonalTodoHome from '../components/home/PersonalTodoHome';
 import Header from '../components/layout/Header';
 import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { useGroupStore } from '../store/groupStore';
 import { calculateHomeworkStats, groupMissionsByHomework } from '../utils/missionStats';
-import { formatDateTime } from '../utils/helpers';
+import { formatDate, formatDateTime } from '../utils/helpers';
 import { useMembershipStore } from '../store/membershipStore';
 import { missionInOrganization } from '../utils/membershipScope';
 
 function FacilitatorHome() {
   const navigate = useNavigate();
   const { currentUser, users } = useAuthStore();
-  const { missions, submissions } = useMissionStore();
+  const { missions, submissions, updateStatus } = useMissionStore();
   const groups = useGroupStore((state) => state.groups);
   const activeOrganizationId=useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId)?.organizationId);
   if (!currentUser) return null;
 
   const created = missions.filter((mission) => mission.creatorId === currentUser.id&&missionInOrganization(mission,activeOrganizationId));
+  const selfTasks = created.filter((mission) => mission.assigneeId === currentUser.id).sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+  const openSelfTasks = selfTasks.filter((mission) => mission.status !== 'SUCCESS');
+  const studentMissions = created.filter((mission) => mission.assigneeId !== currentUser.id);
   const pending = created.filter((mission) => mission.status === 'REVIEWING');
   const missingStudentIds = new Set(created.filter((mission) => ['EXPIRED', 'FAILED'].includes(mission.status)).map((mission) => mission.assigneeId));
   const today = new Date();
@@ -28,8 +30,8 @@ function FacilitatorHome() {
     const date = new Date(mission.endDate);
     return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate() && !['SUCCESS', 'EXPIRED', 'FAILED'].includes(mission.status);
   });
-  const recentHomework = groupMissionsByHomework(created).sort((a, b) => new Date(b[0].createdAt).getTime() - new Date(a[0].createdAt).getTime()).slice(0, 3);
-  const recentActivity = submissions.filter((submission) => created.some((mission) => mission.id === submission.missionId)).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()).slice(0, 3);
+  const recentHomework = groupMissionsByHomework(studentMissions).sort((a, b) => new Date(b[0].createdAt).getTime() - new Date(a[0].createdAt).getTime()).slice(0, 3);
+  const recentActivity = submissions.filter((submission) => studentMissions.some((mission) => mission.id === submission.missionId)).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()).slice(0, 3);
   const missionFor = (id: string) => created.find((mission) => mission.id === id);
   const studentFor = (id: string) => users.find((user) => user.id === id);
   const groupFor = (id?: string) => groups.find((group) => group.id === id)?.name ?? '반 미지정';
@@ -41,6 +43,12 @@ function FacilitatorHome() {
         <section>
           <p className="text-sm font-semibold text-[#14233B]">{currentUser.name} 선생님,</p>
           <h1 className="mt-1 text-[20px] font-bold tracking-[-0.03em] text-[#14233B]">오늘 확인할 내용을 정리했습니다.</h1>
+        </section>
+
+        <section>
+          <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-bold text-[#14233B]">내 할 일</h2><p className="mt-1 text-[10px] text-[#8B929C]">학생 관리와 리포팅 업무를 잊지 않게 기록하세요.</p></div><button type="button" onClick={() => navigate('/missions/create?target=self')} className="flex min-h-11 items-center gap-1 text-xs font-bold text-[#14233B]"><Plus size={14}/>추가</button></div>
+          {openSelfTasks.length === 0 ? <div className="rounded-[12px] border border-dashed border-[#D8D0C5] bg-[#FFFDFC] px-4 py-5 text-center"><p className="text-xs text-[#687282]">등록한 내 할 일이 없습니다.</p><button type="button" onClick={() => navigate('/missions/create?target=self')} className="mt-2 min-h-10 px-3 text-xs font-bold text-[#14233B]">내 할 일 작성하기</button></div> : <div className="divide-y divide-[#ECE7E0] overflow-hidden rounded-[12px] border border-[#E7E1D9] bg-[#FFFDFC]">{openSelfTasks.slice(0, 4).map((mission) => <div key={mission.id} className="flex min-h-[62px] items-center gap-2 px-3 py-2"><button type="button" onClick={() => updateStatus(mission.id, 'SUCCESS')} aria-label={`${mission.title} 완료`} className="flex h-11 w-11 shrink-0 items-center justify-center text-[#9299A3]"><Circle size={21}/></button><button type="button" onClick={() => navigate(`/missions/${mission.id}`)} className="min-w-0 flex-1 py-2 text-left"><strong className="block truncate text-sm text-[#27313F]">{mission.title}</strong><span className="mt-1 block text-[10px] text-[#8B929C]">{formatDate(mission.endDate)}까지</span></button><ChevronRight size={14} className="text-[#B5B7BC]"/></div>)}</div>}
+          {selfTasks.some((mission) => mission.status === 'SUCCESS') && <button type="button" onClick={() => navigate('/missions?tab=self')} className="mt-2 flex min-h-10 w-full items-center justify-center gap-1 text-[11px] font-semibold text-[#52775E]"><CheckCircle2 size={13}/>완료한 내 할 일 보기</button>}
         </section>
 
         <section>
@@ -76,8 +84,6 @@ function FacilitatorHome() {
 export default function HomePage() {
   const currentUser = useAuthStore((state)=>state.currentUser);
   const active = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
-  const activeOrganization = useMembershipStore((state)=>state.organizations.find((organization)=>organization.id===active?.organizationId));
   if (!currentUser) return null;
-  if (activeOrganization?.type === 'PERSONAL') return <PersonalTodoHome/>;
   return active?.role === 'STUDENT' ? <PerformerHome/> : <FacilitatorHome/>;
 }

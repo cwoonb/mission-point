@@ -6,10 +6,6 @@ describe('organization setup errors', () => {
     expect(organizationSetupErrorMessage(new Error('AUTH_REQUIRED'), 'create')).toContain('다시 로그인');
   });
 
-  it('explains personal workspace migration failures', () => {
-    expect(organizationSetupErrorMessage(new Error('PERSONAL_WORKSPACE_SETUP_REQUIRED'), 'personal')).toContain('개인 TODO');
-  });
-
   it('keeps join failures actionable', () => {
     expect(organizationSetupErrorMessage(new Error('INVITE_NOT_FOUND'), 'join')).toContain('초대 코드');
   });
