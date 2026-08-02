@@ -63,7 +63,7 @@ export default function MembershipSelectionPage() {
             <h2 className="text-xs font-bold text-[#53606F]">내 소속</h2>
             {mine.map((m) => {
               const org = organizations.find((o) => o.id === m.organizationId);
-              const Icon = m.role === "STUDENT" ? UsersRound : Building2;
+              const Icon = m.role === "STUDENT" || m.role === "GUARDIAN" ? UsersRound : Building2;
               return (
                 <button
                   key={m.id}
@@ -78,7 +78,7 @@ export default function MembershipSelectionPage() {
                       {org?.name ?? "소속"}
                     </strong>
                     <span className="mt-1 block text-xs text-[#687282]">
-                      {m.role === "STUDENT" ? "학생" : "운영자(선생님)"}
+                      {m.role === "STUDENT" ? "학생" : m.role === "GUARDIAN" ? "보호자" : "운영자(선생님)"}
                       {m.groupId ? " · 연결된 반" : ""}
                     </span>
                   </span>

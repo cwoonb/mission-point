@@ -7,7 +7,8 @@ import { useGroupStore } from './store/groupStore';
 import { useTemplateStore } from './store/templateStore';
 import { startDemoSession } from './data/demoSession';
 import { useMembershipStore } from './store/membershipStore';
-import { isFacilitatorMembership, isStudentMembership, membershipEntry } from './utils/membershipAccess';
+import { useGuardianStore } from './store/guardianStore';
+import { isFacilitatorMembership, isGuardianMembership, isStudentMembership, membershipEntry } from './utils/membershipAccess';
 import { supabase } from './lib/supabase';
 
 import AppLayout from './components/layout/AppLayout';
@@ -37,6 +38,9 @@ const MembershipSetupPage = lazy(() => import('./pages/MembershipSetupPage'));
 const PublicReportPage = lazy(() => import('./pages/PublicReportPage'));
 const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const GuardianReportsPage = lazy(() => import('./pages/guardian/GuardianReportsPage'));
+const GuardianReportDetailPage = lazy(() => import('./pages/guardian/GuardianReportDetailPage'));
+const GuardianActivityPage = lazy(() => import('./pages/guardian/GuardianActivityPage'));
 
 function FacilitatorOnly({ children }: { children: ReactElement }) {
   const active = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId));
@@ -48,16 +52,28 @@ function PerformerOnly({ children }: { children: ReactElement }) {
   return isStudentMembership(active?.role) ? children : <Navigate to="/" replace />;
 }
 
+function GuardianOnly({ children }: { children: ReactElement }) {
+  const active = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId));
+  return isGuardianMembership(active?.role) ? children : <Navigate to="/" replace />;
+}
+
+function OperationalOnly({ children }: { children: ReactElement }) {
+  const active = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId));
+  return isGuardianMembership(active?.role) ? <Navigate to="/" replace /> : children;
+}
+
 function AuthenticatedRoutes() {
   const currentUser = useAuthStore((state) => state.currentUser);
   const { memberships, activeMembershipId, initializedUserId, selectMembership, initializeData: initializeMemberships } = useMembershipStore();
   const mine = memberships.filter((membership) => membership.userId === currentUser?.id && membership.status === 'ACTIVE');
   const active = mine.find((membership) => membership.id === activeMembershipId);
   const entry = membershipEntry(mine, activeMembershipId);
+  const initializeGuardians = useGuardianStore((state) => state.initializeData);
   useEffect(() => {
     if (entry.kind === 'AUTO') selectMembership(entry.membership.id);
   }, [activeMembershipId, currentUser?.id, entry.kind]);
   useEffect(()=>{if(currentUser&&!currentUser.id.startsWith('demo-'))void initializeMemberships(currentUser.id);},[currentUser?.id]);
+  useEffect(()=>{if(active)void initializeGuardians(active.organizationId).catch(()=>undefined);},[active?.organizationId,initializeGuardians]);
   if (!currentUser) return null;
   if (!currentUser.id.startsWith('demo-') && initializedUserId !== currentUser.id) {
     return <div className="page-container flex min-h-[100dvh] items-center justify-center bg-[#F8F5F0] text-sm font-semibold text-[#687282]">소속을 확인하고 있습니다.</div>;
@@ -75,13 +91,13 @@ function AuthenticatedRoutes() {
       <Route path="onboarding" element={<MembershipSetupPage />} />
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
-        <Route path="missions" element={<MissionListPage />} />
+        <Route path="missions" element={<OperationalOnly><MissionListPage /></OperationalOnly>} />
         <Route path="missions/create" element={<FacilitatorOnly><MissionCreatePage /></FacilitatorOnly>} />
         <Route path="missions/class/:classId" element={<FacilitatorOnly><MissionClassPage /></FacilitatorOnly>} />
         <Route path="missions/homework/:homeworkId" element={<FacilitatorOnly><HomeworkDetailPage /></FacilitatorOnly>} />
         <Route path="missions/:id/review" element={<FacilitatorOnly><SubmissionReviewPage /></FacilitatorOnly>} />
         <Route path="missions/:id/edit" element={<FacilitatorOnly><MissionEditPage /></FacilitatorOnly>} />
-        <Route path="missions/:id" element={<MissionDetailPage />} />
+        <Route path="missions/:id" element={<OperationalOnly><MissionDetailPage /></OperationalOnly>} />
         <Route path="missions/:id/submit" element={<PerformerOnly><MissionSubmitPage /></PerformerOnly>} />
         <Route path="approvals" element={<FacilitatorOnly><Navigate to="/missions?tab=pending" replace /></FacilitatorOnly>} />
         <Route path="approval" element={<FacilitatorOnly><Navigate to="/missions?tab=pending" replace /></FacilitatorOnly>} />
@@ -92,6 +108,9 @@ function AuthenticatedRoutes() {
         <Route path="students/:id/report" element={<FacilitatorOnly><ParentReportPage /></FacilitatorOnly>} />
         <Route path="students/:id/report/share" element={<FacilitatorOnly><ReportSharePage /></FacilitatorOnly>} />
         <Route path="activity" element={<PerformerOnly><StudentActivityPage /></PerformerOnly>} />
+        <Route path="guardian/reports" element={<GuardianOnly><GuardianReportsPage /></GuardianOnly>} />
+        <Route path="guardian/reports/:reportId" element={<GuardianOnly><GuardianReportDetailPage /></GuardianOnly>} />
+        <Route path="guardian/activity" element={<GuardianOnly><GuardianActivityPage /></GuardianOnly>} />
         <Route path="ranking" element={<Navigate to="/" replace />} />
         <Route path="analytics" element={<Navigate to="/students?view=analysis" replace />} />
         <Route path="analysis" element={<Navigate to="/students?view=analysis" replace />} />
@@ -155,6 +174,7 @@ function AppContent() {
       if (event === 'SIGNED_OUT') {
         useAuthStore.setState({ currentUser: null, users: [], teacherNotes: {}, isDemoMode: false, authInitialized: true });
         useMembershipStore.getState().clearActiveMembership();
+        useGuardianStore.getState().clear();
       }
     });
     return () => subscription.unsubscribe();

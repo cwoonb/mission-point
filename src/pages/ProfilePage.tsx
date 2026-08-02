@@ -19,8 +19,9 @@ import {
 import { useAuthStore } from "../store/authStore";
 import { useGroupStore } from "../store/groupStore";
 import { useMembershipStore } from "../store/membershipStore";
+import GuardianProfilePage from "./guardian/GuardianProfilePage";
 
-export default function ProfilePage() {
+function StandardProfilePage() {
   const navigate = useNavigate();
   const { currentUser, isDemoMode, logout } = useAuthStore();
   const groups = useGroupStore((s) => s.groups);
@@ -223,4 +224,9 @@ export default function ProfilePage() {
       </main>
     </div>
   );
+}
+
+export default function ProfilePage() {
+  const role = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId)?.role);
+  return role === 'GUARDIAN' ? <GuardianProfilePage /> : <StandardProfilePage />;
 }

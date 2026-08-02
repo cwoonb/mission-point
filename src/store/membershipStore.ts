@@ -8,7 +8,8 @@ import { secureBackendEnabled, supabase } from '../lib/supabase';
 const now = () => new Date().toISOString();
 const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 const legacyRole = (role: User['role']): MembershipRole => role === 'CHILD' ? 'STUDENT' : role === 'PARENT' ? 'OWNER' : 'TEACHER';
-const userRole = (role: MembershipRole): User['role'] => role === 'STUDENT' ? 'CHILD' : 'TEACHER';
+const userRole = (role: MembershipRole): User['role'] => role === 'STUDENT' ? 'CHILD' : role === 'GUARDIAN' ? 'PARENT' : 'TEACHER';
+const viewModeForRole = (role: MembershipRole) => role === 'STUDENT' ? 'PERFORMER' : role === 'GUARDIAN' ? 'GUARDIAN' : 'FACILITATOR';
 const missingRpc = (error: { code?: string; message?: string } | null) =>
   !!error && (error.code === 'PGRST202' || error.message?.includes('Could not find the function'));
 const rowToMembership = (row: Record<string, unknown>): Membership => ({
@@ -85,7 +86,7 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
     if (!baseUser) return false;
     useAuthStore.setState({
       currentUser: { ...baseUser, role: userRole(membership.role), groupId: membership.groupId ?? baseUser.groupId },
-      viewMode: membership.role === 'STUDENT' ? 'PERFORMER' : 'FACILITATOR',
+      viewMode: viewModeForRole(membership.role),
     });
     set({ activeMembershipId: membershipId });
     return true;
@@ -167,4 +168,4 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
   }),
 }));
 
-export const membershipViewMode = (role?: MembershipRole) => role === 'STUDENT' ? 'PERFORMER' : 'FACILITATOR';
+export const membershipViewMode = (role?: MembershipRole) => role === 'STUDENT' ? 'PERFORMER' : role === 'GUARDIAN' ? 'GUARDIAN' : 'FACILITATOR';

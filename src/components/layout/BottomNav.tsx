@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { History, Home, Target, User, UsersRound } from 'lucide-react';
+import { FileText, History, Home, Target, User, UsersRound } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../store/authStore';
 import { useMissionStore } from '../../store/missionStore';
@@ -11,13 +11,14 @@ import { missionInOrganization } from '../../utils/membershipScope';
 type NavTab = { to: string; icon: typeof Home; label: string; badge?: number };
 
 export const getBottomNavTabs=(role:MembershipRole|undefined,memberLabel='학생',pendingReviews=0):NavTab[]=>role==='STUDENT'?
-  [{to:'/',icon:Home,label:'홈'},{to:'/missions',icon:Target,label:'미션'},{to:'/activity',icon:History,label:'활동'},{to:'/profile',icon:User,label:'내 정보'}]:
+  [{to:'/',icon:Home,label:'홈'},{to:'/missions',icon:Target,label:'미션'},{to:'/activity',icon:History,label:'활동'},{to:'/profile',icon:User,label:'내 정보'}]:role==='GUARDIAN'?
+  [{to:'/',icon:Home,label:'홈'},{to:'/guardian/reports',icon:FileText,label:'리포트'},{to:'/guardian/activity',icon:History,label:'활동'},{to:'/profile',icon:User,label:'내 정보'}]:
   [{to:'/',icon:Home,label:'홈'},{to:'/missions',icon:Target,label:'미션',badge:pendingReviews},{to:'/students',icon:UsersRound,label:memberLabel},{to:'/profile',icon:User,label:'내 정보'}];
 
 export default function BottomNav() {
   const { currentUser } = useAuthStore();
   const activeMembership = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
-  const viewMode = activeMembership?.role === 'STUDENT' ? 'PERFORMER' : 'FACILITATOR';
+  const viewMode = activeMembership?.role === 'STUDENT' ? 'PERFORMER' : activeMembership?.role === 'GUARDIAN' ? 'GUARDIAN' : 'FACILITATOR';
   const missions = useMissionStore((state) => state.missions);
   const pendingReviews = missions.filter((mission) => mission.status === 'REVIEWING' && mission.creatorId === currentUser?.id&&missionInOrganization(mission,activeMembership?.organizationId)).length;
   const memberLabel = currentUser?.id.startsWith('demo-') && viewMode === 'FACILITATOR' ? getActiveDemoScenario().memberLabel : '학생';

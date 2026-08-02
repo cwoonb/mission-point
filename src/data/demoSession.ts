@@ -5,15 +5,18 @@ import { useMembershipStore } from '../store/membershipStore';
 import { buildDemoScenario, getDemoScenario, type DemoScenarioId } from './demoScenarios';
 import { buildStudentDemo, STUDENT_DEMO_TEACHER_ID, STUDENT_DEMO_USER_ID } from './studentDemo';
 import { useReportContentStore } from '../store/reportContentStore';
+import { useGuardianStore } from '../store/guardianStore';
+import { buildGuardianDemo, GUARDIAN_DEMO_USER_ID } from './guardianDemo';
 
 const SCENARIO_KEY = 'mp-demo-scenario';
 const DEMO_KIND_KEY = 'mp-demo-kind';
 const STUDENT_STATE_KEY = 'mp-student-demo-state';
-export type DemoKind = 'facilitator' | 'student';
+export type DemoKind = 'facilitator' | 'student' | 'guardian';
 
 export function getDemoKind(): DemoKind {
   if (typeof localStorage === 'undefined') return 'facilitator';
-  return localStorage.getItem(DEMO_KIND_KEY) === 'student' ? 'student' : 'facilitator';
+  const kind = localStorage.getItem(DEMO_KIND_KEY);
+  return kind === 'student' || kind === 'guardian' ? kind : 'facilitator';
 }
 
 export const isStudentDemo = () => getDemoKind() === 'student';
@@ -50,6 +53,8 @@ export function startDemoScenario(id: DemoScenarioId) {
     demoMode: true,
   });
   useReportContentStore.getState().seedDemoMemos(organizationId, seed.reportMemos);
+  const guardianDemo = buildGuardianDemo(seed, organizationId);
+  useGuardianStore.getState().seedDemo([guardianDemo.guardian], guardianDemo.links, guardianDemo.reports);
   const membershipId = `demo-membership-${id}-operator`;
   useMembershipStore.getState().replaceDemoMemberships(
     [{ id: organizationId, name: seed.config.name, type: 'EDUCATION', ownerUserId: facilitator.id, inviteCode: facilitator.code, createdAt: facilitator.createdAt }],
@@ -98,6 +103,7 @@ export function startStudentDemo(reset = false) {
   useAuthStore.setState({ users: seed.users, currentUser: student, viewMode: 'PERFORMER', isDemoMode: true, teacherNotes: {} });
   useGroupStore.setState({ groups: seed.groups, demoMode: true });
   useMissionStore.setState({ missions: seed.missions.map((mission)=>({ ...mission, organizationId })), submissions: seed.submissions, reviewLogs: seed.reviewLogs, demoMode: true });
+  useGuardianStore.getState().clear();
   const membershipId = 'demo-membership-art-student';
   useMembershipStore.getState().replaceDemoMemberships(
     [{ id: organizationId, name: '미술 학원', type: 'ACADEMY', ownerUserId: STUDENT_DEMO_TEACHER_ID, inviteCode: 'ART100', createdAt: seed.users[0].createdAt }],
@@ -108,10 +114,48 @@ export function startStudentDemo(reset = false) {
   return seed;
 }
 
+export function startGuardianDemo() {
+  const seed = buildDemoScenario('study-room');
+  const organizationId = 'demo-org-study-room';
+  const demo = buildGuardianDemo(seed, organizationId);
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(DEMO_KIND_KEY, 'guardian');
+    localStorage.setItem(SCENARIO_KEY, 'study-room');
+  }
+  useAuthStore.setState({
+    users: [...seed.users, demo.currentUser],
+    currentUser: demo.currentUser,
+    viewMode: 'GUARDIAN',
+    isDemoMode: true,
+    teacherNotes: {},
+  });
+  useGroupStore.setState({ groups: seed.groups, demoMode: true });
+  useMissionStore.setState({
+    missions: seed.missions.map((mission) => ({ ...mission, organizationId })),
+    submissions: seed.submissions,
+    reviewLogs: seed.reviewLogs,
+    demoMode: true,
+  });
+  useGuardianStore.getState().seedDemo([demo.guardian], demo.links, demo.reports);
+  const membershipId = 'demo-membership-study-room-guardian';
+  useMembershipStore.getState().replaceDemoMemberships(
+    [{ id: organizationId, name: seed.config.name, type: 'EDUCATION', ownerUserId: seed.users[0].id, inviteCode: seed.users[0].code, createdAt: seed.users[0].createdAt }],
+    [{ id: membershipId, userId: demo.currentUser.id, organizationId, role: 'GUARDIAN', status: 'ACTIVE', createdAt: demo.currentUser.createdAt }],
+    membershipId,
+  );
+  return demo;
+}
+
 export function startDemoSession(userId: string, force = false) {
   installStudentDemoPersistence();
   const auth = useAuthStore.getState();
   const missions = useMissionStore.getState();
+  if (getDemoKind() === 'guardian') {
+    const ready = auth.isDemoMode && auth.currentUser?.id === GUARDIAN_DEMO_USER_ID && useGuardianStore.getState().reports.length > 0;
+    if (!force && ready) return true;
+    startGuardianDemo();
+    return true;
+  }
   if (getDemoKind() === 'student') {
     const ready = auth.isDemoMode && missions.demoMode && auth.currentUser?.id === STUDENT_DEMO_USER_ID && missions.missions.some((mission) => mission.id.startsWith('demo-student-art-'));
     if (!force && ready) return true;
@@ -125,6 +169,8 @@ export function startDemoSession(userId: string, force = false) {
   if (!force && matchesSelectedScenario && auth.isDemoMode && missions.demoMode && missions.missions.length > 0 && existingUser) {
     const seed = buildDemoScenario(selectedScenarioId);
     const organizationId = `demo-org-${selectedScenarioId}`;
+    const guardianDemo = buildGuardianDemo(seed, organizationId);
+    useGuardianStore.getState().seedDemo([guardianDemo.guardian], guardianDemo.links, guardianDemo.reports);
     useReportContentStore.getState().seedDemoMemos(organizationId, seed.reportMemos);
     useMissionStore.setState({
       reviewLogs: missions.reviewLogs.map((log) => log.action === 'APPROVED' && !log.publicFeedback && log.reason
@@ -144,6 +190,7 @@ export function startDemoSession(userId: string, force = false) {
 
 export function resetDemoSession() {
   if (getDemoKind() === 'student') startStudentDemo(true);
+  else if (getDemoKind() === 'guardian') startGuardianDemo();
   else {
     const id = getSelectedDemoScenarioId();
     useReportContentStore.getState().resetDemo(`demo-org-${id}`);

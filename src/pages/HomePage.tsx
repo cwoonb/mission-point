@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, ChevronRight, Circle, ClipboardCheck, FileText, Plus } from 'lucide-react';
 import PerformerHome from '../components/home/PerformerHome';
+import GuardianHomePage from './guardian/GuardianHomePage';
 import Header from '../components/layout/Header';
 import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
@@ -85,5 +86,6 @@ export default function HomePage() {
   const currentUser = useAuthStore((state)=>state.currentUser);
   const active = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
   if (!currentUser) return null;
+  if (active?.role === 'GUARDIAN') return <GuardianHomePage/>;
   return active?.role === 'STUDENT' ? <PerformerHome/> : <FacilitatorHome/>;
 }

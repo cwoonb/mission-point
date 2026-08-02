@@ -28,3 +28,7 @@ export function getDemoReportSnapshot<T>(token: string): T | null {
     return null;
   }
 }
+
+export function revokeDemoReportSnapshot(token: string) {
+  localStorage.removeItem(`${PREFIX}${token}`);
+}

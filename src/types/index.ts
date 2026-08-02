@@ -4,9 +4,9 @@ export type MissionGoal = 'SINCERITY' | 'STUDY_HABIT' | 'SUBMISSION_MGMT' | 'PAR
 export type RepeatType = 'ONCE' | 'DAILY' | 'WEEKLY' | 'WEEKDAYS';
 export type ParentShareType = 'NONE' | 'ON_COMPLETE' | 'WEEKLY_REPORT';
 export type StudentStatus = 'EXCELLENT' | 'CAUTION' | 'UNSUBMITTED' | 'COUNSELING' | 'NOT_STARTED';
-export type ViewMode = 'FACILITATOR' | 'PERFORMER';
+export type ViewMode = 'FACILITATOR' | 'PERFORMER' | 'GUARDIAN';
 export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'NAVER' | 'EMAIL';
-export type MembershipRole = 'OWNER' | 'TEACHER' | 'STUDENT';
+export type MembershipRole = 'OWNER' | 'TEACHER' | 'STUDENT' | 'GUARDIAN';
 export type MembershipStatus = 'ACTIVE' | 'INVITED' | 'INACTIVE';
 
 export type MissionStatus =
@@ -75,6 +75,67 @@ export interface Membership {
   groupId?: string;
   status: MembershipStatus;
   createdAt: string;
+}
+
+export type GuardianRelationship = '어머니' | '아버지' | '조부모' | '보호자' | '기타';
+
+export interface Guardian {
+  id: string;
+  organizationId: string;
+  authUserId?: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  notificationsEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentGuardian {
+  id: string;
+  organizationId: string;
+  studentId: string;
+  guardianId: string;
+  relationship: GuardianRelationship;
+  isPrimary: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
+export interface ReportSnapshot {
+  version?: number;
+  generatedAt: string;
+  periodStart?: string;
+  teacherName?: string;
+  student: { name: string; group: string };
+  recentActivities: Array<{ title: string; date: string; comment?: string }>;
+  completedMissions: Array<{ title: string; date: string }>;
+  ongoingMissions: Array<{ title: string; dueDate: string; status: string }>;
+  feedback: Array<{ mission: string; text: string; date: string; action: string }>;
+  photos: string[];
+  strengths: string;
+  nextGoal: string;
+  teacherMemo: string;
+}
+
+export interface GuardianReport {
+  id: string;
+  organizationId: string;
+  studentId: string;
+  createdBy: string;
+  snapshot: ReportSnapshot;
+  createdAt: string;
+  updatedAt: string;
+  lastViewedAt?: string;
+}
+
+export interface GuardianReportAccessLog {
+  id: string;
+  organizationId: string;
+  guardianId?: string;
+  reportId: string;
+  publicReportTokenId?: string;
+  viewedAt: string;
 }
 
 export interface PendingSocialProfile {

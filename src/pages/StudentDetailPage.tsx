@@ -12,11 +12,12 @@ import { formatDate, formatDateTime } from '../utils/helpers';
 import { getActiveDemoScenario } from '../data/demoSession';
 import { calculateClassStats } from '../utils/missionStats';
 import { useMembershipStore } from '../store/membershipStore';
+import GuardianManagementSection from '../components/guardian/GuardianManagementSection';
 
-type DetailTab = 'overview' | 'missions' | 'feedback' | 'report' | 'memo';
+type DetailTab = 'overview' | 'missions' | 'feedback' | 'report' | 'guardian' | 'memo';
 const TABS = [
   { key: 'overview' as const, label: '개요' }, { key: 'missions' as const, label: '미션' },
-  { key: 'feedback' as const, label: '피드백' }, { key: 'report' as const, label: '리포트' }, { key: 'memo' as const, label: '메모' },
+  { key: 'feedback' as const, label: '피드백' }, { key: 'report' as const, label: '리포트' }, { key: 'guardian' as const, label: '보호자' }, { key: 'memo' as const, label: '메모' },
 ];
 const STATUS: Record<MissionStatus, { label: string; tone: string }> = {
   PENDING: { label: '시작 전', tone: 'bg-[#F0F1F2] text-[#707782]' }, IN_PROGRESS: { label: '진행 중', tone: 'bg-[#EAF0F6] text-[#536D8B]' },
@@ -88,6 +89,8 @@ export default function StudentDetailPage() {
         {tab === 'feedback' && <section className="space-y-2">{feedback.map((log)=>{const mission=all.find((item)=>item.id===log.missionId);return <article key={log.id} className="rounded-xl border border-[var(--color-border)] bg-[#FFFDFC] p-4"><div className="flex items-center justify-between gap-2"><strong className="truncate text-sm font-semibold text-[#14233B]">{mission?.title??'미션'}</strong><span className="text-[10px] text-[#9A9FA7]">{formatDateTime(log.createdAt)}</span></div><p className="mt-2 text-sm leading-6 text-[#53606F]">{log.action==='REJECTED'?log.reason:log.publicFeedback}</p></article>;})}{feedback.length===0&&<EmptyState title="최근 전달된 피드백이 없습니다."/>}</section>}
 
         {tab === 'report' && <section className="rounded-2xl border border-[var(--color-border)] bg-[#FFFDFC] p-5 text-center"><FileText size={28} className="mx-auto text-[#B58A4A]"/><h2 className="mt-3 text-lg font-semibold text-[#14233B]">학부모 활동 리포트</h2><p className="mt-2 text-sm leading-6 text-[#737B86]">최근 활동과 피드백을 읽기 쉬운 기록으로 확인하고 공유합니다.</p><button onClick={()=>navigate(`/students/${student.id}/report`)} className="mt-5 min-h-12 w-full rounded-[10px] bg-[#14233B] text-sm font-semibold text-white">리포트 보기</button></section>}
+
+        {tab === 'guardian' && activeOrganizationId && <GuardianManagementSection organizationId={activeOrganizationId} studentId={student.id} studentName={student.name}/>}
 
         {tab === 'memo' && <section><h2 className="mb-3 text-[17px] font-semibold text-[#14233B]">상담 메모</h2><div className="flex gap-2"><input value={noteInput} onChange={(event)=>setNoteInput(event.target.value)} onKeyDown={(event)=>event.key==='Enter'&&saveNote()} placeholder="상담 내용이나 특이사항 입력" maxLength={200} className="min-h-12 min-w-0 flex-1 rounded-[10px] border border-[var(--color-border)] bg-[#FFFDFC] px-3 text-sm"/><button onClick={saveNote} disabled={!noteInput.trim()} className="min-h-12 rounded-[10px] bg-[#14233B] px-4 text-sm font-semibold text-white disabled:opacity-40">저장</button></div><div className="mt-3 space-y-2">{notes.map((note)=><article key={note.id} className="flex gap-2 rounded-xl border border-[var(--color-border)] bg-[#FFFDFC] p-3"><NotebookPen size={16} className="mt-0.5 shrink-0 text-[#B58A4A]"/><p className="flex-1 text-sm leading-6 text-[#53606F]">{note.text}</p><div className="shrink-0 text-right"><p className="text-[10px] text-[#9A9FA7]">{formatDate(note.createdAt)}</p><button onClick={()=>deleteTeacherNote(student.id,note.id)} aria-label="메모 삭제" className="mt-1 flex h-9 w-9 items-center justify-end text-[#9A9FA7]"><Trash2 size={14}/></button></div></article>)}{notes.length===0&&<EmptyState title="아직 작성된 상담 메모가 없습니다."/>}</div></section>}
       </div>

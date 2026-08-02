@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Membership } from '../types';
-import { isFacilitatorMembership, isStudentMembership, membershipEntry } from './membershipAccess';
+import { isFacilitatorMembership, isGuardianMembership, isStudentMembership, membershipEntry } from './membershipAccess';
 
 const membership=(id:string,role:Membership['role']):Membership=>({id,userId:'u1',organizationId:`org-${id}`,role,status:'ACTIVE',createdAt:'2026-01-01T00:00:00.000Z'});
 
@@ -14,5 +14,8 @@ describe('membership access',()=>{
     expect(isFacilitatorMembership('TEACHER')).toBe(true);
     expect(isFacilitatorMembership('STUDENT')).toBe(false);
     expect(isStudentMembership('STUDENT')).toBe(true);
+    expect(isGuardianMembership('GUARDIAN')).toBe(true);
+    expect(isFacilitatorMembership('GUARDIAN')).toBe(false);
+    expect(isStudentMembership('GUARDIAN')).toBe(false);
   });
 });
