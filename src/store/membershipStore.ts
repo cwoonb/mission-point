@@ -173,7 +173,9 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
   partialize: (state) => ({
     organizations: state.organizations.filter((item) => item.id.startsWith('demo-org-')),
     memberships: state.memberships.filter((item) => item.id.startsWith('demo-membership-')),
-    activeMembershipId: state.activeMembershipId?.startsWith('demo-membership-') ? state.activeMembershipId : null,
+    // Persist only the selected id for real accounts. Membership rows are always
+    // reloaded under RLS; an id belonging to another account cannot become active.
+    activeMembershipId: state.activeMembershipId,
   }),
 }));
 
