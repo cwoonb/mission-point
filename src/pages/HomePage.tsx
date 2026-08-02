@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ClipboardCheck, FileText, Plus } from 'lucide-react';
 import PerformerHome from '../components/home/PerformerHome';
+import PersonalTodoHome from '../components/home/PersonalTodoHome';
 import Header from '../components/layout/Header';
 import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
@@ -75,6 +76,8 @@ function FacilitatorHome() {
 export default function HomePage() {
   const currentUser = useAuthStore((state)=>state.currentUser);
   const active = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
+  const activeOrganization = useMembershipStore((state)=>state.organizations.find((organization)=>organization.id===active?.organizationId));
   if (!currentUser) return null;
+  if (activeOrganization?.type === 'PERSONAL') return <PersonalTodoHome/>;
   return active?.role === 'STUDENT' ? <PerformerHome/> : <FacilitatorHome/>;
 }

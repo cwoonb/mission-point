@@ -1,5 +1,5 @@
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { Calendar, CheckCircle2, FileText, Image as ImageIcon, MessageCircle, RefreshCw, UserRound } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, FileText, Image as ImageIcon, MessageCircle, RefreshCw, UserRound } from 'lucide-react';
 import Header from '../components/layout/Header';
 import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
@@ -14,12 +14,25 @@ export default function MissionDetailPage() {
   const navigate = useNavigate();
   const { currentUser, users } = useAuthStore();
   const active = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
+  const activeOrganization = useMembershipStore((state)=>state.organizations.find((organization)=>organization.id===active?.organizationId));
   const groups = useGroupStore((state)=>state.groups);
-  const { getMission, getLatestSubmission, getReviewLogs, submissions } = useMissionStore();
+  const { getMission, getLatestSubmission, getReviewLogs, submissions, updateStatus } = useMissionStore();
   const mission = id ? getMission(id) : undefined;
   if (!mission || !currentUser) return <div className="page-container"><Header title="미션 상세" showBack/><main className="content-area p-4"><EmptyState title="미션을 찾을 수 없습니다."/></main></div>;
   if(!missionInOrganization(mission,active?.organizationId))return <Navigate to="/" replace/>;
   if(active?.role==='STUDENT'&&mission.assigneeId!==currentUser.id)return <Navigate to="/" replace/>;
+  if (activeOrganization?.type === 'PERSONAL') {
+    const completed = mission.status === 'SUCCESS';
+    return <div className="page-container bg-[#F8F5F0]"><Header title="TODO 상세" showBack showPoints={false}/><main className="content-area space-y-4 px-4 py-4">
+      <section className="rounded-[16px] border border-[#E7E1D9] bg-[#FFFDFC] p-5">
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${completed ? 'bg-[#EAF2EC] text-[#52775E]' : 'bg-[#EAF0F6] text-[#536D8B]'}`}>{completed ? '완료' : '할 일'}</span>
+        <h1 className={`mt-3 text-xl font-bold ${completed ? 'text-[#8B929C] line-through' : 'text-[#14233B]'}`}>{mission.title}</h1>
+        {mission.description && mission.description !== mission.title && <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-[#53606F]">{mission.description}</p>}
+        <p className="mt-5 flex items-center gap-2 text-xs text-[#687282]"><Calendar size={15}/>{formatDate(mission.endDate)}까지</p>
+      </section>
+      <button type="button" onClick={() => { updateStatus(mission.id, completed ? 'IN_PROGRESS' : 'SUCCESS'); navigate('/missions', { replace: true }); }} className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-[10px] text-sm font-bold ${completed ? 'border border-[#D8D0C5] bg-[#FFFDFC] text-[#53606F]' : 'bg-[#14233B] text-white'}`}>{completed ? <><Circle size={17}/>다시 할 일로</> : <><CheckCircle2 size={17}/>완료하기</>}</button>
+    </main></div>;
+  }
   const performer = active?.role === 'STUDENT' && mission.assigneeId === currentUser.id;
   const assignee = users.find((user)=>user.id===mission.assigneeId);
   const teacher = users.find((user)=>user.id===mission.creatorId);

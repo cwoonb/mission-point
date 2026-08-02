@@ -13,7 +13,11 @@ export const supabase = createClient(url, anonKey, {
     persistSession: true,
   },
 });
-export const secureBackendEnabled = import.meta.env.VITE_SECURE_BACKEND_ENABLED === 'true';
+// The launch-security migrations are part of the production baseline. Treat the
+// secure RPC backend as enabled unless a developer explicitly opts out while
+// working against an older local database. An omitted Vercel variable used to
+// send organization writes through RLS-blocked legacy inserts.
+export const secureBackendEnabled = import.meta.env.VITE_SECURE_BACKEND_ENABLED !== 'false';
 
 export const authRedirectUrl = (
   next = '/memberships',

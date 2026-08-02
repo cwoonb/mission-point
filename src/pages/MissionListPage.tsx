@@ -1,4 +1,4 @@
-import { CalendarX2, FileText, Plus } from 'lucide-react';
+import { CalendarClock, CalendarX2, CheckCircle2, Circle, FileText, Plus } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import EmptyState from '../components/ui/EmptyState';
@@ -16,6 +16,7 @@ import { missionInOrganization } from '../utils/membershipScope';
 
 type LeaderTab = 'all' | 'active' | 'due' | 'pending' | 'completed';
 type PerformerTab = 'all' | 'todo' | 'pending' | 'rejected' | 'completed';
+type PersonalTab = 'open' | 'today' | 'completed';
 
 const formatShortDate = (value: string) => new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit' }).format(new Date(value)).replace(/\. /g, '.').replace('.', '');
 const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -139,7 +140,42 @@ function PerformerMissionList() {
   return <div className="page-container bg-[#F8F5F0]"><Header title="미션" showBack={false} showPoints={false}/><main className="content-area px-4 pt-3"><SearchInput value={query} onChange={(value) => update('q', value)} placeholder="미션 검색"/><div className="mt-3"><SegmentTabs tabs={tabs} value={tab} onChange={(value) => update('tab', value)} ariaLabel="미션 상태"/></div><section className="mt-3 space-y-2 pb-6">{shown.map((mission) => { const hasFeedback=reviewLogs.some((log)=>log.missionId===mission.id&&!!(log.reason||log.publicFeedback)); const latest=[...submissions].filter(item=>item.missionId===mission.id).sort((a,b)=>new Date(b.submittedAt).getTime()-new Date(a.submittedAt).getTime())[0]; return <button type="button" key={mission.id} onClick={()=>navigate(`/missions/${mission.id}`)} className="flex min-h-[78px] w-full items-center gap-3 rounded-[13px] border border-[#E7E1D9] bg-[#FFFDFC] p-3 text-left"><span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-[#EEE9E2] text-[#8A7350]">{latest?.imageUrl?<img src={latest.imageUrl} alt="" className="h-full w-full object-cover"/>:<FileText size={18}/>}</span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="truncate text-[14px] text-[#14233B]">{mission.title}</strong><span className={`shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${mission.status==='REJECTED'?'bg-[#F7ECEA] text-[#A65F59]':mission.status==='SUCCESS'?'bg-[#EAF2EC] text-[#52775E]':mission.status==='REVIEWING'?'bg-[#F8EFE3] text-[#A66D32]':'bg-[#EAF0F6] text-[#536D8B]'}`}>{status(mission)}</span></span><span className="mt-1 block text-[11px] text-[#737B86]">{groupName} · {formatDate(mission.endDate)}까지</span><span className="mt-1 block text-[10px] text-[#8B929C]">{submissionTypeLabel[mission.submissionType]}{hasFeedback?' · 피드백 있음':''}</span></span></button>;})}{shown.length===0&&<EmptyState title={tab==='all'?'현재 진행할 미션이 없습니다.':'조건에 맞는 미션이 없습니다.'} description={tab==='all'?'새로운 미션이 등록되면 여기에 표시됩니다.':undefined}/>}</section></main></div>;
 }
 
+function PersonalTodoList() {
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const currentUser = useAuthStore((state) => state.currentUser);
+  const activeOrganizationId = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId)?.organizationId);
+  const missions = useMissionStore((state) => state.missions);
+  const updateStatus = useMissionStore((state) => state.updateStatus);
+  if (!currentUser) return null;
+  const tab = (['open', 'today', 'completed'].includes(params.get('tab') ?? '') ? params.get('tab') : 'open') as PersonalTab;
+  const query = params.get('q') ?? '';
+  const today = localDateKey(new Date());
+  const mine = missions.filter((mission) => mission.assigneeId === currentUser.id && missionInOrganization(mission, activeOrganizationId));
+  const matchesTab = (mission: Mission) => tab === 'completed' ? mission.status === 'SUCCESS' : tab === 'today' ? mission.status !== 'SUCCESS' && localDateKey(new Date(mission.endDate)) === today : mission.status !== 'SUCCESS';
+  const shown = mine.filter((mission) => matchesTab(mission) && mission.title.toLowerCase().includes(query.trim().toLowerCase())).sort((a, b) => tab === 'completed' ? new Date(b.endDate).getTime() - new Date(a.endDate).getTime() : new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
+  const tabs = [
+    { key: 'open' as const, label: '할 일', count: mine.filter((mission) => mission.status !== 'SUCCESS').length },
+    { key: 'today' as const, label: '오늘', count: mine.filter((mission) => mission.status !== 'SUCCESS' && localDateKey(new Date(mission.endDate)) === today).length },
+    { key: 'completed' as const, label: '완료', count: mine.filter((mission) => mission.status === 'SUCCESS').length },
+  ];
+  const update = (key: 'tab' | 'q', value: string) => { const next = new URLSearchParams(params); value ? next.set(key, value) : next.delete(key); setParams(next, { replace: true }); };
+  return <div className="page-container bg-[#F8F5F0]">
+    <Header title="TODO" showBack={false} showPoints={false} rightElement={<button onClick={() => navigate('/missions/create')} aria-label="새 TODO 작성" className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-[#14233B] text-white"><Plus size={20}/></button>}/>
+    <main className="content-area px-4 pt-3">
+      <SearchInput value={query} onChange={(value) => update('q', value)} placeholder="할 일 검색"/>
+      <div className="mt-3"><SegmentTabs tabs={tabs} value={tab} onChange={(value) => update('tab', value)} ariaLabel="TODO 상태"/></div>
+      <section className="mt-3 space-y-2 pb-6">{shown.map((mission) => { const done = mission.status === 'SUCCESS'; const due = localDateKey(new Date(mission.endDate)); return <div key={mission.id} className="flex min-h-[72px] items-center gap-2 rounded-[13px] border border-[#E7E1D9] bg-[#FFFDFC] px-3 py-2">
+        <button type="button" onClick={() => updateStatus(mission.id, done ? 'IN_PROGRESS' : 'SUCCESS')} aria-label={done ? `${mission.title} 다시 열기` : `${mission.title} 완료`} className={`flex h-11 w-11 shrink-0 items-center justify-center ${done ? 'text-[#52775E]' : 'text-[#9AA1AA]'}`}>{done ? <CheckCircle2 size={23}/> : <Circle size={23}/>}</button>
+        <button type="button" onClick={() => navigate(`/missions/${mission.id}`)} className="min-w-0 flex-1 py-2 text-left"><strong className={`block truncate text-sm ${done ? 'text-[#8B929C] line-through' : 'text-[#27313F]'}`}>{mission.title}</strong><span className={`mt-1 flex items-center gap-1 text-[10px] ${!done && due <= today ? 'font-semibold text-[#A65F59]' : 'text-[#8B929C]'}`}><CalendarClock size={11}/>{due === today ? '오늘까지' : formatDate(mission.endDate)}</span>{mission.description && mission.description !== mission.title && <span className="mt-1 block truncate text-[10px] text-[#8B929C]">{mission.description}</span>}</button>
+      </div>; })}{shown.length === 0 && <EmptyState title={tab === 'completed' ? '완료한 TODO가 없습니다.' : '작성된 TODO가 없습니다.'} description={tab === 'completed' ? undefined : '내가 해야 할 일을 직접 작성해 보세요.'} actionLabel={tab === 'completed' ? undefined : '새 TODO 작성'} onAction={tab === 'completed' ? undefined : () => navigate('/missions/create')}/>}</section>
+    </main>
+  </div>;
+}
+
 export default function MissionListPage() {
   const active = useMembershipStore((state)=>state.memberships.find((membership)=>membership.id===state.activeMembershipId));
+  const activeOrganization = useMembershipStore((state)=>state.organizations.find((organization)=>organization.id===active?.organizationId));
+  if (activeOrganization?.type === 'PERSONAL') return <PersonalTodoList />;
   return active?.role === 'STUDENT' ? <PerformerMissionList /> : <LeaderMissionList />;
 }

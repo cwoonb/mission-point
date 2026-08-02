@@ -30,7 +30,7 @@ interface MembershipState {
   replaceDemoMemberships: (organizations: Organization[], memberships: Membership[], activeId: string) => void;
   selectMembership: (membershipId: string) => boolean;
   clearActiveMembership: () => void;
-  createOrganization: (userId: string, name: string, role?: MembershipRole, groupName?: string) => Promise<Membership>;
+  createOrganization: (userId: string, name: string, role?: MembershipRole, groupName?: string, organizationType?: 'EDUCATION' | 'PERSONAL') => Promise<Membership>;
   joinOrganization: (userId: string, inviteCode: string) => Promise<Membership | null>;
   getActiveMembership: () => Membership | undefined;
 }
@@ -91,15 +91,26 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
 
   clearActiveMembership: () => set({ activeMembershipId: null }),
 
-  createOrganization: async (userId, name, role = 'OWNER', groupName) => {
-    const organization: Organization = { id: id('org'), name: name.trim(), type: 'EDUCATION', ownerUserId: userId, inviteCode: Math.random().toString(36).slice(2, 8).toUpperCase(), createdAt: now() };
+  createOrganization: async (userId, name, role = 'OWNER', groupName, organizationType = 'EDUCATION') => {
+    const organization: Organization = { id: id('org'), name: name.trim(), type: organizationType, ownerUserId: userId, inviteCode: Math.random().toString(36).slice(2, 8).toUpperCase(), createdAt: now() };
     const membership: Membership = { id: id('membership'), userId, organizationId: organization.id, role, status: 'ACTIVE', createdAt: now() };
     if (!userId.startsWith('demo-')) {
-      const { data: rpcRow, error: rpcError } = secureBackendEnabled ? await supabase.rpc('create_organization', {
+      let { data: rpcRow, error: rpcError } = secureBackendEnabled ? await supabase.rpc('create_workspace', {
         org_id: organization.id,
         org_name: organization.name,
         invite_code: organization.inviteCode!,
+        organization_type: organization.type,
       }) : { data: null, error: { code: 'PGRST202', message: 'secure backend disabled' } };
+      // Rolling deploy compatibility for education organizations only.
+      if (missingRpc(rpcError) && organizationType === 'EDUCATION' && secureBackendEnabled) {
+        const legacy = await supabase.rpc('create_organization', {
+          org_id: organization.id,
+          org_name: organization.name,
+          invite_code: organization.inviteCode!,
+        });
+        rpcRow = legacy.data;
+        rpcError = legacy.error;
+      }
       if (!rpcError && rpcRow) {
         const persisted = rowToMembership(rpcRow as Record<string, unknown>);
         set((state) => ({ organizations: [...state.organizations, organization], memberships: [...state.memberships, persisted] }));
@@ -107,6 +118,7 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
         return persisted;
       }
       if (!missingRpc(rpcError)) throw new Error(rpcError?.message ?? '소속을 만들지 못했습니다.');
+      if (organizationType === 'PERSONAL') throw new Error('PERSONAL_WORKSPACE_SETUP_REQUIRED');
       const { error: organizationError } = await supabase.from('organizations').insert({ id: organization.id, name: organization.name, type: organization.type, owner_user_id: organization.ownerUserId, invite_code: organization.inviteCode, created_at: organization.createdAt });
       if (organizationError) throw new Error(organizationError.message);
       const { error: membershipError } = await supabase.from('memberships').insert({ id: membership.id, user_id: membership.userId, organization_id: membership.organizationId, role: membership.role, group_id: null, status: membership.status, created_at: membership.createdAt });
