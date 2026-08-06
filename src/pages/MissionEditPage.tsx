@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Calendar, Users, FileText } from 'lucide-react';
 import Header from '../components/layout/Header';
@@ -7,6 +7,9 @@ import Button from '../components/ui/Button';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import type { SubmissionType } from '../types';
+import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
+import { isStudentInOrganization } from '../utils/membershipAccess';
 
 const SUBMISSION_TYPES: Array<{ key: SubmissionType; label: string; emoji: string; desc: string }> = [
   { key: 'IMAGE', label: '이미지', emoji: '사진', desc: '사진으로 제출' },
@@ -20,6 +23,9 @@ export default function MissionEditPage() {
   const navigate = useNavigate();
   const { currentUser, users } = useAuthStore();
   const { getMission, updateMission } = useMissionStore();
+  const memberships = useMembershipStore((state) => state.memberships);
+  const activeMembershipId = useMembershipStore((state) => state.activeMembershipId);
+  const activeOrganizationId = memberships.find((membership) => membership.id === activeMembershipId)?.organizationId;
 
   const mission = getMission(id!);
 
@@ -30,6 +36,7 @@ export default function MissionEditPage() {
       </div>
     );
   }
+  if (!missionInOrganization(mission, activeOrganizationId) || mission.creatorId !== currentUser.id) return <Navigate to="/" replace/>;
 
   const [title, setTitle] = useState(mission.title);
   const [description, setDescription] = useState(mission.description);
@@ -39,7 +46,7 @@ export default function MissionEditPage() {
   const [endDate, setEndDate] = useState(mission.endDate.split('T')[0]);
   const [loading, setLoading] = useState(false);
 
-  const children = users.filter((u) => u.role === 'CHILD');
+  const children = users.filter((user) => user.role === 'CHILD' && isStudentInOrganization(memberships, user.id, activeOrganizationId));
   const isValid = title.trim() && description.trim() && assigneeId && startDate && endDate;
 
   const handleSubmit = () => {

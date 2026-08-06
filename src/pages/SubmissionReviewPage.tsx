@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Check, Image as ImageIcon, X } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Modal from '../components/ui/Modal';
@@ -9,6 +9,7 @@ import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
 import { formatDateTime } from '../utils/helpers';
 import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
 
 export default function SubmissionReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +38,7 @@ export default function SubmissionReviewPage() {
   if (!mission || !student) {
     return <div className="page-container"><Header title="제출물 확인" showBack showPoints={false}/><main className="content-area px-4 py-10"><EmptyState title="제출 정보를 찾을 수 없습니다." actionLabel="승인 대기로 이동" onAction={() => navigate('/missions?tab=pending')}/></main></div>;
   }
+  if (!missionInOrganization(mission, activeOrganizationId) || mission.creatorId !== currentUser?.id) return <Navigate to="/" replace/>;
 
   const approve = async () => {
     if (!currentUser || processing) return;

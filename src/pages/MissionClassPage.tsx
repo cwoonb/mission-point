@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronRight, Clock3 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import { useAuthStore } from '../store/authStore';
 import { useGroupStore } from '../store/groupStore';
@@ -8,6 +8,7 @@ import { useMissionStore } from '../store/missionStore';
 import type { MissionDisplayStatus } from '../utils/missionStats';
 import { calculateClassStats, calculateHomeworkStats, groupMissionsByHomework } from '../utils/missionStats';
 import { formatFriendlyDateTime, formatMissionPeriod, getMissionPeriodStatus, missionPeriodLabel } from '../utils/missionDates';
+import { useMembershipStore } from '../store/membershipStore';
 
 type Filter = 'all' | MissionDisplayStatus;
 
@@ -29,9 +30,11 @@ export default function MissionClassPage() {
   const currentUser = useAuthStore((state) => state.currentUser);
   const groups = useGroupStore((state) => state.groups);
   const missions = useMissionStore((state) => state.missions);
+  const activeOrganizationId = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId)?.organizationId);
   const group = groups.find((item) => item.id === classId);
 
   if (!group || !currentUser) return <div className="page-container"><Header title="반을 찾을 수 없습니다" showBack /></div>;
+  if (group.organizationId !== activeOrganizationId || group.facilitatorId !== currentUser.id) return <Navigate to="/" replace/>;
 
   const members = users.filter((user) => user.role === 'CHILD' && user.groupId === group.id);
   const memberIds = new Set(members.map((user) => user.id));

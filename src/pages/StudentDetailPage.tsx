@@ -13,6 +13,8 @@ import { getActiveDemoScenario } from '../data/demoSession';
 import { calculateClassStats } from '../utils/missionStats';
 import { useMembershipStore } from '../store/membershipStore';
 import GuardianManagementSection from '../components/guardian/GuardianManagementSection';
+import { isStudentInOrganization } from '../utils/membershipAccess';
+import { missionInOrganization } from '../utils/membershipScope';
 
 type DetailTab = 'overview' | 'missions' | 'feedback' | 'report' | 'guardian' | 'memo';
 const TABS = [
@@ -37,9 +39,11 @@ export default function StudentDetailPage() {
   const { users, currentUser, teacherNotes, addTeacherNote, deleteTeacherNote } = useAuthStore();
   const groups = useGroupStore((state) => state.groups);
   const { missions, submissions, reviewLogs } = useMissionStore();
-  const activeOrganizationId = useMembershipStore((state)=>state.memberships.find((item)=>item.id===state.activeMembershipId)?.organizationId);
+  const memberships = useMembershipStore((state)=>state.memberships);
+  const activeMembershipId = useMembershipStore((state)=>state.activeMembershipId);
+  const activeOrganizationId = memberships.find((item)=>item.id===activeMembershipId)?.organizationId;
   const [noteInput, setNoteInput] = useState('');
-  const student = users.find((user) => user.id === id);
+  const student = users.find((user) => user.id === id && isStudentInOrganization(memberships, user.id, activeOrganizationId));
   const scenario = currentUser?.id.startsWith('demo-') ? getActiveDemoScenario() : null;
   const memberLabel = scenario?.memberLabel ?? '학생';
   if (!student) return <div className="page-container"><Header title={`${memberLabel} 정보`} showBack/><main className="content-area p-4"><EmptyState title={`${memberLabel}을 찾을 수 없습니다.`}/></main></div>;
@@ -47,13 +51,13 @@ export default function StudentDetailPage() {
   const tab = (TABS.some((item) => item.key === params.get('tab')) ? params.get('tab') : 'overview') as DetailTab;
   const period = params.get('period') ?? '30';
   const cutoff = period === 'all' ? null : (() => { const date = new Date(); date.setDate(date.getDate() - Number(period || 30) + 1); return date; })();
-  const all = missions.filter((mission) => mission.assigneeId === student.id && (!currentUser || mission.creatorId === currentUser.id));
+  const all = missions.filter((mission) => mission.assigneeId === student.id && (!currentUser || mission.creatorId === currentUser.id) && missionInOrganization(mission, activeOrganizationId));
   const periodMissions = all.filter((mission) => !cutoff || new Date(mission.createdAt) >= cutoff || new Date(mission.endDate) >= cutoff);
   const active = periodMissions.filter((mission) => ['PENDING', 'IN_PROGRESS', 'REJECTED'].includes(mission.status));
   const pending = periodMissions.filter((mission) => mission.status === 'REVIEWING');
   const completed = periodMissions.filter((mission) => mission.status === 'SUCCESS');
   const periodStats = calculateClassStats(periodMissions);
-  const groupName = groups.find((group) => group.id === student.groupId)?.name.replace(/^[^\p{L}\p{N}]+/u, '').trim() ?? '반 미지정';
+  const groupName = groups.find((group) => group.id === student.groupId && group.organizationId === activeOrganizationId)?.name.replace(/^[^\p{L}\p{N}]+/u, '').trim() ?? '반 미지정';
   const myMissionIds = new Set(all.map((mission) => mission.id));
   const recent = periodMissions.map((mission) => {
     const submission = submissions.filter((item) => item.missionId === mission.id).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
@@ -62,7 +66,7 @@ export default function StudentDetailPage() {
     return { mission, submission, review, time };
   }).sort((a, b) => b.time - a.time);
   const feedback = reviewLogs.filter((log) => myMissionIds.has(log.missionId) && (log.reason || log.publicFeedback)).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const notes = teacherNotes[student.id] ?? [];
+  const notes = (teacherNotes[student.id] ?? []).filter((note) => !note.organizationId || note.organizationId === activeOrganizationId);
   const currentStatus = periodStats.pending > 0 ? '승인 대기' : periodStats.missing > 0 ? '미제출' : periodStats.completed > 0 ? '제출 완료' : periodStats.inProgress > 0 ? '진행 중' : '활동 없음';
   const statusTone = periodStats.pending > 0 ? STATUS.REVIEWING.tone : periodStats.missing > 0 ? 'bg-[#F7ECEA] text-[#A65F59]' : periodStats.completed > 0 ? STATUS.SUCCESS.tone : periodStats.inProgress > 0 ? STATUS.IN_PROGRESS.tone : STATUS.PENDING.tone;
   const setTab = (nextTab: DetailTab) => { const next = new URLSearchParams(params); next.set('tab', nextTab); setParams(next, { replace: true }); };

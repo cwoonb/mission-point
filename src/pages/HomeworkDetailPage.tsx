@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { CheckCircle2, ChevronRight } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import type { MissionDisplayStatus } from '../utils/missionStats';
 import { calculateHomeworkStats, getLatestReviewByMission, getLatestSubmissionByMission, groupMissionsByHomework, missionsByDisplayStatus } from '../utils/missionStats';
 import { formatFriendlyDateTime, formatMissionPeriod } from '../utils/missionDates';
+import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
 
 type Filter = 'all' | MissionDisplayStatus;
 const FILTERS: Array<[Filter, string]> = [['all', '전체'], ['completed', '완료'], ['pending', '승인 대기'], ['missing', '미제출'], ['in_progress', '진행 중']];
@@ -18,10 +20,12 @@ export default function HomeworkDetailPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const users = useAuthStore((state) => state.users);
   const { missions, submissions, reviewLogs } = useMissionStore();
+  const activeOrganizationId = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId)?.organizationId);
   const base = missions.find((mission) => mission.id === homeworkId);
   if (!base) return <div className="page-container"><Header title="숙제를 찾을 수 없습니다" showBack /></div>;
+  if (!missionInOrganization(base, activeOrganizationId)) return <Navigate to="/" replace/>;
 
-  const cohort = groupMissionsByHomework(missions.filter((mission) => mission.creatorId === base.creatorId)).find((items) => items.some((mission) => mission.id === base.id)) ?? [base];
+  const cohort = groupMissionsByHomework(missions.filter((mission) => mission.creatorId === base.creatorId && missionInOrganization(mission, activeOrganizationId))).find((items) => items.some((mission) => mission.id === base.id)) ?? [base];
   const stats = calculateHomeworkStats(cohort);
   const shown = missionsByDisplayStatus(cohort, filter);
 

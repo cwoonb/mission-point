@@ -7,6 +7,8 @@ import { useMissionStore } from '../store/missionStore';
 import { formatDate, formatDateTime } from '../utils/helpers';
 import { useMembershipStore } from '../store/membershipStore';
 import { useReportContentStore } from '../store/reportContentStore';
+import { isStudentInOrganization } from '../utils/membershipAccess';
+import { missionInOrganization } from '../utils/membershipScope';
 
 function Empty({ children }: { children: string }) {
   return <p className="rounded-xl bg-[#F5F2ED] px-4 py-5 text-center text-xs font-semibold text-[#8B929C]">{children}</p>;
@@ -18,15 +20,17 @@ export default function ParentReportPage() {
   const { users, currentUser } = useAuthStore();
   const groups = useGroupStore((state) => state.groups);
   const { missions, submissions, reviewLogs } = useMissionStore();
-  const activeMembership = useMembershipStore((state) => state.memberships.find((item) => item.id === state.activeMembershipId));
+  const memberships = useMembershipStore((state) => state.memberships);
+  const activeMembershipId = useMembershipStore((state) => state.activeMembershipId);
+  const activeMembership = memberships.find((item) => item.id === activeMembershipId);
   const { load, saveMemo } = useReportContentStore();
   const savedMemo = useReportContentStore((state) => activeMembership?.organizationId && id ? state.getMemo(activeMembership.organizationId, id) : '');
   const [memo, setMemo] = useState('');
   const [editingMemo, setEditingMemo] = useState(false);
   const [savingMemo, setSavingMemo] = useState(false);
   const [memoNotice, setMemoNotice] = useState('');
-  const student = users.find((user) => user.id === id);
-  const studentMissions = useMemo(() => missions.filter((mission) => mission.assigneeId === id && (!currentUser || currentUser.role === 'CHILD' || mission.creatorId === currentUser.id)), [missions, id, currentUser]);
+  const student = users.find((user) => user.id === id && isStudentInOrganization(memberships, user.id, activeMembership?.organizationId));
+  const studentMissions = useMemo(() => missions.filter((mission) => mission.assigneeId === id && (!currentUser || currentUser.role === 'CHILD' || mission.creatorId === currentUser.id) && missionInOrganization(mission, activeMembership?.organizationId)), [missions, id, currentUser, activeMembership?.organizationId]);
 
   if (!student) return <div className="page-container flex items-center justify-center"><p className="text-sm text-[#687282]">학생 정보를 찾을 수 없습니다.</p></div>;
 
@@ -34,7 +38,7 @@ export default function ParentReportPage() {
   const recentSubmissions = submissions.filter((submission) => submission.userId === id && ids.has(submission.missionId)).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()).slice(0, 5);
   const reviewFeedback = reviewLogs.filter((log) => ids.has(log.missionId) && log.action === 'APPROVED' && log.publicFeedback).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3);
   const active = studentMissions.filter((mission) => ['PENDING', 'IN_PROGRESS', 'REVIEWING', 'REJECTED'].includes(mission.status)).sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime());
-  const groupName = groups.find((group) => group.id === student.groupId)?.name ?? '반 미지정';
+  const groupName = groups.find((group) => group.id === student.groupId && group.organizationId === activeMembership?.organizationId)?.name ?? '반 미지정';
   const missionTitle = (missionId: string) => studentMissions.find((mission) => mission.id === missionId)?.title ?? '미션';
   const periodStart = new Date(Date.now() - 29 * 86400000).toISOString();
   const nextGoal = active[0]?.title ? `${active[0].title} 미션을 기한 안에 차분히 마무리해 보세요.` : '지금의 꾸준한 활동 흐름을 이어가 보세요.';

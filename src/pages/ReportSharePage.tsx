@@ -12,6 +12,7 @@ import { useReportContentStore } from '../store/reportContentStore';
 import type { GuardianReport, ReportSnapshot } from '../types';
 import { revokeDemoReportSnapshot, saveDemoReportSnapshot } from '../utils/demoReportSnapshot';
 import { formatDateTime } from '../utils/helpers';
+import { isStudentInOrganization } from '../utils/membershipAccess';
 
 type ShareHistory = { id: string; reportId: string; guardianId?: string; expiresAt: string; revokedAt?: string; createdAt: string };
 
@@ -31,10 +32,12 @@ export default function ReportSharePage() {
   const navigate = useNavigate();
   const { currentUser, users, isDemoMode } = useAuthStore();
   const groups = useGroupStore((state) => state.groups);
-  const active = useMembershipStore((state) => state.memberships.find((item) => item.id === state.activeMembershipId));
+  const memberships = useMembershipStore((state) => state.memberships);
+  const activeMembershipId = useMembershipStore((state) => state.activeMembershipId);
+  const active = memberships.find((item) => item.id === activeMembershipId);
   const { missions, submissions, reviewLogs } = useMissionStore();
   const { guardians, links, initializeData } = useGuardianStore();
-  const student = users.find((user) => user.id === id);
+  const student = users.find((user) => user.id === id && isStudentInOrganization(memberships, user.id, active?.organizationId));
   const linked = links.filter((link) => link.studentId === id && link.organizationId === active?.organizationId && link.status === 'ACTIVE');
   const linkedGuardians = linked.map((link) => ({ link, guardian: guardians.find((guardian) => guardian.id === link.guardianId) })).filter((item) => item.guardian);
   const primaryGuardianId = linked.find((link) => link.isPrimary)?.guardianId ?? linked[0]?.guardianId ?? '';
@@ -80,7 +83,7 @@ export default function ReportSharePage() {
       generatedAt: new Date().toISOString(),
       periodStart: new Date(Date.now() - 30 * 86400000).toISOString(),
       teacherName: currentUser?.name,
-      student: { name: student.name, group: groups.find((group)=>group.id===student.groupId)?.name ?? '소속 반' },
+      student: { name: student.name, group: groups.find((group)=>group.id===student.groupId && group.organizationId===active?.organizationId)?.name ?? '소속 반' },
       recentActivities: recent.map((item)=>({ title:title(item.missionId), date:item.submittedAt, comment:item.message ?? '' })),
       completedMissions: completed.map((item)=>({ title:item.title, date:item.endDate })),
       ongoingMissions: ongoing.map((item)=>({ title:item.title, dueDate:item.endDate, status:item.status })),

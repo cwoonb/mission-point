@@ -9,6 +9,8 @@ import { useGroupStore } from '../store/groupStore';
 import { useMissionStore } from '../store/missionStore';
 import { useTemplateStore } from '../store/templateStore';
 import type { MissionType, ParentShareType, RepeatType, SubmissionType } from '../types';
+import { useMembershipStore } from '../store/membershipStore';
+import { isStudentInOrganization } from '../utils/membershipAccess';
 
 const dateInputValue = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const today = () => dateInputValue(new Date());
@@ -22,10 +24,13 @@ export default function MissionCreatePage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { currentUser, users } = useAuthStore();
-  const groups = useGroupStore((state) => state.groups.filter((group) => !currentUser || group.facilitatorId === currentUser.id));
+  const memberships = useMembershipStore((state) => state.memberships);
+  const activeMembershipId = useMembershipStore((state) => state.activeMembershipId);
+  const activeOrganizationId = memberships.find((membership) => membership.id === activeMembershipId)?.organizationId;
+  const groups = useGroupStore((state) => state.groups.filter((group) => (!currentUser || group.facilitatorId === currentUser.id) && group.organizationId === activeOrganizationId));
   const createMission = useMissionStore((state) => state.createMission);
   const { templates, incrementUsage } = useTemplateStore();
-  const students = users.filter((user) => user.role === 'CHILD' && (!currentUser?.socialProvider || user.facilitatorId === currentUser.id));
+  const students = users.filter((user) => user.role === 'CHILD' && isStudentInOrganization(memberships, user.id, activeOrganizationId));
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [targetMode, setTargetMode] = useState<'self' | 'group' | 'student'>(params.get('target') === 'self' ? 'self' : 'group');

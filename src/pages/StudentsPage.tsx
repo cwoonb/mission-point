@@ -11,6 +11,7 @@ import { calculateClassStats } from '../utils/missionStats';
 import { overlapsPeriod } from '../utils/missionDates';
 import { getActiveDemoScenario } from '../data/demoSession';
 import { getInviteUrl } from '../lib/kakaoShare';
+import { useMembershipStore } from '../store/membershipStore';
 
 type Period = '7' | '30' | '90' | 'all' | 'custom';
 type Status = 'all' | 'active' | 'missing' | 'pending' | 'feedback' | 'recent';
@@ -43,6 +44,7 @@ export default function StudentsPage() {
   const users = useAuthStore((state) => state.users);
   const groups = useGroupStore((state) => state.groups);
   const { missions, submissions, reviewLogs } = useMissionStore();
+  const activeOrganizationId = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId)?.organizationId);
   if (!currentUser) return null;
   const scenario = currentUser.id.startsWith('demo-') ? getActiveDemoScenario() : null;
   const memberLabel = scenario?.memberLabel ?? '학생';
@@ -52,7 +54,7 @@ export default function StudentsPage() {
   const classId = params.get('class') || 'all';
   const query = params.get('q') || '';
   const selectedRange = range(period, params.get('start'), params.get('end'));
-  const myGroups = groups.filter((group) => group.facilitatorId === currentUser.id);
+  const myGroups = groups.filter((group) => group.facilitatorId === currentUser.id && group.organizationId === activeOrganizationId);
   const groupIds = new Set(myGroups.map((group) => group.id));
   const feedbackMissionIds = new Set(reviewLogs.filter((log) => log.reason || log.publicFeedback).map((log) => log.missionId));
   const update = (key: string, value?: string) => { const next = new URLSearchParams(params); value ? next.set(key, value) : next.delete(key); setParams(next, { replace: true }); };

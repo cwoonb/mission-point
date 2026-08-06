@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Camera, CheckCircle2, ImagePlus, Send, X } from 'lucide-react';
 import Header from '../components/layout/Header';
 import Modal from '../components/ui/Modal';
@@ -7,6 +7,8 @@ import EmptyState from '../components/ui/EmptyState';
 import { useAuthStore } from '../store/authStore';
 import { useMissionStore } from '../store/missionStore';
 import { getStudentDemoImage } from '../data/studentDemo';
+import { useMembershipStore } from '../store/membershipStore';
+import { missionInOrganization } from '../utils/membershipScope';
 
 export default function MissionSubmitPage() {
   const { id } = useParams<{id:string}>();
@@ -14,6 +16,7 @@ export default function MissionSubmitPage() {
   const { currentUser, isDemoMode } = useAuthStore();
   const { getMission, getLatestSubmission, getReviewLogs, submitMission } = useMissionStore();
   const mission = id ? getMission(id) : undefined;
+  const activeOrganizationId = useMembershipStore((state) => state.memberships.find((membership) => membership.id === state.activeMembershipId)?.organizationId);
   const [message,setMessage]=useState('');
   const [images,setImages]=useState<string[]>([]);
   const [confirmOpen,setConfirmOpen]=useState(false);
@@ -22,6 +25,7 @@ export default function MissionSubmitPage() {
   const [error,setError]=useState('');
   const fileRef=useRef<HTMLInputElement>(null);
   if(!mission||!currentUser)return <div className="page-container"><Header title="미션 제출" showBack/><main className="content-area p-4"><EmptyState title="미션을 찾을 수 없습니다."/></main></div>;
+  if (mission.assigneeId !== currentUser.id || !missionInOrganization(mission, activeOrganizationId)) return <Navigate to="/" replace/>;
   const latest=getLatestSubmission(mission.id);
   const rejected=getReviewLogs(mission.id).find((log)=>log.action==='REJECTED');
   const isResubmission=mission.status==='REJECTED'||!!rejected;

@@ -45,7 +45,7 @@ export function startDemoScenario(id: DemoScenarioId) {
     isDemoMode: true,
     teacherNotes: seed.teacherNotes,
   });
-  useGroupStore.setState({ groups: seed.groups, demoMode: true });
+  useGroupStore.setState({ groups: seed.groups.map((group) => ({ ...group, organizationId })), demoMode: true });
   useMissionStore.setState({
     missions: seed.missions.map((mission)=>({ ...mission, organizationId })),
     submissions: seed.submissions,
@@ -56,9 +56,18 @@ export function startDemoScenario(id: DemoScenarioId) {
   const guardianDemo = buildGuardianDemo(seed, organizationId);
   useGuardianStore.getState().seedDemo([guardianDemo.guardian], guardianDemo.links, guardianDemo.reports);
   const membershipId = `demo-membership-${id}-operator`;
+  const studentMemberships = seed.users.filter((user) => user.role === 'CHILD').map((user) => ({
+    id: `demo-membership-${id}-student-${user.id}`,
+    userId: user.id,
+    organizationId,
+    role: 'STUDENT' as const,
+    groupId: user.groupId,
+    status: 'ACTIVE' as const,
+    createdAt: user.createdAt,
+  }));
   useMembershipStore.getState().replaceDemoMemberships(
     [{ id: organizationId, name: seed.config.name, type: 'EDUCATION', ownerUserId: facilitator.id, inviteCode: facilitator.code, createdAt: facilitator.createdAt }],
-    [{ id: membershipId, userId: facilitator.id, organizationId, role: seed.config.facilitatorRole === 'PARENT' ? 'OWNER' : 'TEACHER', status: 'ACTIVE', createdAt: facilitator.createdAt }],
+    [{ id: membershipId, userId: facilitator.id, organizationId, role: seed.config.facilitatorRole === 'PARENT' ? 'OWNER' : 'TEACHER', status: 'ACTIVE', createdAt: facilitator.createdAt }, ...studentMemberships],
     membershipId,
   );
   return seed;
@@ -101,7 +110,7 @@ export function startStudentDemo(reset = false) {
   const student = seed.users.find((user) => user.id === STUDENT_DEMO_USER_ID)!;
   const organizationId = 'demo-org-art-student';
   useAuthStore.setState({ users: seed.users, currentUser: student, viewMode: 'PERFORMER', isDemoMode: true, teacherNotes: {} });
-  useGroupStore.setState({ groups: seed.groups, demoMode: true });
+  useGroupStore.setState({ groups: seed.groups.map((group) => ({ ...group, organizationId })), demoMode: true });
   useMissionStore.setState({ missions: seed.missions.map((mission)=>({ ...mission, organizationId })), submissions: seed.submissions, reviewLogs: seed.reviewLogs, demoMode: true });
   useGuardianStore.getState().clear();
   const membershipId = 'demo-membership-art-student';
@@ -129,7 +138,7 @@ export function startGuardianDemo() {
     isDemoMode: true,
     teacherNotes: {},
   });
-  useGroupStore.setState({ groups: seed.groups, demoMode: true });
+  useGroupStore.setState({ groups: seed.groups.map((group) => ({ ...group, organizationId })), demoMode: true });
   useMissionStore.setState({
     missions: seed.missions.map((mission) => ({ ...mission, organizationId })),
     submissions: seed.submissions,

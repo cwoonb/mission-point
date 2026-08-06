@@ -162,7 +162,6 @@ function AppContent() {
       if (!auth.currentUser) return;
       await initMissions();
       await initGroups();
-      useMembershipStore.getState().ensureLegacyMemberships(useAuthStore.getState().users, useGroupStore.getState().groups);
       initTemplates();
       autoGenerateRepeatMissions();
     })();

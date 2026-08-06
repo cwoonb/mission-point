@@ -1,13 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Membership, MembershipRole, Organization, PerformerGroup, User } from '../types';
+import type { Membership, MembershipRole, Organization, User } from '../types';
 import { useAuthStore } from './authStore';
 import { useGroupStore } from './groupStore';
 import { secureBackendEnabled, supabase } from '../lib/supabase';
 
 const now = () => new Date().toISOString();
 const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-const legacyRole = (role: User['role']): MembershipRole => role === 'CHILD' ? 'STUDENT' : role === 'PARENT' ? 'OWNER' : 'TEACHER';
 const userRole = (role: MembershipRole): User['role'] => role === 'STUDENT' ? 'CHILD' : role === 'GUARDIAN' ? 'PARENT' : 'TEACHER';
 const viewModeForRole = (role: MembershipRole) => role === 'STUDENT' ? 'PERFORMER' : role === 'GUARDIAN' ? 'GUARDIAN' : 'FACILITATOR';
 const missingRpc = (error: { code?: string; message?: string } | null) =>
@@ -28,7 +27,6 @@ interface MembershipState {
   activeMembershipId: string | null;
   initializedUserId: string | null;
   initializeData: (userId: string) => Promise<void>;
-  ensureLegacyMemberships: (users: User[], groups: PerformerGroup[]) => void;
   replaceDemoMemberships: (organizations: Organization[], memberships: Membership[], activeId: string) => void;
   selectMembership: (membershipId: string) => boolean;
   clearActiveMembership: () => void;
@@ -51,23 +49,13 @@ export const useMembershipStore = create<MembershipState>()(persist((set, get) =
     const remoteMemberships:Membership[]=membershipRows.map((row)=>({id:row.id,userId:row.user_id,organizationId:row.organization_id,role:row.role,groupId:row.group_id??undefined,status:row.status,createdAt:row.created_at}));
     const remoteOrganizations:Organization[]=(organizationRows??[]).map((row)=>({id:row.id,name:row.name,type:row.type,ownerUserId:row.owner_user_id,inviteCode:row.invite_code??undefined,createdAt:row.created_at}));
     set((state)=>({organizations:[...state.organizations.filter((item)=>!remoteOrganizations.some((remote)=>remote.id===item.id)),...remoteOrganizations],memberships:[...state.memberships.filter((item)=>item.userId!==userId),...remoteMemberships],initializedUserId:userId}));
-  },
-
-  ensureLegacyMemberships: (users, groups) => set((state) => {
-    const organizations = [...state.organizations];
-    const memberships = [...state.memberships];
-    for (const user of users) {
-      if (memberships.some((membership) => membership.userId === user.id)) continue;
-      const facilitatorId = user.role === 'CHILD' ? user.facilitatorId : user.id;
-      const organizationId = `legacy-org-${facilitatorId ?? user.id}`;
-      if (!organizations.some((organization) => organization.id === organizationId)) {
-        const owner = users.find((candidate) => candidate.id === facilitatorId) ?? user;
-        organizations.push({ id: organizationId, name: `${owner.name}의 소속`, type: 'EDUCATION', ownerUserId: owner.id, inviteCode: owner.code, createdAt: owner.createdAt });
-      }
-      memberships.push({ id: `legacy-membership-${user.id}`, userId: user.id, organizationId, role: legacyRole(user.role), groupId: user.groupId, status: 'ACTIVE', createdAt: user.createdAt });
+    const { data: visibleMembershipRows, error: visibleMembershipError } = await supabase.from('memberships').select('*').in('organization_id', organizationIds).eq('status', 'ACTIVE');
+    if (!visibleMembershipError) {
+      const visibleMemberships = (visibleMembershipRows ?? []).map((row) => rowToMembership(row as Record<string, unknown>));
+      set((state) => ({ memberships: [...state.memberships.filter((item) => !organizationIds.includes(item.organizationId)), ...visibleMemberships] }));
+      await useAuthStore.getState().loadVisibleUsers(visibleMemberships.map((membership) => membership.userId));
     }
-    return { organizations, memberships };
-  }),
+  },
 
   replaceDemoMemberships: (organizations, memberships, activeMembershipId) => {
     set((state)=>({

@@ -147,6 +147,7 @@ interface AuthState {
   authInitialized: boolean;
 
   initializeData: () => Promise<void>;
+  loadVisibleUsers: (userIds: string[]) => Promise<void>;
   login: (userId: string) => void;
   logout: () => Promise<string | null>;
   switchViewMode: () => void;
@@ -257,6 +258,20 @@ export const useAuthStore = create<AuthState>()(
         } finally {
           set({ authInitialized: true });
         }
+      },
+
+      loadVisibleUsers: async (userIds) => {
+        if (get().isDemoMode) return;
+        const current = get().currentUser;
+        if (!current) return;
+        const ids = [...new Set([current.id, ...userIds])];
+        const { data, error } = await supabase.from('users').select('*').in('id', ids);
+        if (error) throw error;
+        const visibleUsers = ((data ?? []) as UserRow[]).map(rowToUser);
+        const databaseCurrent = visibleUsers.find((user) => user.id === current.id);
+        const restoredCurrent = databaseCurrent ? { ...databaseCurrent, role: current.role, groupId: current.groupId } : current;
+        const scopedUsers = visibleUsers.map((user) => user.id === current.id ? restoredCurrent : user);
+        set({ users: scopedUsers.some((user) => user.id === current.id) ? scopedUsers : [restoredCurrent, ...scopedUsers], currentUser: restoredCurrent });
       },
 
       login: (userId) => {
